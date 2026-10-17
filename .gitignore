@@ -48,3 +48,6 @@ tmp/
 temp/
 uploads/
 apps/api/uploads/
+
+# Documentation
+DOCS/

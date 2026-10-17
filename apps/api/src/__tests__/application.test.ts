@@ -25,6 +25,7 @@ describe("Phase 5 — Applications, Hiring Pipeline & Stage History Integration 
 
   beforeAll(async () => {
     await connectDB(TEST_DB_URI);
+    await Application.init();
     app = createApp();
 
     await User.deleteMany({});
