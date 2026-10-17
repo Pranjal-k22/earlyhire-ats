@@ -17,6 +17,7 @@ import {
 
 import { JobsView } from "../features/jobs/JobsView";
 import { CandidatesView } from "../features/candidates/CandidatesView";
+import { PipelineView } from "../features/pipeline/PipelineView";
 
 interface HealthStatus {
   status: string;
@@ -24,7 +25,7 @@ interface HealthStatus {
 }
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "candidates">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "candidates" | "pipeline">("overview");
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,13 +99,18 @@ export const App: React.FC = () => {
             <Briefcase className="w-5 h-5 text-slate-400" />
             <span>Jobs</span>
           </button>
-          <a
-            href="#pipeline"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition-all"
+          <button
+            type="button"
+            onClick={() => setActiveTab("pipeline")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all text-left ${
+              activeTab === "pipeline"
+                ? "bg-brand-600 text-white shadow-sm"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
           >
             <Layers className="w-5 h-5 text-slate-400" />
             <span>Pipeline</span>
-          </a>
+          </button>
           <a
             href="#reports"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition-all"
@@ -174,6 +180,8 @@ export const App: React.FC = () => {
             <JobsView />
           ) : activeTab === "candidates" ? (
             <CandidatesView />
+          ) : activeTab === "pipeline" ? (
+            <PipelineView />
           ) : (
             <>
               {/* Page Header */}

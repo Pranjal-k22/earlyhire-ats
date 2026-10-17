@@ -332,6 +332,73 @@ _Initial baseline recorded prior to Phase 1._
   - Phase 5: Applications & Hiring Pipeline (Link Candidate to Job, stage transitions, immutable stage history).
 - **Auditor:** AI Coding Assistant (Antigravity)
 
+---
+
+### 2026-10-17 — Phase 5 — Applications, Hiring Pipeline & Stage History — PASS
+- **Commit:** `feat/phase-5-applications-pipeline` working tree ready for commit
+- **Scope reviewed:**
+  - Mongoose `Application` schema with references `candidateId`, `jobId`, `recruiterId`, `stage`/`currentStage` enum synchronization, `status` enum (`Active`, `Withdrawn`, `Archived`), `appliedAt`, `lastStageChangedAt`, `rejectedAt`, `hiredAt`, `source`, `version`, and compound unique index `{ candidateId: 1, jobId: 1 }` (`apps/api/src/models/application.model.ts`).
+  - Mongoose `InterviewStageHistory` schema (`stagehistories`) tracking `applicationId`, `fromStage` (null for initial `Applied` record), `toStage`, `actorId`, `changedAt`, `reason`, and `durationMsFromPreviousStage` (`apps/api/src/models/stageHistory.model.ts`).
+  - Strict server-side state machine:
+    - `Applied` → `Screening` | `Rejected`
+    - `Screening` → `Interview` | `Rejected`
+    - `Interview` → `Offer` | `Rejected`
+    - `Offer` → `Hired` | `Rejected`
+    - Terminal stages: `Hired` and `Rejected` are strictly terminal; any transition attempt from a terminal stage returns HTTP 422 `INVALID_STAGE_TRANSITION`.
+  - Duplicate active applications prevention: database-enforced unique index `{ candidateId: 1, jobId: 1 }` and preliminary checks guarantee HTTP 409 `DUPLICATE_APPLICATION` on duplicate attempts, including concurrent requests.
+  - Job status guardrails: applications can only be created for open jobs (`status === "Open"`). Paused, Closed, and Archived jobs reject creation with HTTP 422 `JOB_NOT_OPEN`.
+  - Candidate status guardrails: candidate must exist and not be archived (`archivedAt === null`).
+  - Stage update isolation: clients cannot bypass the state machine; `PATCH /api/v1/applications/:id` rejects `stage` or `currentStage` fields with HTTP 422. Stage transitions are strictly validated and handled via `PATCH /api/v1/applications/:id/stage`.
+  - Immutable audit history: stage transitions record the authenticated actor, calculated duration in ms, timestamp, and optional rejection reason. Stage history is append-only and ordered chronologically.
+  - Transactions: `runWithTransaction` helper executes MongoDB transactions when replica sets are configured (e.g., Atlas) with safe sequential fallback for standalone dev/test runners.
+  - React frontend UI: `PipelineView` responsive 6-column Kanban pipeline (`Applied`, `Screening`, `Interview`, `Offer`, `Hired`, `Rejected`) with stage counters, filter by job opening, live search, empty states, loading skeletons, and error retry banner.
+  - Reusable components: `StageBadge`, `ApplicationCard` with next-stage advance controls and rejection actions, `RejectModal` with optional reason input, `ApplicationHistoryModal` displaying full audit timeline, and `ApplicationCreateModal` linking candidates to jobs.
+  - Navigation: Pipeline activated as first-class view in main sidebar navigation.
+- **Files created & modified:**
+  - Backend: `apps/api/src/models/application.model.ts`, `apps/api/src/models/stageHistory.model.ts`, `apps/api/src/schemas/application.schema.ts`, `apps/api/src/controllers/application.controller.ts`, `apps/api/src/routes/application.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/__tests__/application.test.ts`.
+  - Frontend: `apps/web/src/types/application.ts`, `apps/web/src/api/applicationApi.ts`, `apps/web/src/features/pipeline/StageBadge.tsx`, `apps/web/src/features/pipeline/ApplicationCard.tsx`, `apps/web/src/features/pipeline/RejectModal.tsx`, `apps/web/src/features/pipeline/ApplicationHistoryModal.tsx`, `apps/web/src/features/pipeline/ApplicationCreateModal.tsx`, `apps/web/src/features/pipeline/PipelineView.tsx`, `apps/web/src/app/App.tsx`, `apps/web/src/__tests__/PipelineView.test.tsx`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/MANUAL_ACTIONS.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors, 0 warnings across monorepo).
+  - `npm run typecheck`: PASS (exit code 0; strict mode passes on both workspaces).
+  - `npm test`: PASS (exit code 0; 101 tests passed across 9 test suites: 20 web + 81 api).
+  - `npm run build`: PASS (exit code 0; Vite frontend built `apps/web/dist` in 8.32s, `tsc` compiled `apps/api/dist`).
+- **Acceptance criteria verified:**
+  - [x] Create an application using valid candidate and job references.
+  - [x] Reject missing candidate or job references (422).
+  - [x] Reject malformed MongoDB ObjectIds (400 `INVALID_ID`).
+  - [x] Reject nonexistent candidates (404 `CANDIDATE_NOT_FOUND`).
+  - [x] Reject nonexistent jobs (404 `JOB_NOT_FOUND`).
+  - [x] Reject applications for paused, closed, and archived jobs (422 `JOB_NOT_OPEN`).
+  - [x] Prevent duplicate active applications (409 `DUPLICATE_APPLICATION`).
+  - [x] Prevent concurrent requests from creating duplicate active applications.
+  - [x] Set initial stage to `Applied`.
+  - [x] Record initial stage history (`fromStage: null`, `toStage: "Applied"`).
+  - [x] Permit `Applied` → `Screening`.
+  - [x] Permit `Screening` → `Interview`.
+  - [x] Permit `Interview` → `Offer`.
+  - [x] Permit `Offer` → `Hired`.
+  - [x] Permit rejection from every nonterminal stage.
+  - [x] Reject skipped or backward transitions (422 `INVALID_STAGE_TRANSITION`).
+  - [x] Reject transitions from terminal stages (`Hired` and `Rejected`).
+  - [x] Reject arbitrary stage changes through general PATCH endpoint (422).
+  - [x] Record authenticated actor in history (`actorId`).
+  - [x] Reject unauthenticated requests (401 `UNAUTHENTICATED`).
+  - [x] Reject unauthorized transition requests (403 `FORBIDDEN` for non-recruiter/admin).
+  - [x] Verify application stage and history remain consistent when transition fails.
+  - [x] Retrieve history in deterministic chronological order.
+  - [x] Preserve existing Candidate, Job, Auth, and Health API behavior (zero regressions).
+  - [x] Frontend Kanban pipeline with 6 stage columns, application cards, stage advancement, and rejection flows.
+- **Gaps found:** None. Phase 5 scope boundaries strictly respected.
+- **Security/data risks:**
+  - Concurrency safety: unique database constraint prevents race conditions in concurrent application creation.
+  - State integrity: clients cannot falsify previous stage, transition timestamps, or actor ID.
+  - Permission matrix: mutating application endpoints strictly protected with `requireRole("admin", "recruiter")`.
+- **Follow-up tasks:**
+  - Phase 6: Search, Filters & Recruiter Notes (Full-text candidate search, note history, soft deletion of notes).
+- **Auditor:** AI Coding Assistant (Antigravity)
+
+
 
 
 

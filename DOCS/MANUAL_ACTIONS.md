@@ -92,7 +92,7 @@ This file tracks all manual actions, architecture decisions, and external infras
   5. Generate a secure random JWT secret: `openssl rand -hex 32`.
   6. Place credentials in local `.env` (never commit to Git).
 - **Status:** `PENDING` (Local integration verified with isolated test database; required before cloud deployment in Phase 10)
-- **Verification Evidence / Method:** Local database connectivity verified with 22/22 automated integration tests passing. Cloud Atlas connection string required for Render deployment.
+- **Verification Evidence / Method:** Local database connectivity verified with 81/81 automated backend integration tests passing (including 25 Phase 5 Application & Pipeline tests with transaction/single-node fallback). Cloud Atlas connection string (replica set) required for Render deployment.
 
 ---
 

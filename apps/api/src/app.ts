@@ -7,6 +7,7 @@ import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import candidateRoutes from "./routes/candidate.routes.js";
+import applicationRoutes from "./routes/application.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 
@@ -36,6 +37,7 @@ export const createApp = (): Express => {
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/jobs", jobRoutes);
   app.use("/api/v1/candidates", candidateRoutes);
+  app.use("/api/v1/applications", applicationRoutes);
 
   // 404 Fallback
   app.use(notFoundHandler);

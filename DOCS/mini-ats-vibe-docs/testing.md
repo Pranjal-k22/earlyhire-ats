@@ -168,3 +168,25 @@ Do not call the MVP ready for submission unless all of the following are true:
 - [ ] Lint, type-check, tests, and build have actual recorded results.
 - [ ] The deployed app has been smoke-tested using the demo environment.
 - [ ] README and deployed links are accurate; limitations are disclosed.
+
+---
+
+### Test run — 2026-10-17 18:15 UTC (Phase 5 Verification)
+- **Commit:** `feat/phase-5-applications-pipeline` (ready for commit)
+- **Environment:** Local test runner with isolated MongoDB database (`earlyai_ats_test`)
+- **Dataset:** Synthetic test fixtures created and torn down in `beforeEach`
+- **`npm run lint`:** PASS — exit code: 0 (0 errors, 0 warnings across monorepo)
+- **`npm run typecheck`:** PASS — exit code: 0 (strict mode passed on `web` and `api`)
+- **`npm test`:** PASS — exit code: 0; passed: 101 tests, failed: 0 across 9 test files:
+  - `apps/web/src/__tests__/App.test.tsx`: 2 passed
+  - `apps/web/src/__tests__/JobsView.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/CandidatesView.test.tsx`: 6 passed
+  - `apps/web/src/__tests__/PipelineView.test.tsx`: 7 passed
+  - `apps/api/src/__tests__/health.test.ts`: 2 passed
+  - `apps/api/src/__tests__/auth.test.ts`: 18 passed
+  - `apps/api/src/__tests__/job.test.ts`: 14 passed
+  - `apps/api/src/__tests__/candidate.test.ts`: 22 passed
+  - `apps/api/src/__tests__/application.test.ts`: 25 passed
+- **`npm run build`:** PASS — exit code: 0 (Vite frontend built in 8.32s; `tsc` compiled backend)
+- **Verified by:** Antigravity (AI Coding Assistant)
+
