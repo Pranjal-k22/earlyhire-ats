@@ -166,5 +166,62 @@ This file tracks all manual actions, architecture decisions, and external infras
 - **Status:** `PENDING` (Verified locally via automated test suites and JSDOM; physical device verification required upon deployment)
 - **Verification Evidence / Method:** Manual QA smoke testing checklist completed during Phase 10 release staging.
 
+---
 
+### ACT-12: Google Cloud Platform OAuth 2.0 & Calendar API Integration
+- **Action ID:** ACT-12
+- **Description:** Configure Google Cloud Console project, enable Google Calendar API, and configure OAuth 2.0 client credentials for automated Google Meet link creation.
+- **Reason:** The interview scheduling engine uses Google Calendar API with `conferenceDataVersion=1` to generate official Google Meet conference links with conference status tracking.
+- **Required Account / Service:** Google Cloud Platform Console (Workspace or GCP Admin)
+- **Exact Steps:**
+  1. Open [Google Cloud Console](https://console.cloud.google.com/) and create or select project `EarlyAI-ATS`.
+  2. Navigate to **APIs & Services > Library**, search for **Google Calendar API**, and click **Enable**.
+  3. Navigate to **APIs & Services > Credentials** and click **Create Credentials > OAuth client ID**.
+  4. Select **Web application** and configure Authorized redirect URIs:
+     - Local dev: `http://localhost:5000/api/v1/auth/google/callback`
+     - Staging: `https://earlyhire-ats-api.onrender.com/api/v1/auth/google/callback`
+  5. Add required environment variables to root `.env` or Render environment settings:
+     - `GOOGLE_CLIENT_ID`
+     - `GOOGLE_CLIENT_SECRET`
+     - `GOOGLE_REDIRECT_URI`
+     - `GOOGLE_REFRESH_TOKEN` (for service-level scheduling account)
+- **Fallback / Development Behavior:** If Google credentials are not configured, the platform automatically saves the proposed interview schedule in `pending_configuration` state and allows hiring-team members to supply a manual meeting link or join URL. The UI displays an explicit indicator that automated Google Meet generation is pending configuration.
+- **Status:** `PENDING CREDENTIALS` (Service logic, schema, routes, and manual fallback verified locally with 100% test pass).
 
+---
+
+### ACT-13: Production AI Provider Credentials & Quota Monitoring
+- **Action ID:** ACT-13
+- **Description:** Provision API keys for Groq and/or Google Gemini and configure production model selections.
+- **Reason:** The AI ATS analysis and stage review engine routes prompts to high-throughput, low-cost LLM endpoints (`llama-3.3-70b-versatile` / `llama-3.1-8b-instant` on Groq, or `gemini-2.5-flash` / `gemini-1.5-flash` on Google Gemini) with bounded retries and token tracking.
+- **Required Account / Service:** [Groq Cloud Console](https://console.groq.com/) and/or [Google AI Studio](https://aistudio.google.com/)
+- **Exact Steps:**
+  1. For Groq:
+     - Generate an API key from Groq Console.
+     - Set `GROQ_API_KEY` in environment.
+     - Optional: Set `GROQ_MODEL=llama-3.3-70b-versatile` (default).
+  2. For Gemini:
+     - Generate an API key from Google AI Studio.
+     - Set `GEMINI_API_KEY` in environment.
+     - Optional: Set `GEMINI_MODEL=gemini-2.5-flash` (default).
+  3. Configure provider selection:
+     - `AI_PROVIDER=groq` or `AI_PROVIDER=gemini` or `AI_PROVIDER=fallback`.
+     - Optional: `AI_FALLBACK_PROVIDER=fallback`.
+- **Fallback / Development Behavior:** If no external API keys are configured, the backend automatically falls back to `FallbackAiProvider` — a zero-failure, deterministic heuristic engine that extracts skills, computes rubric-grounded match scores (0–100), generates screening probe questions, and creates interview brief rubrics. Zero tests or local workflows fail when offline.
+- **Status:** `PENDING CREDENTIALS` (Provider router, telemetry model, rate limiting, and fallback verified locally with 100% test pass).
+
+---
+
+### ACT-14: Canonical RBAC User Role Migration
+- **Action ID:** ACT-14
+- **Description:** Execute the idempotent role migration script to map legacy roles to canonical roles:
+  - `admin` -> `platform_manager`
+  - `recruiter` -> `hiring_team`
+  - `hiring_manager` -> `hiring_team`
+  - `candidate` -> `candidate`
+- **Reason:** Ensuring server-side consistency with the new three primary role categories while maintaining 100% backward compatibility via `normalizeRole()` middleware.
+- **Required Account / Service:** Database Administrator / Server CLI
+- **Exact Steps:**
+  1. Dry-run preview: Run `npm run migrate:roles -- --preview` (or run without flags). This reads existing user records and prints planned role migrations without writing to the database.
+  2. Execute migration: Run `npm run migrate:roles -- --execute`. This updates user documents with their canonical role.
+- **Status:** `READY TO EXECUTE` (Migration script implemented in `apps/api/src/scripts/migrateRoles.ts` and verified with integration tests in `rbac.test.ts`).

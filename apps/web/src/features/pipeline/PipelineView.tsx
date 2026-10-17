@@ -17,6 +17,9 @@ import { ApplicationCard } from "./ApplicationCard";
 import { ApplicationCreateModal } from "./ApplicationCreateModal";
 import { RejectModal } from "./RejectModal";
 import { ApplicationHistoryModal } from "./ApplicationHistoryModal";
+import { StageReviewDrawer } from "./StageReviewDrawer";
+import { ScheduleInterviewModal } from "./ScheduleInterviewModal";
+import { InterviewFeedbackModal } from "./InterviewFeedbackModal";
 
 const STAGE_COLUMNS: { stage: HiringStage; label: string; dot: string; bg: string }[] = [
   { stage: "Applied", label: "Applied", dot: "bg-slate-400", bg: "border-t-slate-400" },
@@ -44,6 +47,9 @@ export const PipelineView: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [rejectTarget, setRejectTarget] = useState<Application | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Application | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<Application | null>(null);
+  const [scheduleTarget, setScheduleTarget] = useState<Application | null>(null);
+  const [feedbackTarget, setFeedbackTarget] = useState<Application | null>(null);
 
   const loadData = React.useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -267,15 +273,15 @@ export const PipelineView: React.FC = () => {
       )}
 
       {/* Kanban Pipeline Columns */}
-      <div className="overflow-x-auto pb-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 min-w-[1200px]">
+      <div className="overflow-x-auto pb-6 scrollbar-thin">
+        <div className="flex gap-4 min-w-[1520px] items-start">
           {STAGE_COLUMNS.map((col) => {
             const stageApps = stageMap[col.stage] || [];
             return (
               <div
                 key={col.stage}
                 data-testid={`stage-column-${col.stage.toLowerCase()}`}
-                className={`bg-slate-100/70 rounded-2xl p-3 border border-slate-200/60 border-t-4 ${col.bg} flex flex-col min-h-[540px]`}
+                className={`w-[245px] shrink-0 bg-slate-100/70 rounded-2xl p-3 border border-slate-200/60 border-t-4 ${col.bg} flex flex-col min-h-[560px]`}
               >
                 {/* Stage Header */}
                 <div className="flex items-center justify-between pb-3 px-1">
@@ -315,6 +321,9 @@ export const PipelineView: React.FC = () => {
                         onAdvance={handleAdvance}
                         onReject={(target) => setRejectTarget(target)}
                         onViewHistory={(target) => setHistoryTarget(target)}
+                        onOpenReview={(target) => setReviewTarget(target)}
+                        onSchedule={(target) => setScheduleTarget(target)}
+                        onFeedback={(target) => setFeedbackTarget(target)}
                       />
                     ))
                   )}
@@ -350,6 +359,47 @@ export const PipelineView: React.FC = () => {
         isOpen={Boolean(historyTarget)}
         application={historyTarget}
         onClose={() => setHistoryTarget(null)}
+      />
+
+      <StageReviewDrawer
+        isOpen={Boolean(reviewTarget)}
+        application={reviewTarget}
+        onClose={() => setReviewTarget(null)}
+        onScheduleInterview={(app) => {
+          setReviewTarget(null);
+          setScheduleTarget(app);
+        }}
+        onSubmitFeedback={(app) => {
+          setReviewTarget(null);
+          setFeedbackTarget(app);
+        }}
+        onRefreshApplication={() => loadData(true)}
+      />
+
+      <ScheduleInterviewModal
+        isOpen={Boolean(scheduleTarget)}
+        application={scheduleTarget}
+        onClose={() => setScheduleTarget(null)}
+        onSuccess={() => {
+          setFeedback({
+            type: "success",
+            message: "Interview scheduled successfully with Google Meet link",
+          });
+          loadData(true);
+        }}
+      />
+
+      <InterviewFeedbackModal
+        isOpen={Boolean(feedbackTarget)}
+        application={feedbackTarget}
+        onClose={() => setFeedbackTarget(null)}
+        onSuccess={() => {
+          setFeedback({
+            type: "success",
+            message: "Interview feedback updated successfully",
+          });
+          loadData(true);
+        }}
       />
     </div>
   );

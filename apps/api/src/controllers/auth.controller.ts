@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { signupSchema, loginSchema } from "../schemas/auth.schema.js";
-import { User } from "../models/user.model.js";
+import { User, UserRole, normalizeRole } from "../models/user.model.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { signToken, getAuthCookieOptions, AUTH_COOKIE_NAME } from "../utils/jwt.js";
 
 /**
- * Handles recruiter signup.
- * Strictly forces role to 'recruiter', ignoring any role supplied by the client.
+ * Handles user signup.
+ * Allows 'candidate' or 'recruiter'/'hiring_team', defaulting to 'recruiter' for backward compatibility.
+ * Strictly prevents privilege escalation to 'admin' or 'platform_manager'.
  */
 export const signup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -24,12 +25,21 @@ export const signup = async (req: Request, res: Response, next: NextFunction): P
     // Securely hash password
     const passwordHash = await User.hashPassword(validated.password);
 
-    // Public signups are strictly granted the 'recruiter' role only
+    // Public signups allow candidate or hiring team; strictly forbids admin / platform_manager
+    let assignedRole: UserRole = "recruiter";
+    if (validated.role === "candidate") {
+      assignedRole = "candidate";
+    } else if (validated.role === "hiring_team") {
+      assignedRole = "hiring_team";
+    } else {
+      assignedRole = "recruiter";
+    }
+
     const user = await User.create({
       name: validated.name.trim(),
       email: normalizedEmail,
       passwordHash,
-      role: "recruiter",
+      role: assignedRole,
       isActive: true,
       lastLoginAt: new Date(),
     });
@@ -49,6 +59,7 @@ export const signup = async (req: Request, res: Response, next: NextFunction): P
           name: user.name,
           email: user.email,
           role: user.role,
+          canonicalRole: normalizeRole(user.role),
         },
       },
     });
@@ -99,6 +110,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
           name: user.name,
           email: user.email,
           role: user.role,
+          canonicalRole: normalizeRole(user.role),
         },
       },
     });
@@ -144,6 +156,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
           name: req.user.name,
           email: req.user.email,
           role: req.user.role,
+          canonicalRole: normalizeRole(req.user.role),
         },
       },
     });

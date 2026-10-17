@@ -2,7 +2,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "recruiter" | "hiring_manager";
+  role: string;
+  canonicalRole?: "candidate" | "hiring_team" | "platform_manager";
 }
 
 export interface AuthResponse {
@@ -16,6 +17,7 @@ export interface SignupPayload {
   name: string;
   email: string;
   password: string;
+  role?: string;
 }
 
 export interface LoginPayload {

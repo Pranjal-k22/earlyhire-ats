@@ -2,7 +2,35 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 import { env } from "../config/env.js";
 
-export type UserRole = "admin" | "recruiter" | "hiring_manager";
+export const CANONICAL_ROLES = ["candidate", "hiring_team", "platform_manager"] as const;
+export const LEGACY_ROLES = ["admin", "recruiter", "hiring_manager"] as const;
+export const ALL_USER_ROLES = [
+  "candidate",
+  "hiring_team",
+  "platform_manager",
+  "admin",
+  "recruiter",
+  "hiring_manager",
+] as const;
+
+export type CanonicalRole = (typeof CANONICAL_ROLES)[number];
+export type LegacyRole = (typeof LEGACY_ROLES)[number];
+export type UserRole = (typeof ALL_USER_ROLES)[number];
+
+export const normalizeRole = (role: UserRole | string): CanonicalRole => {
+  switch (role) {
+    case "admin":
+    case "platform_manager":
+      return "platform_manager";
+    case "recruiter":
+    case "hiring_manager":
+    case "hiring_team":
+      return "hiring_team";
+    case "candidate":
+    default:
+      return "candidate";
+  }
+};
 
 export interface IUser {
   name: string;
@@ -10,6 +38,12 @@ export interface IUser {
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  headline?: string;
+  phone?: string;
+  bio?: string;
+  skills?: string[];
+  resumeId?: mongoose.Types.ObjectId;
+  candidateProfileId?: mongoose.Types.ObjectId;
   lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -50,14 +84,46 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
     role: {
       type: String,
       enum: {
-        values: ["admin", "recruiter", "hiring_manager"],
+        values: ALL_USER_ROLES,
         message: "{VALUE} is not a supported role",
       },
-      default: "recruiter",
+      default: "candidate",
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    headline: {
+      type: String,
+      trim: true,
+      maxlength: [150, "Headline cannot exceed 150 characters"],
+      default: "",
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [30, "Phone cannot exceed 30 characters"],
+      default: "",
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: [2000, "Bio cannot exceed 2000 characters"],
+      default: "",
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    resumeId: {
+      type: Schema.Types.ObjectId,
+      ref: "ResumeFile",
+      default: null,
+    },
+    candidateProfileId: {
+      type: Schema.Types.ObjectId,
+      ref: "Candidate",
+      default: null,
     },
     lastLoginAt: {
       type: Date,
@@ -70,6 +136,7 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
     toJSON: {
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = (ret._id as { toString(): string })?.toString();
+        ret.canonicalRole = normalizeRole(ret.role as UserRole);
         delete ret._id;
         delete ret.__v;
         delete ret.passwordHash;

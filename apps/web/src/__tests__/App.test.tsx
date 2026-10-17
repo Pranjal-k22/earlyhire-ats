@@ -22,9 +22,12 @@ describe("App Shell Component", () => {
     expect(screen.getByText("Candidates")).toBeInTheDocument();
     expect(screen.getByText("Jobs")).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Service: earlyai-ats-api/)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Service: earlyai-ats-api/)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it("renders recruitment metric stage cards", async () => {
@@ -35,8 +38,11 @@ describe("App Shell Component", () => {
     expect(screen.getByText("Interview")).toBeInTheDocument();
     expect(screen.getByText("Hired")).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.getByText(/Service: earlyai-ats-api/)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Service: earlyai-ats-api/)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 });

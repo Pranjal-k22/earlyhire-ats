@@ -372,3 +372,39 @@ Do not call the MVP ready for submission unless all of the following are true:
   4. Backend Cookie & CORS Hardening: `SameSite=None; Secure` enforced for cross-site cookie transmission between Vercel and Render in production; dynamic CORS allowlist strictly rejects untrusted origins; exact cookie attributes preserved on logout.
   5. Atlas Cloud Index Inspection (Harmless): Authenticated inspection confirmed all required indexes active on remote cluster `earlyhire-ats`: partial unique index on applications (`candidateId_1_jobId_1`, `partialFilter: { status: "Active" }`) and compound analytics indexes across `applications` and `stagehistories`.
 - **Verified by:** Antigravity (AI Coding Assistant)
+
+---
+
+### Test run — 2026-10-17 23:05 UTC (AI-Powered End-to-End Recruitment Workflow)
+- **Commit:** `feat/ai-candidate-recruitment-workflow`
+- **Environment:** Local test runner with isolated MongoDB database (`earlyai_ats_test`) and Vitest JSDOM; remote MongoDB Atlas verified
+- **`npm run lint`:** PASS — exit code: 0 (0 errors, 0 warnings across monorepo)
+- **`npm run typecheck`:** PASS — exit code: 0 (TypeScript strict mode passed on both `web` and `api`)
+- **`npm test`:** PASS — exit code: 0; passed: 219 tests, failed: 0 across 19 test suites (47 web, 172 api):
+  - `apps/web/src/__tests__/App.test.tsx`: 2 passed
+  - `apps/web/src/__tests__/JobsView.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/CandidatesView.test.tsx`: 6 passed
+  - `apps/web/src/__tests__/PipelineView.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/NotesAndSearch.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/DashboardView.test.tsx`: 10 passed
+  - `apps/web/src/__tests__/AuthWorkflow.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/EndToEndIntegration.test.tsx`: 5 passed
+  - `apps/api/src/__tests__/health.test.ts`: 2 passed
+  - `apps/api/src/__tests__/auth.test.ts`: 18 passed
+  - `apps/api/src/__tests__/job.test.ts`: 14 passed
+  - `apps/api/src/__tests__/candidate.test.ts`: 22 passed
+  - `apps/api/src/__tests__/application.test.ts`: 25 passed
+  - `apps/api/src/__tests__/searchAndNotes.test.ts`: 30 passed
+  - `apps/api/src/__tests__/analytics.test.ts`: 15 passed
+  - `apps/api/src/__tests__/security.test.ts`: 29 passed
+  - `apps/api/src/__tests__/rbac.test.ts`: 8 passed (Canonical RBAC, Candidate profile access, Signup role boundaries, Migration preview/execution)
+  - `apps/api/src/__tests__/resumeAndAts.test.ts`: 5 passed (Private storage, Magic-byte inspection, SHA-256 hash, Sanitization, ATS scoring & caching, Prompt injection isolation)
+  - `apps/api/src/__tests__/workflowAndPlatform.test.ts`: 4 passed (Stage reviews, Google Meet scheduling with fallback, Structured confidential vs candidate feedback, Platform manager AI telemetry)
+- **`npm run build`:** PASS — exit code: 0 (Vite frontend built `apps/web/dist` in 1m 32s with chunk splitting; `tsc` compiled `apps/api/dist`; 0 warnings)
+- **AI Safety & RBAC Verification:**
+  1. AI Output strictly advisory: All hiring stage transitions and offer decisions require explicit human action.
+  2. Prompt Injection Defense: Resume text quarantined within `<resume_content>` XML tags; system prompts enforce JSON schema validation and ignore embedded prompt instructions.
+  3. Resume Storage Privacy: Files stored in private storage `uploads/resumes/` outside web root with magic-byte content validation.
+  4. Google Meet Integration: Created using official Google Calendar API with `conferenceDataVersion=1`, conference status tracking, and manual link fallback.
+  5. Feedback Release Controls: Internal notes strictly confidential; candidate-releasable feedback requires explicit release by authorized hiring-team member.
+- **Verified by:** Antigravity (AI Coding Assistant)

@@ -809,3 +809,54 @@ The data model strictly separates Candidate (individual entity) from Application
 - `GET /api/v1/dashboard/metrics` (Backward-compatible alias for overview).
 - Protected with `requireAuth` (401 `UNAUTHENTICATED`).
 
+---
+
+## 15. AI-Powered End-to-End Recruitment Architecture
+
+### 15.1 Domain Models
+1. **`ResumeFile` (`resumes`):**
+   - Fields: `candidateId`, `filename`, `storedPath`, `mimeType`, `sizeBytes`, `sha256Hash`, `extractedText`, `charCount`, `parsingStatus` (`pending`, `parsed`, `failed`), `deletedAt`.
+   - Security: Stored in private directory `uploads/resumes/`. Validated via magic bytes inspection (`%PDF`, `PK\x03\x04`, text).
+2. **`AtsAnalysis` (`atsanalyses`):**
+   - Fields: `resumeId`, `candidateId`, `jobId`, `overallScore` (0–100), `criteriaBreakdown`, `requiredSkillsEvidence`, `preferredSkillsEvidence`, `missingCriteria`, `improvementSuggestions`, `interviewTopics`, `provider`, `model`, `promptVersion`, `requestHash`.
+   - Caching: Indexed on unique compound `requestHash` (SHA-256 of resume text, job specs, rubric, and model) preventing redundant external AI provider requests.
+3. **`StageReview` (`stagereviews`):**
+   - Fields: `applicationId`, `candidateId`, `jobId`, `stage` (`Screening`, `Interview`), `reviewSummary`, `suggestedQuestions`, `evidenceHighlights`, `potentialConcerns`, `rubricVersion`, `humanDecision` (`decision`, `notes`, `decidedBy`, `decidedAt`).
+4. **`Interview` (`interviews`):**
+   - Fields: `applicationId`, `candidateId`, `jobId`, `title`, `scheduledStartTime`, `scheduledEndTime`, `meetingType` (`google_meet`, `manual_link`), `meetingUrl`, `googleEventId`, `status` (`scheduled`, `rescheduled`, `cancelled`, `completed`), `attendees`, `cancellationReason`.
+5. **`InterviewFeedback` (`interviewfeedbacks`):**
+   - Fields: `interviewId`, `applicationId`, `interviewerId`, `ratings` (`technicalRating`, `communicationRating`, `problemSolvingRating`, `cultureAndValuesRating`, `overallRating`), `strengths`, `concerns`, `internalNotes`, `candidateReleasableFeedback`, `recommendation`, `isReleasedToCandidate`, `releasedAt`, `releasedBy`.
+6. **`Notification` (`notifications`):**
+   - Fields: `recipientId`, `recipientRole`, `title`, `message`, `type` (`application_submitted`, `ats_ready`, `stage_advanced`, `interview_scheduled`, `feedback_released`, `system_alert`), `data`, `isRead`, `readAt`.
+7. **`AIUsageRecord` (`aiusages`):**
+   - Fields: `provider`, `model`, `feature` (`ats_review`, `stage_screening`, `interview_brief`), `promptTokens`, `completionTokens`, `totalTokens`, `latencyMs`, `success`, `errorMessage`, `userId`, `applicationId`.
+
+### 15.2 API Routes & Authorization Matrix
+
+| Endpoint | Method | Canonical Role Allowed | Notes |
+|---|---|---|---|
+| `/api/v1/profile` | GET / PUT | `candidate`, `hiring_team`, `platform_manager` | Self-profile updates (candidates restricted to own profile) |
+| `/api/v1/resumes` | POST / GET | `candidate`, `hiring_team` | Resume upload with magic byte check & SHA-256 deduplication |
+| `/api/v1/resumes/:id` | GET / DELETE | `candidate` (own), `hiring_team` (own jobs) | Private streaming download and soft-delete |
+| `/api/v1/ats/analyze` | POST | `candidate`, `hiring_team` | AI ATS match scoring with deterministic caching |
+| `/api/v1/ats/history` | GET | `candidate` (own), `hiring_team` | Historical ATS evaluation reports |
+| `/api/v1/stage-reviews/application/:id` | GET / POST | `hiring_team`, `platform_manager` | Stage-specific screening probes & interview briefs |
+| `/api/v1/stage-reviews/:id/decision` | POST | `hiring_team`, `platform_manager` | Human hiring decision recording |
+| `/api/v1/interviews/schedule` | POST | `hiring_team`, `platform_manager` | Google Meet creation (`conferenceDataVersion=1`) or manual link |
+| `/api/v1/interviews/application/:id` | GET | `hiring_team`, `platform_manager` | List application interviews |
+| `/api/v1/interviews/my` | GET | `candidate` | Candidate interview schedule & Meet join links |
+| `/api/v1/feedback` | POST / GET | `hiring_team`, `platform_manager` | Structured interview rating submission |
+| `/api/v1/feedback/:id/release` | POST | `hiring_team`, `platform_manager` | Release candidate-releasable feedback |
+| `/api/v1/feedback/candidate/application/:id` | GET | `candidate` | View approved candidate-released feedback only |
+| `/api/v1/notifications` | GET | Authenticated users | User in-app notifications with unread counts |
+| `/api/v1/notifications/:id/read` | PATCH | Authenticated users | Mark notification as read |
+| `/api/v1/platform/users` | GET / PUT | `platform_manager` | Team account administration and role updates |
+| `/api/v1/platform/ai-metrics` | GET | `platform_manager` | AI token consumption, latency, and request totals |
+| `/api/v1/platform/health/integrations` | GET | `platform_manager` | Google Calendar and AI provider status checks |
+
+### 15.3 AI Provider Abstraction & Prompt Defense
+- Implements `AiProvider` interface with `GroqProvider`, `GeminiProvider`, and `FallbackAiProvider`.
+- Automatic rate-limit handling with bounded backoff on HTTP 429.
+- System prompt isolates untrusted resume content within `<resume_content>` XML tags and strictly prohibits instructions within resumes from modifying scoring behavior.
+- Responses strictly validated with Zod schemas (`atsAnalysisSchema`, `stageReviewSchema`, `interviewFeedbackSummarySchema`).
+- Deterministic offline heuristic fallback guarantees zero failure when API keys are unconfigured.

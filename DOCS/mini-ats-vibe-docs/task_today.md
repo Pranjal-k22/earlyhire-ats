@@ -5,61 +5,83 @@
 ## Session metadata
 
 - **Date:** 2026-10-17
-- **Phase:** Phase 10 — Deployment Readiness & Cloud Release
-- **Time box:** 2 hours
-- **Status:** PASS (Local regression suite: 202/202 passing across 16 test suites [47 web, 155 api]; zero lint errors, zero lint warnings; zero TypeScript errors; production build clean; Atlas live cloud indexes and connectivity verified).
-- **Branch:** `feat/phase-10-deployment-readiness`.
+- **Phase:** Feature Phase A–I — AI-Powered End-to-End Recruitment Workflow
+- **Time box:** Full implementation session
+- **Status:** PASS (Local regression suite: 219/219 passing across 19 test suites [47 web, 172 api]; zero ESLint errors, zero ESLint warnings; zero TypeScript errors; production build clean; Atlas live cloud connectivity verified).
+- **Branch:** `feat/ai-candidate-recruitment-workflow`.
 
 ## Current task
 
-Execute Phase 10 deployment readiness audit, configure Vercel and Render targets, establish cross-origin cookie and CSRF topologies, harmlessly inspect and verify MongoDB Atlas cloud indexes, and generate the production release plan and smoke-test checklist.
+Evolve EarlyAI ATS into an end-to-end AI-assisted recruitment platform supporting:
+1. Three canonical roles (`candidate`, `hiring_team`, `platform_manager`) with backward-compatible role mapping.
+2. Candidate self-service profile, secure resume upload with magic-byte validation, and SHA-256 deduplication.
+3. Structured AI ATS analysis (0–100 match score, rubric breakdown, skill evidence, missing criteria, prompt injection guardrails).
+4. Multi-provider AI engine (Groq, Gemini, and offline deterministic fallback).
+5. Stage-specific AI reviews (Screening probes & Interview briefs) with human decision controls.
+6. Google Calendar/Meet integration (`conferenceDataVersion=1`) with manual link fallback.
+7. Structured interview evaluation separating confidential internal notes from candidate-releasable feedback.
+8. In-app notifications with unread tracking for candidates and hiring teams.
+9. Platform Manager dashboard for user role administration, AI usage telemetry, and integration health.
+10. Enhanced Kanban board layout preventing card clipping and nested horizontal scrollbars.
 
-## Requirements
+## Requirements & Phase Gates
 
-- [x] Gate 1: Git and worktree safety verified. Checked clean branch off `fbfca12`, created `feat/phase-10-deployment-readiness`. Confirmed `.env` and local secrets are excluded from Git.
-- [x] Gate 2: Production configuration audit completed.
-  - Verified `apps/api` binds to `env.HOST` (`0.0.0.0`) and `env.PORT` for Render container ingress.
-  - Verified `apps/api/dist/server.js` production build and start command (`node dist/server.js`).
-  - Verified `apps/web` production build with code splitting (`dist/index.html`, `dist/assets/`).
-  - Added `apps/web/vercel.json` for client-side SPA routing (`/(.*)` -> `/index.html`).
-  - Added `apps/web/src/api/baseUrl.ts` and `apps/web/src/vite-env.d.ts` supporting `VITE_API_URL` prefixing.
-  - Verified production secrets validation in `env.ts` (fails fast on missing `MONGODB_URI` or weak `JWT_SECRET`).
-  - Verified zero mock data in production application bundle.
-- [x] Gate 3: MongoDB Atlas and cloud index verification completed.
-  - Authenticated connection to Atlas cluster `cluster0.s8vxj7j.mongodb.net` and database `earlyhire-ats` verified.
-  - Harmless index inspection verified all 6 collections: `applications`, `notes`, `stagehistories`, `candidates`, `jobs`, `users`.
-  - ACT-09 verified: `applications` collection contains `candidateId_1_jobId_1` unique partial index (`partialFilter: {"status": "Active"}`).
-  - ACT-10 verified: `applications` and `stagehistories` contain all required compound indexes for Phase 7 analytics.
-- [x] Gate 4: Production authentication, cookies, CORS, and CSRF verified.
-  - `apps/api/src/utils/jwt.ts`: `getAuthCookieOptions` sets `sameSite: "none"` and `secure: true` in production (configurable via `COOKIE_SAME_SITE`).
-  - `apps/api/src/app.ts`: Dynamic CORS origin matching with `credentials: true` against explicit `CLIENT_URL` allowlist (rejects untrusted origins; no wildcards).
-  - `apps/api/src/middleware/csrf.ts`: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) protected by `Origin` / `Referer` allowlist check.
-  - Logout cookie clearing preserves identical security attributes (`httpOnly`, `sameSite`, `secure`, `path`).
-- [x] Gate 5: Final local regression checks executed with actual outcomes:
-  - `npm run lint`: PASSED (0 errors, 0 warnings across all workspaces).
-  - `npm run typecheck`: PASSED (0 errors across all workspaces).
-  - `npm test`: PASSED (202/202 passed across 16 test suites: 47 web, 155 api).
-  - `npm run build`: PASSED (both web and api production artifacts compiled).
-- [x] Gate 6: Deployment configuration and comprehensive smoke-test plan prepared for Vercel and Render.
-- [x] Gate 7: Documentation updated across `DOCS/MANUAL_ACTIONS.md`, `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/implementation_plan.md`.
-- [x] Gate 8: Stopping rule enforced. No cloud deployments triggered without explicit owner authorization.
+- [x] **Feature Phase A (Architecture & Audit):** Completed architecture design and data modeling in `DOCS/mini-ats-vibe-docs/ai_recruitment_workflow_design.md`.
+- [x] **Feature Phase B (Canonical RBAC & Profile):**
+  - Updated User model with `normalizeRole()`, candidate profile fields (`headline`, `phone`, `bio`, `skills`, `resumeId`).
+  - Added `requireRole` middleware with canonical mapping and `requireSelfOrRole` for object-level authorization.
+  - Implemented `profile.routes.ts` and `profile.controller.ts` (`GET/PUT /api/v1/profile`).
+  - Created idempotent migration script `migrateRoles.ts` with dry-run preview and execute modes.
+  - Added 8 integration tests in `rbac.test.ts` (100% passing).
+- [x] **Feature Phase C (Secure Resume Upload & Magic-Byte Parsing):**
+  - Private filesystem storage in `uploads/resumes/` (strictly excluded from Git).
+  - Magic-byte validation (`%PDF`, `PK\x03\x04`, text), SHA-256 content hash, text sanitization and bounding (50k chars).
+  - Implemented `resume.routes.ts` and `resume.controller.ts` (upload, download stream, soft delete).
+- [x] **Feature Phase D (AI Provider Engine & ATS Analyzer):**
+  - Provider abstraction supporting Groq, Gemini, and offline deterministic fallback.
+  - Rate limiting, bounded exponential backoff on HTTP 429, telemetry tracking in `AIUsageRecord`.
+  - Prompt injection isolation using XML boundary tags and strict system rules.
+  - Deterministic ATS analysis caching keyed by SHA-256 hash.
+  - Added 5 integration tests in `resumeAndAts.test.ts` (100% passing).
+- [x] **Feature Phase E & F (Recruitment Workflow, Interviews, Meet & Feedback):**
+  - Stage-specific AI reviews (`stageReview.model.ts`, `stageReview.controller.ts`, `stageReview.routes.ts`).
+  - Google Calendar & Meet integration (`conferenceDataVersion=1`, `googleCalendarService.ts`, `interview.controller.ts`).
+  - Structured interview feedback with confidential notes vs candidate-releasable feedback (`interviewFeedback.model.ts`, `feedback.controller.ts`).
+  - In-app notification center (`notification.model.ts`, `notification.controller.ts`, `notification.routes.ts`).
+  - Added 4 integration tests in `workflowAndPlatform.test.ts` (100% passing).
+- [x] **Feature Phase G (Platform Manager Dashboard & Auditability):**
+  - User role administration endpoints (`GET/PUT /api/v1/platform/users`).
+  - AI usage metrics aggregation (`GET /api/v1/platform/ai-metrics`).
+  - System integration health checks (`GET /api/v1/platform/health/integrations`).
+- [x] **Feature Phase H (Frontend UX & Kanban Integration):**
+  - Created web API clients for profile, resume, ats, interview, feedback, stageReview, notification, and platform.
+  - Implemented `CandidatePortalView.tsx` with profile completeness, resume upload, ATS analysis report, interview schedules, and notifications.
+  - Implemented `PlatformPortalView.tsx` with user role management, AI telemetry charts, and integration health status.
+  - Updated `ApplicationCard.tsx` with action buttons for AI Review, Schedule Meet, and Feedback.
+  - Updated `PipelineView.tsx` with roomy horizontal scrolling container (`min-w-[1520px]`, `w-[245px]` per column) eliminating card clipping, and mounted `StageReviewDrawer`, `ScheduleInterviewModal`, and `InterviewFeedbackModal`.
+  - Updated `App.tsx` with dynamic role-based navigation and `<NotificationsDropdown />`.
+- [x] **Feature Phase I (Verification & Documentation):**
+  - All test suites passing (219/219 tests across monorepo).
+  - ESLint 0 errors, 0 warnings.
+  - TypeScript 0 errors.
+  - Production builds passing for both `apps/web` and `apps/api`.
 
 ## Completion gate
 
 ```bash
 npm run lint       # PASSED (exit code 0; 0 errors, 0 warnings across monorepo)
 npm run typecheck  # PASSED (exit code 0 across web and api workspaces)
-npm test           # PASSED (exit code 0, 202/202 tests passing across 16 test suites)
-npm run build      # PASSED (exit code 0, 0 chunk warnings; web bundle 232 kB, api dist/server.js)
+npm test           # PASSED (exit code 0; 219/219 tests passing across 19 suites: 47 web, 172 api)
+npm run build      # PASSED (exit code 0; web bundle compiled in 1m 32s, api dist/server.js)
 ```
 
 ## Session result
 
-- **Outcome:** Phase 10 deployment readiness audit and cloud preparation complete on `feat/phase-10-deployment-readiness`.
+- **Outcome:** Feature Phases A through I complete on `feat/ai-candidate-recruitment-workflow`.
 - **Infrastructure Actions:**
   - `ACT-06`: DONE / VERIFIED (Live Atlas database connection, ping `{ ok: 1 }`).
-  - `ACT-09`: DONE / VERIFIED (Atlas Application partial unique index inspected and confirmed active).
-  - `ACT-10`: DONE / VERIFIED (Atlas Analytics compound indexes inspected and confirmed active).
-  - `ACT-08`: SOURCE-VERIFIED / PENDING LIVE HOSTING TEST (Cross-domain cookies & CORS configured in code; live staging test required once deployed).
-  - `ACT-11`: PENDING PREVIEW DEPLOYMENT (Physical mobile smoke testing pending deployed URL).
-- **Deployment Readiness:** READY FOR OWNER REVIEW.
+  - `ACT-09`: DONE / VERIFIED (Atlas Application partial unique index confirmed active).
+  - `ACT-10`: DONE / VERIFIED (Atlas Analytics compound indexes confirmed active).
+  - `ACT-12`: CREATED (Google Cloud OAuth 2.0 & Calendar API production credentials).
+  - `ACT-13`: CREATED (Production AI Provider credentials for Groq / Gemini; heuristic fallback active).
+  - `ACT-14`: CREATED (Canonical role migration execution script `npm run migrate:roles -- --execute`).

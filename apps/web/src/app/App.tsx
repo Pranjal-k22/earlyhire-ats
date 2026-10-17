@@ -16,12 +16,17 @@ import {
   LogOut,
   UserPlus,
   Shield,
+  Sparkles,
+  Cpu,
 } from "lucide-react";
 
 import { JobsView } from "../features/jobs/JobsView";
 import { CandidatesView } from "../features/candidates/CandidatesView";
 import { PipelineView } from "../features/pipeline/PipelineView";
 import { DashboardView } from "../features/dashboard/DashboardView";
+import { CandidatePortalView } from "../features/candidate/CandidatePortalView";
+import { PlatformPortalView } from "../features/platform/PlatformPortalView";
+import { NotificationsDropdown } from "../features/notifications/NotificationsDropdown";
 import { AuthModal } from "../features/auth/AuthModal";
 import { fetchMe, logout } from "../api/authApi";
 import { API_BASE } from "../api/baseUrl";
@@ -32,8 +37,10 @@ interface HealthStatus {
   service: string;
 }
 
+export type AppTab = "overview" | "jobs" | "candidates" | "pipeline" | "candidate" | "platform";
+
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "candidates" | "pipeline">("overview");
+  const [activeTab, setActiveTab] = useState<AppTab>("overview");
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +81,10 @@ export const App: React.FC = () => {
       .then((res) => {
         if (res?.data?.user) {
           setCurrentUser(res.data.user);
+          const role = res.data.user.canonicalRole || res.data.user.role;
+          if (role === "candidate") {
+            setActiveTab("candidate");
+          }
         } else {
           setCurrentUser(null);
         }
@@ -109,6 +120,10 @@ export const App: React.FC = () => {
 
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user);
+    const role = user.canonicalRole || user.role;
+    if (role === "candidate") {
+      setActiveTab("candidate");
+    }
     setAuthNotice(`Signed in as ${user.name}`);
     setTimeout(() => setAuthNotice(null), 4000);
   };
@@ -134,12 +149,25 @@ export const App: React.FC = () => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const navigationItems = [
-    { id: "overview", label: "Dashboard", icon: LayoutDashboard },
-    { id: "candidates", label: "Candidates", icon: Users },
-    { id: "jobs", label: "Jobs", icon: Briefcase },
-    { id: "pipeline", label: "Pipeline", icon: Layers },
-  ] as const;
+  const userRole = currentUser?.canonicalRole || currentUser?.role;
+  const isCandidate = userRole === "candidate";
+  const isPlatformManager = userRole === "platform_manager" || userRole === "admin";
+
+  const navigationItems = isCandidate
+    ? [
+        { id: "candidate" as AppTab, label: "My ATS Portal", icon: Sparkles },
+        { id: "jobs" as AppTab, label: "Explore Jobs", icon: Briefcase },
+      ]
+    : [
+        { id: "overview" as AppTab, label: "Dashboard", icon: LayoutDashboard },
+        { id: "candidates" as AppTab, label: "Candidates", icon: Users },
+        { id: "jobs" as AppTab, label: "Jobs", icon: Briefcase },
+        { id: "pipeline" as AppTab, label: "Pipeline", icon: Layers },
+        { id: "candidate" as AppTab, label: "Candidate View", icon: Sparkles },
+        ...(isPlatformManager
+          ? [{ id: "platform" as AppTab, label: "Platform Ops", icon: Cpu }]
+          : []),
+      ];
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -259,13 +287,13 @@ export const App: React.FC = () => {
 
           {/* Right Action Icons & User Dropdown */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <button
-              type="button"
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all hidden sm:flex"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-            </button>
+            {currentUser ? (
+              <NotificationsDropdown />
+            ) : (
+              <div className="p-2 text-slate-300 rounded-lg hidden sm:flex">
+                <Bell className="w-5 h-5 opacity-40" />
+              </div>
+            )}
 
             <div className="h-6 w-px bg-slate-200 hidden sm:block" />
 
@@ -286,7 +314,7 @@ export const App: React.FC = () => {
                   <div className="text-left hidden sm:block">
                     <p className="text-sm font-semibold text-slate-800 leading-none">{currentUser.name}</p>
                     <p className="text-[11px] text-slate-500 capitalize leading-none mt-1">
-                      {currentUser.role.replace("_", " ")}
+                      {(currentUser.canonicalRole || currentUser.role).replace("_", " ")}
                     </p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
@@ -301,7 +329,7 @@ export const App: React.FC = () => {
                       <div className="mt-1 flex items-center gap-1.5">
                         <Shield className="w-3 h-3 text-brand-600" />
                         <span className="text-[10px] uppercase font-bold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">
-                          {currentUser.role}
+                          {currentUser.canonicalRole || currentUser.role}
                         </span>
                       </div>
                     </div>
@@ -365,6 +393,10 @@ export const App: React.FC = () => {
             <CandidatesView />
           ) : activeTab === "pipeline" ? (
             <PipelineView />
+          ) : activeTab === "candidate" ? (
+            <CandidatePortalView />
+          ) : activeTab === "platform" ? (
+            <PlatformPortalView />
           ) : (
             <div className="space-y-6">
               {health && (

@@ -725,3 +725,46 @@ _Initial baseline recorded prior to Phase 1._
     - Full repository-specific deployment instructions and environment variable specs prepared for Vercel and Render.
     - Comprehensive smoke-test checklist prepared covering Authentication, Jobs, Candidates, Applications, Notes, and Analytics.
 - **Auditor:** AI Coding Assistant (Antigravity)
+
+---
+
+### Audit 12: Feature Phases A–I — AI-Powered End-to-End Recruitment Workflow Verification
+
+- **Date:** 2026-10-17
+- **Branch:** `feat/ai-candidate-recruitment-workflow`
+- **Scope:** Architecture, data modeling, canonical RBAC (`candidate`, `hiring_team`, `platform_manager`), private resume storage with magic-byte validation, Groq/Gemini/Fallback AI provider engine, deterministic ATS scoring & caching, stage-specific reviews, Google Calendar/Meet integration, structured feedback release controls, in-app notifications, platform manager portal, and full monorepo regression.
+- **Key Findings & Verifications:**
+  - **1. Server-Enforced Canonical RBAC:**
+    - Canonical roles defined: `candidate`, `hiring_team`, `platform_manager`.
+    - Backward-compatibility mapping: `admin` maps to `platform_manager`; `recruiter` and `hiring_manager` map to `hiring_team`; legacy roles seamlessly supported in all auth middleware via `normalizeRole()`.
+    - Public signup prevents privilege escalation: strictly forces `candidate` (default) or `recruiter`/`hiring_team`. Never allows public creation of `platform_manager` or `admin`.
+    - Object-level authorization: `requireSelfOrRole` guarantees candidates cannot access other candidates' profiles, resumes, reports, or unreleased notes.
+    - Idempotent migration script `apps/api/src/scripts/migrateRoles.ts` supports dry-run preview and safe execution.
+  - **2. Secure Resume Management:**
+    - Private filesystem storage in `uploads/resumes/` (strictly excluded from Git via `.gitignore`).
+    - Magic-byte validation verifies `%PDF` (`\x25\x50\x44\x46`), `PK\x03\x04` (docx), and text rather than trusting client-supplied MIME types.
+    - Content hashing via SHA-256 prevents duplicate parsing, detects identical uploads, and tracks versions without overwriting historical application records.
+    - Text sanitization strips control characters, normalizes whitespace, and bounds extraction to 50,000 characters.
+  - **3. AI Provider Engine & Prompt Isolation:**
+    - Provider abstraction in `apps/api/src/services/ai/aiProvider.ts` with native clients for Groq and Gemini.
+    - Rate-limiting protection with bounded exponential backoff handling HTTP 429 quota limits.
+    - Prompt injection isolation: Untrusted resume content and job descriptions are quarantined inside XML boundary tags (`<resume_content>`, `<job_description>`) with strict system instructions prohibiting resume instructions from overriding scoring rubrics.
+    - Deterministic heuristic fallback provider (`FallbackAiProvider`) provides zero-failure offline local operation with realistic scoring (0–100), screening probes, and interview brief questions.
+    - Deterministic caching in `atsAnalysis.model.ts` keyed by SHA-256 hash prevents duplicate provider calls and cost waste.
+    - Telemetry tracking in `aiUsage.model.ts` records model ID, token estimates, latency, and status without exposing secrets.
+  - **4. Recruitment Workflow & Human Decision Governance:**
+    - Main 6-stage Kanban pipeline preserved: Applied, Screening, Interview, Offer, Hired, Rejected.
+    - AI decision-support guarantee: AI outputs are purely advisory; no candidate is ever automatically hired or rejected by AI.
+    - Stage Reviews: Automated screening probe questions generated during Screening; interview preparation briefs generated during Interview.
+    - Google Meet Scheduling: Official Google Calendar API integration with `conferenceDataVersion=1`, conference status tracking, and graceful fallback to manual link entry.
+    - Structured Interview Feedback: Clear separation of confidential internal recruiter/interviewer notes from candidate-releasable feedback. Explicit release action required before feedback is visible to candidates.
+  - **5. Frontend UX & Kanban Ergonomics:**
+    - Board horizontal scrolling container (`overflow-x-auto min-w-[1520px]`) with consistent column width (`w-[245px]`) ensures cards are never clipped and avoids nested horizontal scrollbars inside cards.
+    - Quick action buttons on cards: AI Review (Sparkles), Schedule Meet (Video), Feedback (MessageSquare).
+    - Top header integration: Live unread badge `<NotificationsDropdown />`, user canonical role badge, and role-appropriate tab switching.
+  - **6. Monorepo Quality & Regression Checks:**
+    - `npm run lint`: PASS (0 errors, 0 warnings across monorepo).
+    - `npm run typecheck`: PASS (0 errors across web and api).
+    - `npm test`: PASS (219/219 tests passing across 19 test suites: 47 web, 172 api).
+    - `npm run build`: PASS (both web and api production artifacts compiled cleanly).
+- **Auditor:** AI Coding Assistant (Antigravity)

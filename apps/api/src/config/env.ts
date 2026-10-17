@@ -18,6 +18,16 @@ const envSchema = z
     JWT_SECRET: z.string().default("development_jwt_secret_at_least_32_characters_long_placeholder"),
     JWT_EXPIRES_IN: z.string().default("7d"),
     COOKIE_SAME_SITE: z.enum(["lax", "none", "strict"]).optional(),
+    RESUME_STORAGE_DIR: z.string().default("uploads/resumes"),
+    AI_PROVIDER: z.enum(["gemini", "groq", "mock"]).default("gemini"),
+    AI_FALLBACK_PROVIDER: z.enum(["gemini", "groq", "mock", "none"]).default("groq"),
+    GEMINI_API_KEY: z.string().optional(),
+    GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+    GROQ_API_KEY: z.string().optional(),
+    GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_REDIRECT_URI: z.string().optional(),
   })
   .transform((data) => {
     if (data.NODE_ENV === "test") {

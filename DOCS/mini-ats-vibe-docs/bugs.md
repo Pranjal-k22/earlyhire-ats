@@ -220,3 +220,36 @@ When a request payload exceeded Express body-parser's configured 1MB limit (`exp
 #### Fix and regression protection
 - Added explicit inspection for `err.type === "entity.too.large"` and `err.status === 413` in `errorHandler.ts`, returning standard HTTP 413 `PAYLOAD_TOO_LARGE`.
 - Added regression scenario 5.2 in `apps/api/src/__tests__/security.test.ts`.
+
+---
+
+### BUG-009: Vitest JSDOM multi-fork competition caused App.test.tsx waitFor default timeout failure under Windows CPU load
+
+#### Issue summary
+- **Component:** `apps/web/src/__tests__/App.test.tsx` and `apps/web/vite.config.ts`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Feature Phase I
+
+#### Problem description
+When running the full test suite across 8 concurrent web test files with `--pool=forks`, high CPU utilization during heavy JSDOM rendering and Recharts initialization caused React Testing Library's default 1000ms `waitFor` in `App.test.tsx` to occasionally time out before `fetch` microtasks resolved and component state re-rendered.
+
+#### Fix and regression protection
+- Added `{ timeout: 5000 }` to `waitFor` calls in `apps/web/src/__tests__/App.test.tsx`.
+- Increased `testTimeout` from `15000` to `35000` in `apps/web/vite.config.ts`.
+- Verified across multiple consecutive complete workspace test runs: 8/8 test files, 47/47 tests passing consistently.
+
+---
+
+### BUG-010: Zod .default() resolver input/output type mismatch in React Hook Form useForm
+
+#### Issue summary
+- **Component:** `apps/web/src/features/auth/AuthModal.tsx`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Feature Phase I
+
+#### Problem description
+In `AuthModal.tsx`, using `role: z.enum([...]).default("candidate")` created an asymmetric Zod schema where input type has optional `role?: ...` but output type has required `role: ...`. When passed to `zodResolver(signupSchema)` with `useForm<SignupFormValues>`, TypeScript compiler threw TS2322 / TS2345 error regarding parameter type incompatibility.
+
+#### Fix and regression protection
+- Defined `role: z.enum(["candidate", "recruiter", "hiring_team"])` without `.default()`, while providing `defaultValues: { role: "candidate" }` in `useForm`.
+- Typecheck verified clean with `tsc --noEmit` (exit code 0).

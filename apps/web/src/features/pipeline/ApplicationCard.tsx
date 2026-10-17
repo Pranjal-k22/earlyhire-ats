@@ -7,6 +7,9 @@ import {
   XCircle,
   Loader2,
   CheckCircle2,
+  Sparkles,
+  Video,
+  MessageSquare,
 } from "lucide-react";
 import { Application, HiringStage } from "../../types/application";
 import { StageBadge } from "./StageBadge";
@@ -16,6 +19,9 @@ interface ApplicationCardProps {
   onAdvance: (app: Application, nextStage: HiringStage) => Promise<void>;
   onReject: (app: Application) => void;
   onViewHistory: (app: Application) => void;
+  onOpenReview?: (app: Application) => void;
+  onSchedule?: (app: Application) => void;
+  onFeedback?: (app: Application) => void;
 }
 
 const NEXT_STAGE_MAP: Partial<Record<HiringStage, { next: HiringStage; label: string }>> = {
@@ -30,6 +36,9 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   onAdvance,
   onReject,
   onViewHistory,
+  onOpenReview,
+  onSchedule,
+  onFeedback,
 }) => {
   const [isAdvancing, setIsAdvancing] = useState(false);
 
@@ -97,8 +106,49 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         </div>
       </div>
 
+      {/* AI & Interview Actions */}
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 text-[11px]">
+        {onOpenReview && (
+          <button
+            type="button"
+            onClick={() => onOpenReview(application)}
+            className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-medium transition-colors"
+            title="Inspect AI Stage Review & Screening Probes"
+          >
+            <Sparkles className="w-3 h-3 text-indigo-600" />
+            <span>AI Review</span>
+          </button>
+        )}
+
+        <div className="flex items-center gap-1 ml-auto">
+          {currentStage === "Interview" && onSchedule && (
+            <button
+              type="button"
+              onClick={() => onSchedule(application)}
+              className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-md font-medium transition-colors"
+              title="Schedule Google Meet"
+            >
+              <Video className="w-3 h-3 text-purple-600" />
+              <span>Meet</span>
+            </button>
+          )}
+
+          {currentStage === "Interview" && onFeedback && (
+            <button
+              type="button"
+              onClick={() => onFeedback(application)}
+              className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-md font-medium transition-colors"
+              title="Submit Interview Feedback"
+            >
+              <MessageSquare className="w-3 h-3 text-amber-600" />
+              <span>Feedback</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Action Buttons */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+      <div className="pt-1.5 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => onViewHistory(application)}

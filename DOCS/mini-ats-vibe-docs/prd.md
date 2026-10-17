@@ -176,3 +176,32 @@ The MVP is successful when:
 
 ## 8. Definition of done
 A feature is complete only when its API/UI behavior, validation, authorization, empty/error states, and tests are implemented; the required checks pass; and documentation is updated. “Code written” or “looks correct” is not sufficient evidence. Do not claim a deployment or test passed unless it was actually verified.
+
+## 9. AI-Powered End-to-End Recruitment Workflow (Evolution)
+
+### 9.1 Three Canonical Role Categories & Server-Side RBAC
+The system transitions from legacy monolithic roles (`admin`, `recruiter`, `hiring_manager`) to three canonical role categories while preserving 100% backward compatibility via `normalizeRole()` middleware:
+1. **Candidate (`candidate`):** Self-service profile management, private resume upload/deletion, AI ATS analysis against open jobs, application progress tracking, interview schedule & Google Meet links, candidate-released feedback, and in-app notifications. Candidates cannot access internal recruiter notes, other candidates' records, or admin APIs.
+2. **Hiring Team (`hiring_team`):** Manage job postings, applicant Kanban pipeline, stage progression with concurrency checks (`expectedStage`, `expectedVersion`), AI screening probes & interview prep briefs, Google Calendar/Meet interview scheduling, confidential internal notes vs candidate-releasable feedback approval.
+3. **Platform Manager (`platform_manager`):** Team account management, role assignment and revocation, AI usage telemetry (request counts, latency, estimated tokens, model IDs), integration health monitoring, and system audit logs. Never exposes provider secrets, OAuth refresh tokens, or passwords.
+
+### 9.2 Secure Resume Upload & Private Storage
+- Files stored in private storage `uploads/resumes/` outside web root (strictly gitignored).
+- Content-type verified by inspection of magic bytes (`%PDF`, `PK\x03\x04`, text) rather than trusting client-supplied MIME headers.
+- Deduplication and integrity via SHA-256 content hashing. Text extraction normalized and bounded to 50,000 characters.
+
+### 9.3 AI Provider Architecture & ATS Match Scoring
+- Multi-provider abstraction (`GroqProvider`, `GeminiProvider`, `FallbackAiProvider`) with automatic model routing and bounded exponential backoff on HTTP 429.
+- Heuristic fallback engine ensures zero test or local workflow failures even when offline or unconfigured.
+- Prompt injection quarantine: Resume content and job descriptions enclosed in `<resume_content>` XML tags with strict system prompt boundaries.
+- Deterministic ATS analysis caching keyed by SHA-256 hash. Scoring returns overall match (0–100), criteria breakdown, evidence quotes, missing criteria, improvement suggestions, and interview topics.
+- Human decision governance: AI scores are strictly advisory; all stage advances, rejections, and hiring decisions remain under authorized human control.
+
+### 9.4 Interview Scheduling & Google Meet Integration
+- Official Google Calendar API integration with `conferenceDataVersion=1` to generate unique Google Meet conference links with conference status tracking.
+- Fallback manual link entry supported when automated Google integration is pending configuration.
+- Rescheduling, cancellation, and duplicate prevention.
+
+### 9.5 Structured Feedback & Notification Center
+- Separation of confidential internal interview notes from candidate-releasable feedback. Explicit release action required before feedback is exposed to candidates.
+- In-app notification center tracking read/unread state, ownership, and event delivery for application submissions, stage advances, interview invites, and released feedback.

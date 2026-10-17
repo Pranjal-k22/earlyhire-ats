@@ -135,3 +135,14 @@ npm run build
 5. Existing implementation.
 
 If two requirements at the same priority conflict, do not choose silently. Explain the exact conflict and request a decision. Security guardrails cannot be overridden by an ordinary feature shortcut.
+
+## 11. AI Recruitment Workflow Essentials
+
+1. **Three Canonical Roles:** Server-enforced RBAC for `candidate`, `hiring_team`, and `platform_manager`. Legacy roles (`admin`, `recruiter`, `hiring_manager`) map to canonical categories transparently via `normalizeRole()`.
+2. **Object-Level Authorization:** Candidates can only access their own profile, resumes, and reports via `requireSelfOrRole`. Never expose recruiter private notes to candidates.
+3. **Private Resume Storage:** Resumes stored in private directory `uploads/resumes/` (strictly gitignored). Content-type verified by magic bytes (`%PDF`, `PK\x03\x04`, text); SHA-256 content hashing for deduplication.
+4. **Prompt Isolation & Defense:** Resume text quarantined in `<resume_content>` XML tags with strict system instructions prohibiting prompt instructions from overriding rubrics.
+5. **AI as Decision Support:** AI scores (0–100) are advisory matching indicators. Final advancement, offer, and rejection decisions remain strictly human-controlled.
+6. **Provider Fallback:** Deterministic offline heuristic engine ensures zero failures when external Groq/Gemini API keys are unconfigured.
+7. **Google Meet Integration:** Official Google Calendar API with `conferenceDataVersion=1`, conference status checking, and manual link fallback.
+8. **Feedback Boundaries:** Internal evaluations and interviewer notes remain confidential until explicitly approved and released by authorized hiring-team members.

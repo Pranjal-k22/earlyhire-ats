@@ -163,3 +163,49 @@ For each phase, append a record to `audit.md` containing:
 - Manual scenarios tested
 - Known issues and follow-ups
 - Explicit statement of anything not verified
+
+---
+
+## Feature Evolution — AI-Powered End-to-End Recruitment Workflow (Phases A–I)
+
+- [x] **Feature Phase A: Architecture, Schema & RBAC Plan**
+  - Formulated comprehensive design artifact `DOCS/mini-ats-vibe-docs/ai_recruitment_workflow_design.md`.
+  - Defined 3 canonical roles (`candidate`, `hiring_team`, `platform_manager`), mapping legacy roles with 100% backward compatibility.
+  - Specified domain entities for resumes, ATS analyses, stage reviews, interviews, feedback, notifications, and AI telemetry.
+- [x] **Feature Phase B: Candidate Identity, Safe Role Migration & Candidate Profile**
+  - Extended User schema with canonical roles, `normalizeRole()` helper, and candidate profile fields (`headline`, `phone`, `bio`, `skills`, `resumeId`).
+  - Added object-level authorization (`requireSelfOrRole`) and self-service profile endpoints (`GET/PUT /api/v1/profile`).
+  - Created idempotent migration script `apps/api/src/scripts/migrateRoles.ts` with dry-run preview and execution modes.
+  - Added 8 automated integration tests in `rbac.test.ts`.
+- [x] **Feature Phase C: Secure Resume Upload, Parsing & ATS Data Layer**
+  - Implemented `ResumeFile` model tracking SHA-256 content hash, parsing status, and soft-deletion.
+  - Created private filesystem storage adapter (`uploads/resumes/` outside web root) with magic-byte content inspection (`%PDF`, `PK\x03\x04`, text), text sanitization, and 50k character bounding.
+  - Created `resume.controller.ts` and `resume.routes.ts` with secure streaming download.
+- [x] **Feature Phase D: AI Provider Engine, Application-Triggered Analysis & Reports**
+  - Provider abstraction supporting Groq, Gemini, and offline deterministic fallback.
+  - Rate limiting, bounded exponential backoff on HTTP 429, telemetry tracking in `AIUsageRecord`.
+  - Prompt injection isolation with XML boundary tags (`<resume_content>`, `<job_description>`) and strict system prompt guardrails.
+  - Deterministic ATS analysis caching keyed by SHA-256 hash.
+  - Added 5 automated integration tests in `resumeAndAts.test.ts`.
+- [x] **Feature Phase E & F: Recruitment Workflow, Interviews, Meet & Feedback**
+  - Stage review engine generating automated screening probes during Screening and interview briefs during Interview.
+  - Google Calendar & Meet integration using official API with `conferenceDataVersion=1`, conference status checking, and manual link fallback.
+  - Structured interview feedback separating confidential internal interviewer notes from candidate-releasable feedback.
+  - In-app notification system with read tracking for candidates and hiring teams.
+  - Added 4 automated integration tests in `workflowAndPlatform.test.ts`.
+- [x] **Feature Phase G: Platform Manager Dashboard, AI Usage Metrics & Audit Views**
+  - User role administration endpoints (`GET/PUT /api/v1/platform/users`).
+  - AI token consumption, latency, and error rate telemetry (`GET /api/v1/platform/ai-metrics`).
+  - Integration health checks (`GET /api/v1/platform/health/integrations`).
+- [x] **Feature Phase H: Frontend UX, Kanban Ergonomics & End-to-End Integration**
+  - Created frontend API clients for profile, resume, ats, interview, feedback, stageReview, notification, and platform.
+  - Implemented `CandidatePortalView.tsx` with profile completeness, resume upload, ATS analysis report, and interview schedules.
+  - Implemented `PlatformPortalView.tsx` with role administration, AI metrics, and integration health.
+  - Updated `ApplicationCard.tsx` with action buttons for AI Review, Schedule Meet, and Feedback.
+  - Updated `PipelineView.tsx` with roomy horizontal scrolling container (`min-w-[1520px]`, `w-[245px]` per column) eliminating card clipping, and mounted `StageReviewDrawer`, `ScheduleInterviewModal`, and `InterviewFeedbackModal`.
+  - Updated `App.tsx` with dynamic role navigation and `<NotificationsDropdown />`.
+- [x] **Feature Phase I: Monorepo Verification & Git Checkpoint**
+  - All test suites passing (219/219 tests across monorepo).
+  - ESLint passing (0 errors, 0 warnings across monorepo).
+  - TypeScript passing (0 errors across monorepo).
+  - Production builds verified clean for both `apps/web` and `apps/api`.
