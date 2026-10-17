@@ -5,57 +5,39 @@
 ## Session metadata
 
 - **Date:** 2026-10-17
-- **Phase:** Phase 1 — Project Skeleton and Shared Conventions
-- **Time box:** 4 hours (Hours 4–8)
-- **Status:** Phase 1 Completed & Verified (PASS).
-- **Branch:** `main` (clean, ready for Phase 2).
+- **Phase:** Phase 2 — MongoDB Integration, Authentication & Authorization
+- **Time box:** 4 hours (Hours 8–12)
+- **Status:** Phase 2 Completed & Verified (PASS).
+- **Branch:** `feat/phase-2-auth`.
 
 ## Current task
 
-Create and verify the repository/documentation scaffold for the Mini ATS. Do not implement application features until the product and architecture docs have been reviewed and the repository conventions are in place.
+Implement reliable MongoDB Atlas integration, User model, recruiter signup, password hashing with bcrypt, JWT HttpOnly cookie session management, and role-based authorization middleware. Do not implement application features beyond authentication.
 
 ## Requirements
 
-- [x] Read `prd.md` completely.
-- [x] Read `implementation_plan.md` completely.
-- [x] Read `Architecture-essentials.md` and `Architecture.md`.
-- [x] Inspect the repository before creating or modifying files. Preserve existing work.
-- [x] Create/verify `.gitignore` for `.env`, `.env.*` except `.env.example`, `node_modules/`, build output, coverage, logs, and editor/OS files.
-- [x] Create `.env.example` with variable names and safe placeholders only; never paste actual credentials.
-- [x] Establish root/package structure and package manager based on the agreed architecture; do not install redundant libraries.
-- [x] Ensure package scripts are planned for `lint`, `typecheck`, `test`, and `build`.
-- [x] Add a concise repository README outline if one does not exist.
-- [x] Record files changed and unresolved decisions in `audit.md`.
+- [x] Read `Architecture-essentials.md`, `Architecture.md`, and `prd.md`.
+- [x] Implement reusable database connection module with credential scrubbing (`apps/api/src/config/db.ts`).
+- [x] Implement User model with trimmed/lowercase email uniqueness, role enum, and bcrypt password hashing (`apps/api/src/models/user.model.ts`).
+- [x] Implement signup, login, logout, and getMe endpoints under `/api/v1/auth`.
+- [x] Ensure public signup strictly forces `recruiter` role only; ignore/reject client-supplied roles.
+- [x] Configure HttpOnly session cookie (`SameSite: Lax`, `Secure: true` in production, 7-day maxAge).
+- [x] Implement `requireAuth` and `requireRole` middleware (`admin`, `recruiter`, `hiring_manager`).
+- [x] Write 18 automated integration test scenarios covering authentication, security, and authorization.
+- [x] Ensure health check and existing scaffolding tests pass without regression.
+- [x] Update documentation (`audit.md`, `testing.md`, `bugs.md`, `task_today.md`, `MANUAL_ACTIONS.md`).
 
 ## Constraints / guardrails
 
-- Do not build unapproved features.
-- Do not introduce Next.js or Supabase; this project uses React + Vite, Express, and MongoDB Atlas as specified in the stack decision.
-- Do not switch the database to SQLite/PostgreSQL without an explicit decision and coordinated updates to all docs.
-- Do not create a complex monorepo toolchain unless it clearly reduces setup work. Prefer simple npm workspaces only if needed for two app folders.
-- Do not create fake test results, fake screenshots, or placeholder deployment URLs presented as real.
-- Keep components and modules small; avoid premature abstractions.
-
-## Reference files
-
-- `prd.md` — requirements and scope.
-- `implementation_plan.md` — sequence and time boxes.
-- `Architecture.md` — intended structure and technical details, if present.
-- `Architecture-essentials.md` — non-negotiable guardrails, if present.
-- `testing.md` — verification plan.
-- `audit.md` — evidence of completed work.
-
-## Expected deliverables
-
-1. A repository scaffold that is easy to run and understand.
-2. Environment/configuration examples without secrets.
-3. Required npm scripts configured or explicit notes describing what remains to configure.
-4. A short audit entry reporting the real command results.
-5. No application feature marked complete unless it exists and has been verified.
+- Do not implement job management, candidate management, applications, pipeline, or dashboard features in this phase.
+- Never store JWTs in localStorage or sessionStorage.
+- Never store plaintext passwords or log credentials.
+- Use validated environment variables only; keep secrets exclusively in `.env`.
+- Do not weaken production cookie security to make local development work.
 
 ## Completion gate
 
-Before marking this task complete, run every currently configured check, including:
+Before marking this task complete, run every configured check:
 
 ```bash
 npm run lint
@@ -64,19 +46,16 @@ npm test
 npm run build
 ```
 
-If any command is not yet configured or fails because the app scaffold is incomplete, report that honestly. Do not make unrelated feature changes to hide the failure.
-
 ## Session result (fill in after work)
 
-- **Outcome:** Phase 1 Project Skeleton and Shared Conventions completed. React + Vite + TypeScript frontend, Express + TypeScript backend, Tailwind styling tokens, centralized error handling, and health endpoint verified.
-- **Files changed:** `package.json`, `package-lock.json`, `.gitignore`, `.env.example`, `README.md`, `apps/web/*`, `apps/api/*`, `DOCS/MANUAL_ACTIONS.md`, `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/task_today.md`.
+- **Outcome:** Phase 2 MongoDB Integration, Authentication & Authorization completed and verified.
+- **Files changed:** `apps/api/src/config/env.ts`, `apps/api/src/config/db.ts`, `apps/api/src/models/user.model.ts`, `apps/api/src/utils/jwt.ts`, `apps/api/src/schemas/auth.schema.ts`, `apps/api/src/middleware/auth.ts`, `apps/api/src/types/express.d.ts`, `apps/api/src/controllers/auth.controller.ts`, `apps/api/src/routes/auth.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/server.ts`, `apps/api/src/__tests__/auth.test.ts`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`.
 - **Commands run / exit codes:**
   - `npm run lint`: exit code 0 (clean across `web` and `api`)
   - `npm run typecheck`: exit code 0 (strict mode passes on both workspaces)
-  - `npm test`: exit code 0 (4 tests passed across 2 test suites)
-  - `npm run build`: exit code 0 (Vite client build in 3.50s, tsc backend compile)
-  - Backend start & test: exit code 0 (HTTP 200, returned `{"status":"ok","service":"earlyai-ats-api"}`)
-  - Frontend dev server test: exit code 0 (Vite server ready at `http://localhost:5173/`)
-- **Tests:** 4 passed (App shell rendering, stage card counts, GET /api/v1/health 200 OK, 404 handler).
-- **Blockers / decisions needed:** None for Phase 1. Ready for Phase 2 database & authentication setup.
-- **Next task:** Begin Phase 2 (Hours 8–12: MongoDB Atlas connection, User model, bcrypt, JWT HttpOnly cookies, auth middleware).
+  - `npm test`: exit code 0 (22 tests passed across 3 test suites: `App.test.tsx` [2 passed], `health.test.ts` [2 passed], `auth.test.ts` [18 passed])
+  - `npm run build`: exit code 0 (Vite client build in 16.31s, `tsc` backend compile)
+  - Local backend execution & health check: exit code 0 (MongoDB connected, `GET /api/v1/health` returned HTTP 200 `{"status":"ok","service":"earlyai-ats-api"}`)
+- **Tests:** 22 passed, 0 failed.
+- **Blockers / decisions needed:** None. Atlas production provisioning tracked in ACT-06.
+- **Next task:** Begin Phase 3 — Job Openings & Candidate Management (Hours 12–20).

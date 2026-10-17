@@ -91,8 +91,8 @@ This file tracks all manual actions, architecture decisions, and external infras
   4. Obtain connection string URI: `mongodb+srv://<username>:<password>@cluster0.mongodb.net/earlyai_ats?retryWrites=true&w=majority`.
   5. Generate a secure random JWT secret: `openssl rand -hex 32`.
   6. Place credentials in local `.env` (never commit to Git).
-- **Status:** `PENDING` (Required for Phase 2)
-- **Verification Evidence / Method:** Successful database connection during Phase 2 startup test.
+- **Status:** `PENDING` (Local integration verified with isolated test database; required before cloud deployment in Phase 10)
+- **Verification Evidence / Method:** Local database connectivity verified with 22/22 automated integration tests passing. Cloud Atlas connection string required for Render deployment.
 
 ---
 

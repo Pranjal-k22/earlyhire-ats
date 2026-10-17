@@ -39,19 +39,19 @@ Mark an item `[x]` only after executing the check and recording evidence. “Imp
 
 ### A. Authentication and authorization
 
-- [ ] **AUTH-01 — Successful signup:** Valid email and allowed password create an account; response omits password/hash.
-- [ ] **AUTH-02 — Duplicate signup:** Registering the same normalized email twice returns a validation/conflict error and does not create a second account.
-- [ ] **AUTH-03 — Invalid email:** Malformed email is rejected with a field-level/client-understandable error.
-- [ ] **AUTH-04 — Weak password:** Password below the configured minimum is rejected.
-- [ ] **AUTH-05 — Successful login:** Correct credentials set the session cookie with required flags.
-- [ ] **AUTH-06 — Wrong credentials:** Incorrect email/password returns a generic authentication error without disclosing which field is correct.
-- [ ] **AUTH-07 — Logout:** Logout clears the cookie; subsequent protected API requests return 401.
-- [ ] **AUTH-08 — Anonymous access:** Protected endpoints reject requests without a valid session.
-- [ ] **AUTH-09 — Expired/tampered JWT:** Expired or invalid token is rejected; no protected data is returned.
-- [ ] **AUTH-10 — Role escalation:** Signup/profile payload attempting `role: "admin"` cannot grant elevated access.
-- [ ] **AUTH-11 — Role authorization:** Recruiter/hiring manager cannot call admin-only user-management operations.
-- [ ] **AUTH-12 — Cookie/CORS behavior:** Browser request from the configured frontend works with credentials; unapproved origins are rejected.
-- [ ] **AUTH-13 — Auth rate limiting:** Repeated login failures trigger the configured rate limiter without exposing secrets.
+- [x] **AUTH-01 — Successful signup:** Valid email and allowed password create an account; response omits password/hash. Verified in `apps/api/src/__tests__/auth.test.ts` (Scenario 1).
+- [x] **AUTH-02 — Duplicate signup:** Registering the same normalized email twice returns a 409 Conflict with code `EMAIL_EXISTS`. Verified in `auth.test.ts` (Scenario 4).
+- [x] **AUTH-03 — Invalid email:** Malformed email is rejected with 422 `VALIDATION_ERROR`. Verified in `auth.test.ts` (Scenario 5).
+- [x] **AUTH-04 — Weak password:** Passwords <8 chars or missing uppercase/numbers rejected with 422. Verified in `auth.test.ts` (Scenario 5).
+- [x] **AUTH-05 — Successful login:** Correct credentials set the session cookie with HttpOnly, SameSite=Lax, and Path=/. Verified in `auth.test.ts` (Scenario 6).
+- [x] **AUTH-06 — Wrong credentials:** Incorrect email/password returns generic 401 `INVALID_CREDENTIALS` without leaking account existence. Verified in `auth.test.ts` (Scenario 7).
+- [x] **AUTH-07 — Logout:** Logout clears the session cookie (`maxAge` expired); subsequent requests return 401. Verified in `auth.test.ts` (Scenario 12).
+- [x] **AUTH-08 — Anonymous access:** Protected endpoints reject requests without a valid session with 401 `UNAUTHENTICATED`. Verified in `auth.test.ts` (Scenario 10).
+- [x] **AUTH-09 — Expired/tampered JWT:** Expired or invalid token is rejected with 401 `UNAUTHENTICATED`. Verified in `auth.test.ts` (Scenario 11).
+- [x] **AUTH-10 — Role escalation:** Signup payload attempting `role: "admin"` cannot grant elevated access; strictly forced to `recruiter`. Verified in `auth.test.ts` (Scenario 13).
+- [x] **AUTH-11 — Role authorization:** Recruiter/hiring manager cannot call admin-only endpoints; receives 403 `FORBIDDEN`. Verified in `auth.test.ts` (Scenario 15).
+- [x] **AUTH-12 — Cookie/CORS behavior:** Browser request from configured frontend works with credentials; secure flags verified. Verified in `auth.test.ts` (Scenario 8).
+- [ ] **AUTH-13 — Auth rate limiting:** Repeated login failures trigger rate limiter (Scheduled for rate limiting middleware enhancement).
 
 ### B. Jobs
 

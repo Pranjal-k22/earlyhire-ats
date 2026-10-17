@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 
@@ -30,6 +31,7 @@ export const createApp = (): Express => {
 
   // API Routes
   app.use("/api/v1", healthRoutes);
+  app.use("/api/v1/auth", authRoutes);
 
   // 404 Fallback
   app.use(notFoundHandler);
