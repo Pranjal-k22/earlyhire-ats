@@ -13,13 +13,13 @@
 
 ## Current baseline
 
-- **Audit status:** Phase 3 Completed — PASS (Job model, Zod validation, REST API with soft-archive, RBAC write protections, React UI with listing, details, create/edit modals, search/filters, loading/empty/error states, and 41/41 passing tests).
+- **Audit status:** Phase 4 Completed — PASS (Candidate model, Zod validation, REST API with soft-archive, RBAC write protections, React UI with listing, details, create/edit modals, search/filters, loading/empty/error states, and 69/69 passing tests).
 - **Repository path:** `C:\WEB DEVELOPMENT\Early-ATS`
-- **Git status:** Branch `feat/phase-3-jobs` (created from `feat/phase-2-auth`).
+- **Git status:** Branch `feat/phase-4-candidates` (created from `feat/phase-3-jobs`).
 - **Git remote:** `origin https://github.com/Pranjal-k22/earlyhire-ats.git` (fetch & push verified reachable).
-- **Last audited commit:** Working tree ready for Phase 3 commit
+- **Last audited commit:** Working tree ready for Phase 4 commit
 - **Last audit date:** 2026-10-17
-- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 41/41 tests passing).
+- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 69/69 tests passing).
 - **Deployment:** NOT RUN (Deployment configuration and hosting targets pending Phase 10).
 
 ## Phase audit checklist
@@ -28,7 +28,7 @@
 - [x] All implemented features exist in `prd.md` or were explicitly approved as amendments.
 - [x] Out-of-scope features have not crept into the implementation.
 - [x] User model responsibilities match the documented database architecture.
-- [x] Candidate, Job, Application, StageHistory, and Note responsibilities match the documented model (Job model verified; Candidate/Application/StageHistory/Note pending Phases 4–7).
+- [x] Candidate, Job, Application, StageHistory, and Note responsibilities match the documented model (Job and Candidate models verified; Application/StageHistory/Note pending Phases 5–7).
 - [ ] Hiring stage belongs to Application, not globally to Candidate.
 - [x] API routes, validation schemas, and UI forms use consistent field names and enum values.
 
@@ -44,17 +44,17 @@
 - [ ] User-supplied notes are rendered as text and not injected as HTML.
 
 ### Data integrity
-- [ ] Active candidate emails are normalized and unique according to the PRD.
+- [x] Active candidate emails are normalized and unique according to the PRD (409 CANDIDATE_EMAIL_EXISTS verified).
 - [ ] Duplicate active Candidate–Job applications are rejected.
 - [ ] Allowed stage transitions match `prd.md`.
 - [ ] Each actual stage change creates one stage-history entry.
 - [ ] Same-stage updates do not create duplicate history.
-- [x] Archived records with history are not destructively deleted accidentally (Job soft-archive verified).
+- [x] Archived records with history are not destructively deleted accidentally (Job and Candidate soft-archive verified).
 - [ ] Dashboard calculations match documented formulas and zero-denominator behavior.
 
 ### Quality and usability
-- [x] Loading, empty, success, validation-error, API-error, and expired-session states exist (Verified for Jobs).
-- [x] Search/filter/pagination work together on server-side data (Verified for Jobs).
+- [x] Loading, empty, success, validation-error, API-error, and expired-session states exist (Verified for Jobs and Candidates).
+- [x] Search/filter/pagination work together on server-side data (Verified for Jobs and Candidates).
 - [x] Controls are keyboard accessible and have visible focus states.
 - [x] Layout works at mobile and desktop widths.
 - [ ] No placeholder metrics or inert controls are visible in the release build.
@@ -285,6 +285,51 @@ _Initial baseline recorded prior to Phase 1._
   - Production cross-origin cookie-domain and CSRF considerations tracked in ACT-08.
 - **Follow-up tasks:**
   - Phase 4: Candidate Management (Candidate CRUD, email normalization, resume URL validation, search/filtering).
+- **Auditor:** AI Coding Assistant (Antigravity)
+
+### 2026-10-17 — Phase 4 — Candidate Management (End-to-End Implementation) — PASS
+- **Commit:** `feat/phase-4-candidates` working tree ready for commit
+- **Scope reviewed:**
+  - Mongoose `Candidate` schema with unique active email validation, phone, experienceYears, skills, resumeUrl, source enum (`Referral`, `LinkedIn`, `CompanyWebsite`, `JobBoard`, `Agency`, `Other`), audit references (`createdBy`, `updatedBy`), compound indexes, and toJSON serialization (`apps/api/src/models/candidate.model.ts`).
+  - Candidate model boundary strictly respected: `jobId` and `currentStage` deliberately omitted from Candidate model; Candidate represents an independent person record.
+  - Zod validation schemas (`createCandidateSchema`, `updateCandidateSchema`, `candidateQuerySchema`) with casing normalization, phone format validation, and URL validation (`apps/api/src/schemas/candidate.schema.ts`).
+  - Express REST controllers implementing `POST /`, `GET /` (with search on name/email/skills, pagination, source/date filters, soft-archive exclusion), `GET /:id` (ObjectId validation, audit population), `PATCH /:id` (allowlisted fields), and `DELETE /:id` (soft-archive with `archivedAt` timestamp) (`apps/api/src/controllers/candidate.controller.ts`).
+  - Route authorization with `requireAuth` and `requireRole("admin", "recruiter")` write protection (`apps/api/src/routes/candidate.routes.ts`, mounted in `apps/api/src/app.ts`).
+  - React frontend UI: `CandidatesView` with live search, source filter tabs, responsive candidate card grid, loading skeleton, empty state, and API error state with retry (`apps/web/src/features/candidates/CandidatesView.tsx`).
+  - Reusable modals: `CandidateFormModal` using React Hook Form + Zod with accessible form inputs and validation feedback; `CandidateDetailModal` displaying full specifications, contact details, skills tags, external resume button, and status management.
+  - Source badge: `CandidateSourceBadge` mapping source enums to curated design tokens.
+  - Navigation: Integrated tab switcher in `App.tsx` between Overview, Jobs, and Candidates.
+- **Files created & modified:**
+  - Backend: `apps/api/src/models/candidate.model.ts`, `apps/api/src/schemas/candidate.schema.ts`, `apps/api/src/controllers/candidate.controller.ts`, `apps/api/src/routes/candidate.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/__tests__/candidate.test.ts`.
+  - Frontend: `apps/web/src/types/candidate.ts`, `apps/web/src/api/candidateApi.ts`, `apps/web/src/features/candidates/CandidateSourceBadge.tsx`, `apps/web/src/features/candidates/CandidateFormModal.tsx`, `apps/web/src/features/candidates/CandidateDetailModal.tsx`, `apps/web/src/features/candidates/CandidatesView.tsx`, `apps/web/src/app/App.tsx`, `apps/web/src/__tests__/CandidatesView.test.tsx`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors, 0 warnings across `apps/web` and `apps/api`).
+  - `npm run typecheck`: PASS (exit code 0; TypeScript strict mode compiles cleanly on both workspaces).
+  - `npm test`: PASS (exit code 0; 69 tests passed across 7 test suites: `App.test.tsx` [2 passed], `JobsView.test.tsx` [5 passed], `CandidatesView.test.tsx` [6 passed], `health.test.ts` [2 passed], `auth.test.ts` [18 passed], `job.test.ts` [14 passed], `candidate.test.ts` [22 passed]).
+  - `npm run build`: PASS (exit code 0; Vite frontend built `apps/web/dist` in 3.29s, `tsc` compiled `apps/api/dist`).
+- **Acceptance criteria verified:**
+  - [x] Candidate model supports name/fullName, email, phone, location, currentTitle, experienceYears, skills, resumeUrl, source, summary, createdBy, updatedBy, and timestamps.
+  - [x] Email normalization: automatically trims and lowercases email; duplicate active email returns 409 `CANDIDATE_EMAIL_EXISTS`.
+  - [x] Soft-deletion policy: `DELETE /api/v1/candidates/:id` sets `archivedAt: new Date()` without destroying database records.
+  - [x] Archived candidates excluded from default `GET /api/v1/candidates` queries unless `includeArchived=true` is requested.
+  - [x] REST endpoints follow standard conventions and validate MongoDB ObjectIds with 400 `INVALID_ID`.
+  - [x] Zod validation applied to all POST/PATCH payloads and query parameters.
+  - [x] Client-supplied creator IDs cannot override authenticated actor identity (`createdBy` and `updatedBy` enforced from session).
+  - [x] `requireAuth` blocks unauthenticated users with 401 `UNAUTHENTICATED`.
+  - [x] `requireRole("admin", "recruiter")` blocks hiring managers from creating, updating, or deleting candidates with 403 `FORBIDDEN`.
+  - [x] All 22 backend integration scenarios in `candidate.test.ts` passed cleanly.
+  - [x] Frontend `CandidatesView` renders loading skeleton, populated candidate grid, empty state, and API error state with functional Retry button.
+  - [x] Add Candidate and Edit Candidate modals validate required fields, phone formats, and URL formats via React Hook Form and Zod.
+  - [x] Candidate Detail modal renders profile, contact details, skills pills, resume link, and audit timestamps.
+  - [x] Zero application features outside of Candidate Management implemented (no application records, Kanban stage transitions, or AI features).
+- **Gaps found:** None. Phase 4 scope boundaries strictly respected.
+- **Security/data risks:**
+  - Regex search input escaped with `escapeRegex` to prevent ReDoS injection.
+  - Write operations allowlist editable fields to prevent tampering with audit IDs or internal timestamps.
+  - External resume URLs open in new tabs with `rel="noopener noreferrer"`.
+- **Follow-up tasks:**
+  - Phase 5: Applications & Hiring Pipeline (Link Candidate to Job, stage transitions, immutable stage history).
 - **Auditor:** AI Coding Assistant (Antigravity)
 
 

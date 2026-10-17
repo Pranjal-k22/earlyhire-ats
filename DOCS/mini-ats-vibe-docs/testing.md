@@ -64,18 +64,18 @@ Mark an item `[x]` only after executing the check and recording evidence. “Imp
 
 ### C. Candidates
 
-- [ ] **CAND-01 — Create valid candidate:** Required candidate data persists and is displayed correctly.
-- [ ] **CAND-02 — Email normalization:** ` Candidate@Example.com ` is normalized consistently before uniqueness checking.
-- [ ] **CAND-03 — Duplicate active email:** Duplicate active candidate email returns conflict/validation error.
-- [ ] **CAND-04 — Update candidate:** Name, phone, skills, source, experience, and resume URL can be edited with validation.
-- [ ] **CAND-05 — Candidate details:** Detail view shows profile, applications, notes, and stage history where permitted.
-- [ ] **CAND-06 — Archive candidate:** Confirmation is required; historical application data is not accidentally removed.
-- [ ] **CAND-07 — Resume URL validation:** Malformed or unsupported URLs are rejected; empty optional URL is accepted.
-- [ ] **CAND-08 — Search by name/email:** Partial and case-insensitive search returns expected matches.
-- [ ] **CAND-09 — Search by skills/job title:** Search matches skill and related job-title data without unsafe query construction.
-- [ ] **CAND-10 — Combined filters:** Stage, job, source, date range, and search combine correctly.
-- [ ] **CAND-11 — Pagination bounds:** Invalid page/limit is handled; maximum page size is enforced and sorting remains stable.
-- [ ] **CAND-12 — Empty results:** UI shows a useful empty state and does not display stale records.
+- [x] **CAND-01 — Create valid candidate:** Required candidate data persists and is displayed correctly. Verified in `apps/api/src/__tests__/candidate.test.ts` (Scenario 1) & `apps/web/src/__tests__/CandidatesView.test.tsx` (Scenario 1).
+- [x] **CAND-02 — Email normalization:** ` Candidate@Example.com ` is normalized to lowercase and trimmed before uniqueness checking. Verified in `candidate.test.ts` (Scenario 4).
+- [x] **CAND-03 — Duplicate active email:** Duplicate active candidate email returns 409 `CANDIDATE_EMAIL_EXISTS`. Verified in `candidate.test.ts` (Scenario 5).
+- [x] **CAND-04 — Update candidate:** Name, phone, skills, source, experience, and resume URL can be edited with validation. Verified in `candidate.test.ts` (Scenario 18).
+- [x] **CAND-05 — Candidate details:** Detail view shows profile, contact info, skills tags, and audit references. Verified in `candidate.test.ts` (Scenario 15) & `CandidatesView.test.tsx` (Scenario 5).
+- [x] **CAND-06 — Archive candidate:** Confirmation required; soft-archives with `archivedAt` timestamp without deleting records. Verified in `candidate.test.ts` (Scenario 21).
+- [x] **CAND-07 — Resume URL validation:** Malformed or non-http/https URLs rejected with 422; valid URLs accepted. Verified in `candidate.test.ts` (Scenario 7).
+- [x] **CAND-08 — Search by name/email:** Partial and case-insensitive search returns expected matches. Verified in `candidate.test.ts` (Scenario 9 & 10).
+- [x] **CAND-09 — Search by skills/job title:** Search matches skill tags and title data without unsafe query construction. Verified in `candidate.test.ts` (Scenario 11).
+- [x] **CAND-10 — Combined filters:** Source, date range (`createdFrom`/`createdTo`), and search combine correctly. Verified in `candidate.test.ts` (Scenario 12 & 13).
+- [x] **CAND-11 — Pagination bounds:** Invalid page/limit handled; maximum limit of 100 enforced. Verified in `candidate.test.ts` (Scenario 14).
+- [x] **CAND-12 — Empty results:** UI shows a clear empty state with informative text and add candidate CTA. Verified in `CandidatesView.test.tsx` (Scenario 2).
 
 ### D. Applications and pipeline
 

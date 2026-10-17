@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { JobsView } from "../features/jobs/JobsView";
+import { CandidatesView } from "../features/candidates/CandidatesView";
 
 interface HealthStatus {
   status: string;
@@ -23,7 +24,7 @@ interface HealthStatus {
 }
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"overview" | "jobs">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "jobs" | "candidates">("overview");
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,13 +74,18 @@ export const App: React.FC = () => {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <a
-            href="#candidates"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white font-medium transition-all"
+          <button
+            type="button"
+            onClick={() => setActiveTab("candidates")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all text-left ${
+              activeTab === "candidates"
+                ? "bg-brand-600 text-white shadow-sm"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
           >
             <Users className="w-5 h-5 text-slate-400" />
             <span>Candidates</span>
-          </a>
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab("jobs")}
@@ -166,6 +172,8 @@ export const App: React.FC = () => {
         <main className="flex-1 p-8 overflow-y-auto">
           {activeTab === "jobs" ? (
             <JobsView />
+          ) : activeTab === "candidates" ? (
+            <CandidatesView />
           ) : (
             <>
               {/* Page Header */}
