@@ -1,0 +1,29 @@
+{
+  "name": "earlyhire-ats",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EarlyAI ATS — A modern Applicant Tracking System",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "build": "npm run build --workspaces",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "keywords": [
+    "ats",
+    "applicant-tracking-system",
+    "recruitment",
+    "hiring"
+  ],
+  "author": "",
+  "license": "ISC"
+}
