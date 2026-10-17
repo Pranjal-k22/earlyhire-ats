@@ -91,8 +91,15 @@ This file tracks all manual actions, architecture decisions, and external infras
   4. Obtain connection string URI: `mongodb+srv://<username>:<password>@cluster0.mongodb.net/earlyai_ats?retryWrites=true&w=majority`.
   5. Generate a secure random JWT secret: `openssl rand -hex 32`.
   6. Place credentials in local `.env` (never commit to Git).
-- **Status:** `PENDING` (Local integration verified with isolated test database; required before cloud deployment in Phase 10)
-- **Verification Evidence / Method:** Local database connectivity verified with 81/81 automated backend integration tests passing (including 25 Phase 5 Application & Pipeline tests with transaction/single-node fallback). Cloud Atlas connection string (replica set) required for Render deployment.
+- **Status:** `BLOCKED / ACTION REQUIRED` (Atlas cluster reachable over TLS; credentials rejected by Atlas with `bad auth : Authentication failed`)
+- **Verification Evidence / Method:** Tested live on 2026-10-17. Sanitized URI `mongodb+srv://***:***@cluster0.s8vxj7j.mongodb.net/` connects to remote host, but authentication handshake fails with `MongoServerError: bad auth : Authentication failed. (code: 8000, codeName: 'AtlasError')`.
+- **Human Action Required:**
+  1. Log in to MongoDB Atlas Console.
+  2. Navigate to **Database Access**: Verify that the database user exists. If password was reset or contains special characters, update it or re-enter in `.env`.
+  3. Ensure the user has `readWrite` role assigned on the `earlyhire-ats` database (or `readWriteAnyDatabase`).
+  4. Navigate to **Network Access**: Confirm your IP address (or `0.0.0.0/0`) is active in the IP Access List.
+  5. Update the `.env` connection string to explicitly include the database name:
+     `MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.s8vxj7j.mongodb.net/earlyhire-ats?retryWrites=true&w=majority`
 
 ---
 

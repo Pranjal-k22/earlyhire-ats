@@ -545,6 +545,40 @@ _Initial baseline recorded prior to Phase 1._
   - Phase 8: Integration & UI Polish (End-to-end integration flows, responsive styling polish, production configuration audit).
 - **Auditor:** AI Coding Assistant (Antigravity)
 
+---
+
+### 2026-10-17 — MongoDB Atlas Connection Verification — BLOCKED / ACTION REQUIRED
+- **Task:** Verify MongoDB Atlas remote cluster connectivity and database configuration.
+- **Scope reviewed:**
+  - `apps/api/src/config/db.ts`: Verified `sanitizeMongoUri` strips credentials safely (`mongodb+srv://***:***@...`).
+  - `apps/api/src/config/env.ts`: Enhanced dotenv loader to resolve root `.env` path (`../../../.env`) relative to `import.meta.url`, ensuring reliable `.env` loading regardless of command invocation directory.
+  - `MONGODB_URI` verification: Confirmed loaded without printing raw credentials (`MONGODB_URI loaded: true`, host: `cluster0.s8vxj7j.mongodb.net`).
+  - Atlas Connection Attempt:
+    - Attempted connection to remote cluster `cluster0.s8vxj7j.mongodb.net`.
+    - TLS handshake and SRV lookup succeeded.
+    - Remote cluster rejected authentication with sanitized error:
+      `MongoServerError: bad auth : Authentication failed. (code: 8000, codeName: 'AtlasError')`.
+  - Database Name Target (`earlyhire-ats`):
+    - Root `.env` connection string had pathname `/` (missing explicit database name).
+    - Tested connection with explicit target `/earlyhire-ats?retryWrites=true&w=majority&authSource=admin`; authentication was rejected with `bad auth : Authentication failed`.
+  - Harmless database checks (ping, collection listing) could not proceed due to authentication handshake rejection.
+  - API Health endpoint (`GET /api/v1/health`): Server correctly refuses to boot with failed DB connection in `server.ts`. In automated test mode (`earlyai_ats_test`), health endpoint verified 100% functional.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors across monorepo).
+  - `npm run typecheck`: PASS (exit code 0; strict mode compiles cleanly on both workspaces).
+  - `npm test`: PASS (exit code 0; 163/163 passing tests across 13 test suites).
+  - `npm run build`: PASS (exit code 0; clean production bundles built for web and api).
+- **Blocker & Human Action Required:**
+  - The MongoDB Atlas database credentials in `.env` must be created or updated in the MongoDB Atlas Console:
+    1. Navigate to **Database Access** in MongoDB Atlas.
+    2. Confirm the username exists, or reset its password.
+    3. Ensure user privileges include `readWrite` on `earlyhire-ats` (or `readWriteAnyDatabase`).
+    4. Confirm IP Access List allows current IP or `0.0.0.0/0`.
+    5. Update `MONGODB_URI` in `.env` with the verified credentials and database name:
+       `MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.s8vxj7j.mongodb.net/earlyhire-ats?retryWrites=true&w=majority`
+- **Auditor:** AI Coding Assistant (Antigravity)
+
+
 
 
 
