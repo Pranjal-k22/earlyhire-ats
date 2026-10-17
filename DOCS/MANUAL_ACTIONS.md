@@ -110,3 +110,20 @@ This file tracks all manual actions, architecture decisions, and external infras
   6. Verify HTTPS cookies, exact CORS origin matching, and cold-start health checks.
 - **Status:** `PENDING` (Required for Phase 10)
 - **Verification Evidence / Method:** Deployed `/api/v1/health` returning `200 OK` and live frontend authentication flow.
+
+---
+
+### ACT-08: Production Cross-Origin Cookie-Domain & CSRF Architecture (Phase 10)
+- **Action ID:** ACT-08
+- **Description:** Establish the production cross-origin cookie domain and CSRF strategy between Vercel frontend and Render backend.
+- **Reason:** In production, modern browsers (Chrome Privacy Sandbox, Apple Safari ITP) restrict third-party cross-site cookies (`SameSite=None`) when the frontend domain (e.g., `*.vercel.app`) and backend domain (e.g., `*.onrender.com`) have different effective top-level domains.
+- **Required Account / Service:** DNS Registrar / Cloudflare / Vercel & Render Domain Settings
+- **Exact Steps:**
+  1. Determine domain strategy:
+     - **Option A (Recommended — Unified Domain):** Configure a custom apex or subdomain (e.g., `app.earlyhire.example` for frontend, `api.earlyhire.example` for backend) allowing first-party cookie scope (`domain: ".earlyhire.example"`, `SameSite: Lax`, `Secure: true`).
+     - **Option B (Vercel API Proxy):** Configure `vercel.json` rewrites mapping `/api/:path*` to the Render backend origin, treating all requests as same-origin from the browser's perspective.
+     - **Option C (Cross-Origin HTTPS Cookies):** Configure `SameSite=None`, `Secure=true`, with explicit `FRONTEND_ORIGIN` CORS credentials allowlist and CSRF header validation (`X-Requested-With` or double-submit anti-CSRF tokens).
+  2. Implement anti-CSRF token validation middleware if `SameSite=None` is selected.
+  3. Validate secure cookie transmission in end-to-end production smoke test.
+- **Status:** `PENDING` (Follow-up work for Phase 10 deployment)
+- **Verification Evidence / Method:** Cookie persists across authenticated requests in cross-domain staging preview environment without browser cookie blocking warnings.

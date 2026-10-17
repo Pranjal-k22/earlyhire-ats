@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import jobRoutes from "./routes/job.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 
@@ -32,6 +33,7 @@ export const createApp = (): Express => {
   // API Routes
   app.use("/api/v1", healthRoutes);
   app.use("/api/v1/auth", authRoutes);
+  app.use("/api/v1/jobs", jobRoutes);
 
   // 404 Fallback
   app.use(notFoundHandler);

@@ -21,7 +21,7 @@
 
 ## Open issues
 
-_No confirmed open defects. Phase 2 verification complete (22/22 tests passing across API and Web, zero ESLint or TypeScript issues)._
+_No confirmed open defects. Phase 3 verification complete (41/41 tests passing across API [34 tests] and Web [7 tests], zero ESLint or TypeScript issues)._
 
 ## Bug report template
 

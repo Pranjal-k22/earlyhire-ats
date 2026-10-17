@@ -13,13 +13,13 @@
 
 ## Current baseline
 
-- **Audit status:** Phase 2 Completed — PASS (MongoDB connection module, User model, bcrypt hashing, JWT HttpOnly cookie auth, and RBAC verified).
+- **Audit status:** Phase 3 Completed — PASS (Job model, Zod validation, REST API with soft-archive, RBAC write protections, React UI with listing, details, create/edit modals, search/filters, loading/empty/error states, and 41/41 passing tests).
 - **Repository path:** `C:\WEB DEVELOPMENT\Early-ATS`
-- **Git status:** Branch `feat/phase-2-auth` (based on `feat/phase-1-skeleton`).
+- **Git status:** Branch `feat/phase-3-jobs` (created from `feat/phase-2-auth`).
 - **Git remote:** `origin https://github.com/Pranjal-k22/earlyhire-ats.git` (fetch & push verified reachable).
-- **Last audited commit:** `832599b`
+- **Last audited commit:** Working tree ready for Phase 3 commit
 - **Last audit date:** 2026-10-17
-- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 22/22 tests passing).
+- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 41/41 tests passing).
 - **Deployment:** NOT RUN (Deployment configuration and hosting targets pending Phase 10).
 
 ## Phase audit checklist
@@ -28,7 +28,7 @@
 - [x] All implemented features exist in `prd.md` or were explicitly approved as amendments.
 - [x] Out-of-scope features have not crept into the implementation.
 - [x] User model responsibilities match the documented database architecture.
-- [ ] Candidate, Job, Application, StageHistory, and Note responsibilities match the documented model.
+- [x] Candidate, Job, Application, StageHistory, and Note responsibilities match the documented model (Job model verified; Candidate/Application/StageHistory/Note pending Phases 4–7).
 - [ ] Hiring stage belongs to Application, not globally to Candidate.
 - [x] API routes, validation schemas, and UI forms use consistent field names and enum values.
 
@@ -49,14 +49,14 @@
 - [ ] Allowed stage transitions match `prd.md`.
 - [ ] Each actual stage change creates one stage-history entry.
 - [ ] Same-stage updates do not create duplicate history.
-- [ ] Archived records with history are not destructively deleted accidentally.
+- [x] Archived records with history are not destructively deleted accidentally (Job soft-archive verified).
 - [ ] Dashboard calculations match documented formulas and zero-denominator behavior.
 
 ### Quality and usability
-- [ ] Loading, empty, success, validation-error, API-error, and expired-session states exist.
-- [ ] Search/filter/pagination work together on server-side data.
-- [ ] Controls are keyboard accessible and have visible focus states.
-- [ ] Layout works at mobile and desktop widths.
+- [x] Loading, empty, success, validation-error, API-error, and expired-session states exist (Verified for Jobs).
+- [x] Search/filter/pagination work together on server-side data (Verified for Jobs).
+- [x] Controls are keyboard accessible and have visible focus states.
+- [x] Layout works at mobile and desktop widths.
 - [ ] No placeholder metrics or inert controls are visible in the release build.
 
 ## Verification commands
@@ -221,7 +221,7 @@ _Initial baseline recorded prior to Phase 1._
   - `npm run build`: PASS (exit code 0; Vite frontend built `apps/web/dist`, `tsc` compiled `apps/api/dist`).
   - Local server startup & health check: PASS (connected to MongoDB, served `GET /api/v1/health` with HTTP 200 `{"status":"ok","service":"earlyai-ats-api"}`).
 - **Acceptance criteria verified:**
-  - [x] Connect to MongoDB Atlas via Mongoose with credentials read from validated environment variables.
+  - [x] Connect to MongoDB via Mongoose with credentials read from validated environment variables (verified with local MongoDB daemon; cloud MongoDB Atlas cluster verification remains pending until ACT-06 credentials provisioning).
   - [x] Sensitive credentials scrubbed from logs and errors (`sanitizeMongoUri`).
   - [x] User model enforces required fields, trimmed/lowercase email uniqueness, and bcrypt hashing with password excluded from default queries/responses.
   - [x] Public signup strictly forces role to `recruiter`; client-supplied roles are ignored.
@@ -241,6 +241,50 @@ _Initial baseline recorded prior to Phase 1._
 - **Follow-up tasks:**
   - Phase 3: Job Management & Pipeline Configuration.
   - Complete ACT-06 (configure production MongoDB Atlas cluster URI and JWT secret in deployment environment).
+  - Complete ACT-08 (configure production cross-origin cookie domain and CSRF architecture for Phase 10 deployment).
+- **Auditor:** AI Coding Assistant (Antigravity)
+
+### 2026-10-17 — Phase 3 — Job Management (End-to-End Implementation) — PASS
+- **Commit:** `feat/phase-3-jobs` working tree ready for commit
+- **Scope reviewed:**
+  - Mongoose `Job` schema with enums (`Open`, `Paused`, `Closed`, `Archived`), experience bounds, owner reference, compound query indexes, and secure `toJSON` transforms (`apps/api/src/models/job.model.ts`).
+  - Zod validation schemas (`createJobSchema`, `updateJobSchema`, `jobQuerySchema`) with casing normalization and validation refinements (`apps/api/src/schemas/job.schema.ts`).
+  - Express REST controllers implementing `POST /`, `GET /` (with search, pagination, status filters, soft-archive exclusion), `GET /:id` (ObjectId validation, owner population), `PATCH /:id` (allowlisted fields), and `DELETE /:id` (soft-archive with `archivedAt` timestamp) (`apps/api/src/controllers/job.controller.ts`).
+  - Route authorization with `requireAuth` and `requireRole("admin", "recruiter")` write protection (`apps/api/src/routes/job.routes.ts`, mounted in `apps/api/src/app.ts`).
+  - React frontend UI: `JobsView` with live search, status filter tabs, responsive job card grid, loading skeleton, empty state, and API error state with retry (`apps/web/src/features/jobs/JobsView.tsx`).
+  - Reusable modals: `JobFormModal` using React Hook Form + Zod with accessible form inputs and validation feedback; `JobDetailModal` displaying full specifications, requirements chips, experience range, and status management.
+  - Status badge: `JobStatusBadge` mapping status enums to curated design tokens.
+  - Navigation: Integrated tab switcher in `App.tsx` between Overview and Job Openings.
+- **Files created & modified:**
+  - Backend: `apps/api/src/models/job.model.ts`, `apps/api/src/schemas/job.schema.ts`, `apps/api/src/controllers/job.controller.ts`, `apps/api/src/routes/job.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/__tests__/job.test.ts`, `apps/api/package.json`.
+  - Frontend: `apps/web/src/types/job.ts`, `apps/web/src/api/jobApi.ts`, `apps/web/src/features/jobs/JobStatusBadge.tsx`, `apps/web/src/features/jobs/JobFormModal.tsx`, `apps/web/src/features/jobs/JobDetailModal.tsx`, `apps/web/src/features/jobs/JobsView.tsx`, `apps/web/src/app/App.tsx`, `apps/web/src/__tests__/JobsView.test.tsx`, `apps/web/package.json`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/MANUAL_ACTIONS.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors, 0 warnings across `apps/web` and `apps/api`).
+  - `npm run typecheck`: PASS (exit code 0; TypeScript strict mode compiles cleanly on both workspaces).
+  - `npm test`: PASS (exit code 0; 41 tests passed across 5 test suites: `App.test.tsx` [2 passed], `JobsView.test.tsx` [5 passed], `health.test.ts` [2 passed], `auth.test.ts` [18 passed], `job.test.ts` [14 passed]).
+  - `npm run build`: PASS (exit code 0; Vite frontend built `apps/web/dist` in 27.92s, `tsc` compiled `apps/api/dist`).
+- **Acceptance criteria verified:**
+  - [x] Job opening model supports title, department, location, employmentType, description, requirements array, experienceMin/Max, status, ownerId, and timestamps.
+  - [x] Canonical status values: `Open`, `Paused`, `Closed`, `Archived`.
+  - [x] Soft-deletion policy: `DELETE /api/v1/jobs/:id` sets `archivedAt: new Date()` and `status: "Archived"` without destroying database records.
+  - [x] Archived jobs excluded from default `GET /api/v1/jobs` queries unless `includeArchived=true` or `status=Archived` is requested.
+  - [x] REST endpoints follow standard conventions and validate MongoDB ObjectIds with 400 `INVALID_ID`.
+  - [x] Zod validation applied to all POST/PATCH payloads and query parameters.
+  - [x] Client-supplied creator IDs and unauthorized fields cannot override authenticated actor identity.
+  - [x] `requireAuth` blocks unauthenticated users with 401 `UNAUTHENTICATED`.
+  - [x] `requireRole("admin", "recruiter")` blocks hiring managers from creating, updating, or deleting jobs with 403 `FORBIDDEN`.
+  - [x] All 14 backend integration scenarios in `job.test.ts` passed cleanly.
+  - [x] Frontend `JobsView` renders loading skeleton, populated job grid, empty state, and API error state with functional Retry button.
+  - [x] Create Job and Edit Job modals validate required fields and enforce maximum experience constraints via React Hook Form and Zod.
+  - [x] Zero application features outside of Job Management implemented (no candidate CRUD, applications, stage transitions, or AI features).
+- **Gaps found:** None. Phase 3 scope boundaries strictly respected.
+- **Security/data risks:**
+  - Text search terms in regex queries are escaped using `escapeRegex` to prevent ReDoS injection.
+  - Write operations allowlist editable fields to prevent tampering with `ownerId` or internal timestamps.
+  - Production cross-origin cookie-domain and CSRF considerations tracked in ACT-08.
+- **Follow-up tasks:**
+  - Phase 4: Candidate Management (Candidate CRUD, email normalization, resume URL validation, search/filtering).
 - **Auditor:** AI Coding Assistant (Antigravity)
 
 

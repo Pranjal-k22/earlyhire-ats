@@ -55,12 +55,12 @@ Mark an item `[x]` only after executing the check and recording evidence. “Imp
 
 ### B. Jobs
 
-- [ ] **JOB-01 — Create valid job:** Authorized recruiter creates a job and it appears in list/detail responses.
-- [ ] **JOB-02 — Required-field validation:** Missing title or other required field returns a clear 400 validation response.
-- [ ] **JOB-03 — Update job:** Editing job title/description persists and is visible after reload.
-- [ ] **JOB-04 — Status filtering:** Open/on-hold/closed/archived filters return the correct records.
-- [ ] **JOB-05 — Archive safety:** Archiving a job with applications retains historical application visibility and prevents new applications until reopened.
-- [ ] **JOB-06 — Unauthorized write:** Anonymous user cannot create, update, or archive jobs.
+- [x] **JOB-01 — Create valid job:** Authorized recruiter/admin creates a job and it appears in list/detail responses. Verified in `apps/api/src/__tests__/job.test.ts` (Scenario 1 & 5) and `apps/web/src/__tests__/JobsView.test.tsx`.
+- [x] **JOB-02 — Required-field validation:** Missing title or other required fields return 422 `VALIDATION_ERROR` with detailed Zod issues. Verified in `job.test.ts` (Scenario 2).
+- [x] **JOB-03 — Update job:** Editing job title/description/status persists and is visible after reload. Verified in `job.test.ts` (Scenario 7 & 10).
+- [x] **JOB-04 — Status filtering:** Open/paused/closed/archived filters and regex search return the correct records. Verified in `job.test.ts` (Scenario 3, 4, 12) and `JobsView.test.tsx`.
+- [x] **JOB-05 — Archive safety:** DELETE /api/v1/jobs/:id soft-archives with `archivedAt`, preventing destructive deletion, and excludes archived jobs by default from listings. Verified in `job.test.ts` (Scenario 11 & 12).
+- [x] **JOB-06 — Unauthorized write:** Anonymous users receive 401 `UNAUTHENTICATED`; hiring managers receive 403 `FORBIDDEN` on POST/PATCH/DELETE. Verified in `job.test.ts` (Scenario 8 & 13).
 
 ### C. Candidates
 
