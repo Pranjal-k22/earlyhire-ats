@@ -83,7 +83,7 @@ describe("Phase 6 — Search, Advanced Filters & Recruiter Notes Test Suite", ()
     await Job.deleteMany({});
   });
 
-  const createCandidateFixture = async (override: Partial<any> = {}) => {
+  const createCandidateFixture = async (override: Record<string, unknown> = {}) => {
     return await Candidate.create({
       name: "Aarav Patel",
       fullName: "Aarav Patel",
@@ -98,7 +98,7 @@ describe("Phase 6 — Search, Advanced Filters & Recruiter Notes Test Suite", ()
     });
   };
 
-  const createJobFixture = async (override: Partial<any> = {}) => {
+  const createJobFixture = async (override: Record<string, unknown> = {}) => {
     return await Job.create({
       title: "Backend Platform Engineer",
       department: "Engineering",
@@ -440,12 +440,12 @@ describe("Phase 6 — Search, Advanced Filters & Recruiter Notes Test Suite", ()
       const resDefault = await request(app)
         .get("/api/v1/candidates")
         .set("Cookie", recruiterCookie);
-      expect(resDefault.body.data.some((c: any) => c.name === "Ananya Sharma")).toBe(false);
+      expect(resDefault.body.data.some((c: { name: string }) => c.name === "Ananya Sharma")).toBe(false);
 
       const resArchived = await request(app)
         .get("/api/v1/candidates?includeArchived=true")
         .set("Cookie", recruiterCookie);
-      expect(resArchived.body.data.some((c: any) => c.name === "Ananya Sharma")).toBe(true);
+      expect(resArchived.body.data.some((c: { name: string }) => c.name === "Ananya Sharma")).toBe(true);
     });
 
     it("20. Prevents regex injection and input abuse", async () => {
@@ -516,10 +516,10 @@ describe("Phase 6 — Search, Advanced Filters & Recruiter Notes Test Suite", ()
 
     it("23. Excludes archived jobs by default", async () => {
       const resDefault = await request(app).get("/api/v1/jobs").set("Cookie", recruiterCookie);
-      expect(resDefault.body.data.some((j: any) => j.status === "Archived")).toBe(false);
+      expect(resDefault.body.data.some((j: { status: string }) => j.status === "Archived")).toBe(false);
 
       const resArchived = await request(app).get("/api/v1/jobs?includeArchived=true").set("Cookie", recruiterCookie);
-      expect(resArchived.body.data.some((j: any) => j.status === "Archived")).toBe(true);
+      expect(resArchived.body.data.some((j: { status: string }) => j.status === "Archived")).toBe(true);
     });
   });
 

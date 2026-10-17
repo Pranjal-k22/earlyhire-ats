@@ -165,4 +165,21 @@ This file tracks all manual actions, architecture decisions, and external infras
 - **Status:** `PENDING` (Verified locally with 100% pass rate on test runners; required upon cloud deployment)
 - **Verification Evidence / Method:** Aggregation queries benchmarked in `apps/api/src/__tests__/analytics.test.ts`.
 
+---
+
+### ACT-11: Phase 8 UI Integration & Responsive Staging Verification (Phase 10)
+- **Action ID:** ACT-11
+- **Description:** Verify the responsive navigation drawer, modal dialogs, and HttpOnly session cookies in a live cross-domain staging deployment (Vercel preview + Render staging).
+- **Reason:** In local test environments, cookie storage is simulated and JSDOM runs in headless virtual DOM. While automated tests prove functional correctness, real browser verification on physical devices (mobile iOS Safari, mobile Android Chrome, desktop Firefox/Safari/Chrome) must be conducted once preview deployments are live in Phase 10.
+- **Required Account / Service:** Frontend & QA Engineers (Physical mobile devices and cross-browser testing tools)
+- **Exact Steps:**
+  1. Deploy feature/preview build to staging hosting environment.
+  2. Test recruiter registration and login on mobile Safari and Chrome.
+  3. Verify the hamburger navigation drawer opens smoothly, links navigate correctly, and backdrop dismisses drawer.
+  4. Test job search, candidate creation, pipeline stage progression, and dashboard KPI charts.
+  5. Verify HttpOnly cookies persist across page reloads without third-party cookie blocking flags.
+- **Status:** `PENDING` (Verified locally via automated test suites and JSDOM; physical device verification required upon deployment)
+- **Verification Evidence / Method:** Manual QA smoke testing checklist completed during Phase 10 release staging.
+
+
 

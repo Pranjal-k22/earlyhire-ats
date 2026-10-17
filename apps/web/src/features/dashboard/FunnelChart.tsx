@@ -17,11 +17,19 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export const FunnelChart: React.FC<FunnelChartProps> = ({
-  stages,
-  offerAcceptance,
-  totalCohort,
+  stages = [],
+  offerAcceptance: rawOfferAcceptance,
+  totalCohort = 0,
 }) => {
-  const maxCount = stages.length > 0 ? Math.max(...stages.map((s) => s.count), 1) : 1;
+  const offerAcceptance = {
+    offersExtended: rawOfferAcceptance?.offersExtended ?? 0,
+    offersAccepted: rawOfferAcceptance?.offersAccepted ?? 0,
+    offersRejected: rawOfferAcceptance?.offersRejected ?? 0,
+    pendingOffers: rawOfferAcceptance?.pendingOffers ?? 0,
+    acceptanceRate: rawOfferAcceptance?.acceptanceRate ?? null,
+  };
+  const safeStages = Array.isArray(stages) ? stages : [];
+  const maxCount = safeStages.length > 0 ? Math.max(...safeStages.map((s) => s.count), 1) : 1;
 
   return (
     <div
@@ -51,7 +59,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
         <div className="space-y-4">
           {/* Horizontal Funnel Step Bars */}
           <div className="space-y-3">
-            {stages.map((stage, idx) => {
+            {safeStages.map((stage, idx) => {
               const widthPct = Math.max(Math.round((stage.count / maxCount) * 100), 4);
               const colorClass = STAGE_COLORS[stage.stage] || "bg-brand-500";
 

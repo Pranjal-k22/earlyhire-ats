@@ -266,5 +266,46 @@ Do not call the MVP ready for submission unless all of the following are true:
   20. Frontend dashboard loading skeletons, KPI rendering, Recharts visualizer, empty state, date preset changes, inline range validation, and API error retry.
 - **Verified by:** Antigravity (AI Coding Assistant)
 
+---
+
+### Test run — 2026-10-17 20:10 UTC (Phase 8 Verification)
+- **Commit:** `feat/phase-8-integration-polish` (ready for commit)
+- **Environment:** Local test runner with isolated MongoDB database (`earlyai_ats_test`) and Vitest JSDOM
+- **Dataset:** Synthetic isolated test fixtures with fresh teardown per test; mocked API responses and React Testing Library user-event simulations
+- **`npm run lint`:** PASS — exit code: 0 (0 errors, 0 warnings across monorepo — 6 pre-existing backend test lint warnings eliminated)
+- **`npm run typecheck`:** PASS — exit code: 0 (TypeScript strict mode passed on both `web` and `api`)
+- **`npm test`:** PASS — exit code: 0; passed: 173 tests, failed: 0 across 15 test suites (47 web, 126 api):
+  - `apps/web/src/__tests__/App.test.tsx`: 2 passed
+  - `apps/web/src/__tests__/JobsView.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/CandidatesView.test.tsx`: 6 passed
+  - `apps/web/src/__tests__/PipelineView.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/NotesAndSearch.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/DashboardView.test.tsx`: 10 passed
+  - `apps/web/src/__tests__/AuthWorkflow.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/EndToEndIntegration.test.tsx`: 5 passed
+  - `apps/api/src/__tests__/health.test.ts`: 2 passed
+  - `apps/api/src/__tests__/auth.test.ts`: 18 passed
+  - `apps/api/src/__tests__/job.test.ts`: 14 passed
+  - `apps/api/src/__tests__/candidate.test.ts`: 22 passed
+  - `apps/api/src/__tests__/application.test.ts`: 25 passed
+  - `apps/api/src/__tests__/searchAndNotes.test.ts`: 30 passed
+  - `apps/api/src/__tests__/analytics.test.ts`: 15 passed
+- **`npm run build`:** PASS — exit code: 0 (Vite frontend built `apps/web/dist` in 5.61s with Rollup `manualChunks` splitting; `tsc` compiled `apps/api/dist`; 0 chunk size warnings)
+- **Phase 8 Automated Test Coverage Breakdown:**
+  1. `AuthWorkflow.test.tsx`:
+     - Unauthenticated initial state with Sign In / Register buttons.
+     - AuthModal toggling between login and register modes.
+     - Form validation and rejection of invalid credentials with error alert.
+     - Successful login, profile header display, avatar initials, and secure logout.
+     - Automatic session persistence on page refresh via HttpOnly cookie `fetchMe()`.
+  2. `EndToEndIntegration.test.tsx`:
+     - Workflow B: Job listing, status pills, and keyword search filtering.
+     - Workflow C: Candidate profile, tenure badges, skills chips, and contact info.
+     - Workflow D: Kanban board stage columns, application cards, and stage progression.
+     - Workflow E: Dashboard KPIs, conversion highlights, offer acceptance, and funnel.
+     - Workspace Navigation: Tab switching between Dashboard, Jobs, Candidates, and Pipeline without state corruption.
+- **Verified by:** Antigravity (AI Coding Assistant)
+
+
 
 

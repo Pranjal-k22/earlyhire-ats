@@ -13,6 +13,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          recharts: ["recharts"],
+          icons: ["lucide-react"],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",

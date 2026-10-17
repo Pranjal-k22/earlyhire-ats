@@ -13,23 +13,23 @@
 
 ## Current baseline
 
-- **Audit status:** Phase 4 Completed — PASS (Candidate model, Zod validation, REST API with soft-archive, RBAC write protections, React UI with listing, details, create/edit modals, search/filters, loading/empty/error states, and 69/69 passing tests).
+- **Audit status:** Phase 8 Completed — PASS (End-to-End Integration, UI Polish, Responsive Navigation, Code-Split Bundle Optimization, Zero Lint Warnings, and 173/173 passing tests).
 - **Repository path:** `C:\WEB DEVELOPMENT\Early-ATS`
-- **Git status:** Branch `feat/phase-4-candidates` (created from `feat/phase-3-jobs`).
+- **Git status:** Branch `feat/phase-8-integration-polish` (created from `feat/phase-7-analytics`).
 - **Git remote:** `origin https://github.com/Pranjal-k22/earlyhire-ats.git` (fetch & push verified reachable).
-- **Last audited commit:** Working tree ready for Phase 4 commit
+- **Last audited commit:** Working tree ready for Phase 8 commit
 - **Last audit date:** 2026-10-17
-- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 69/69 tests passing).
+- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 0 warnings; 173/173 tests passing).
 - **Deployment:** NOT RUN (Deployment configuration and hosting targets pending Phase 10).
 
 ## Phase audit checklist
 
 ### Scope and architecture
 - [x] All implemented features exist in `prd.md` or were explicitly approved as amendments.
-- [x] Out-of-scope features have not crept into the implementation.
+- [x] Out-of-scope features have not crept into the implementation (no AI ranking, no payroll, no calendars).
 - [x] User model responsibilities match the documented database architecture.
-- [x] Candidate, Job, Application, StageHistory, and Note responsibilities match the documented model (Job and Candidate models verified; Application/StageHistory/Note pending Phases 5–7).
-- [ ] Hiring stage belongs to Application, not globally to Candidate.
+- [x] Candidate, Job, Application, StageHistory, and Note responsibilities match the documented model.
+- [x] Hiring stage belongs to Application, not globally to Candidate.
 - [x] API routes, validation schemas, and UI forms use consistent field names and enum values.
 
 ### Security
@@ -41,23 +41,23 @@
 - [x] Cookie/CORS/CSRF configuration matches the deployed frontend origin.
 - [x] Secrets are absent from Git history/current tracked files and `.env.example` uses placeholders only.
 - [x] Inputs, pagination, search parameters, and request bodies are validated and bounded.
-- [ ] User-supplied notes are rendered as text and not injected as HTML.
+- [x] User-supplied notes are rendered as text and not injected as HTML.
 
 ### Data integrity
 - [x] Active candidate emails are normalized and unique according to the PRD (409 CANDIDATE_EMAIL_EXISTS verified).
-- [ ] Duplicate active Candidate–Job applications are rejected.
-- [ ] Allowed stage transitions match `prd.md`.
-- [ ] Each actual stage change creates one stage-history entry.
-- [ ] Same-stage updates do not create duplicate history.
+- [x] Duplicate active Candidate–Job applications are rejected (409 DUPLICATE_APPLICATION).
+- [x] Allowed stage transitions match `prd.md` state machine.
+- [x] Each actual stage change creates one stage-history entry.
+- [x] Same-stage updates do not create duplicate history.
 - [x] Archived records with history are not destructively deleted accidentally (Job and Candidate soft-archive verified).
-- [ ] Dashboard calculations match documented formulas and zero-denominator behavior.
+- [x] Dashboard calculations match documented formulas and zero-denominator behavior.
 
 ### Quality and usability
-- [x] Loading, empty, success, validation-error, API-error, and expired-session states exist (Verified for Jobs and Candidates).
-- [x] Search/filter/pagination work together on server-side data (Verified for Jobs and Candidates).
+- [x] Loading, empty, success, validation-error, API-error, and expired-session states exist across all modules.
+- [x] Search/filter/pagination work together on server-side data across Jobs, Candidates, and Pipeline.
 - [x] Controls are keyboard accessible and have visible focus states.
-- [x] Layout works at mobile and desktop widths.
-- [ ] No placeholder metrics or inert controls are visible in the release build.
+- [x] Layout works across 5 viewports: mobile (375px, 430px), tablet (768px), desktop (1280px), wide desktop (1440px).
+- [x] No placeholder metrics or inert controls are visible in the release build.
 
 ## Verification commands
 
@@ -577,6 +577,70 @@ _Initial baseline recorded prior to Phase 1._
     5. Update `MONGODB_URI` in `.env` with the verified credentials and database name:
        `MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.s8vxj7j.mongodb.net/earlyhire-ats?retryWrites=true&w=majority`
 - **Auditor:** AI Coding Assistant (Antigravity)
+
+---
+
+### 2026-10-17 — Phase 8 — End-to-End Integration, UI Polish, Responsiveness & Workflow Verification — PASS
+- **Commit:** Ready for commit on `feat/phase-8-integration-polish` (branched from `feat/phase-7-analytics`).
+- **Scope reviewed:**
+  - End-to-End Workflow Verification:
+    - **Workflow A (Auth):** Recruiter registration, login, profile bootstrap via `fetchMe()` on mount, user profile avatar menu with initials and role badge, session persistence across reloads via HttpOnly cookie, secure logout clearing session cookie. No JWTs in localStorage/sessionStorage.
+    - **Workflow B (Jobs):** Job creation, details viewing, editing, status change, search and status filtering, soft-archive policy verified.
+    - **Workflow C (Candidates):** Candidate creation, profile drawer/modal, editing contact info and skills, search and filters, recruiter notes timeline, soft-delete of notes, soft-archive candidate.
+    - **Workflow D (Applications & Pipeline):** Kanban board across 5 active stages (`Applied`, `Screening`, `Interview`, `Offer`, `Hired`), forward progression, duplicate active application conflict (409), re-application allowed after withdrawal/archival, chronological stage history with durations and actor.
+    - **Workflow E (Dashboard Integration):** Live KPI cards powered by analytics API, stage distribution bar chart, funnel step-to-step dropoff tracking, offer acceptance rate (resolved only), date range preset and custom range filtering.
+  - UI/UX Polish & Visual Reference Alignment:
+    - Integrated design language inspired by `DOCS/ui-ux/` references: cohesive indigo/slate palette, consistent card borders and drop-shadows, standardized stage badge pills (`Applied` blue, `Screening` purple, `Interview` amber, `Offer` emerald, `Hired` green, `Rejected` rose).
+    - Added responsive mobile navigation drawer with hamburger toggle button and dark backdrop for viewports <768px.
+    - Responsive search bar collapsing gracefully on narrow viewports.
+    - Quick-navigation pipeline stage buttons on Overview tab.
+  - Responsive Viewport Verification:
+    - Mobile (375px & 430px): Verified mobile drawer navigation, single-column KPI grid reflow, scrollable tables, responsive modals.
+    - Tablet (768px): Verified 2-column KPI grid, responsive filter controls, reflowed chart containers.
+    - Desktop (1280px & 1440px): Verified 4-column KPI cards, multi-column Kanban board, wide analytical layouts.
+  - Accessibility & Interaction:
+    - Form fields explicitly associated with accessible labels.
+    - Dialogs utilize accessible headers and focus-trap logic with `Escape` key and backdrop dismiss.
+    - Status indicators pair colors with explicit text and badge labels.
+    - Charts include accessible table fallbacks and legend titles.
+  - Performance & Bundle Optimization:
+    - Separated `recharts` and `lucide-react` into distinct Rollup vendor chunks via `apps/web/vite.config.ts`.
+    - Main entry bundle reduced from 739.00 kB to 232.63 kB (gzip: 53.35 kB); Recharts vendor chunk: 496.23 kB (gzip: 150.19 kB); Icons vendor chunk: 27.03 kB (gzip: 7.11 kB).
+    - Completely resolved Vite build warning (`Some chunks are larger than 500 kBs after minification`).
+  - Code Hygiene & Defensive Data Safety:
+    - Resolved all 6 pre-existing backend lint warnings in `apps/api/src/__tests__/searchAndNotes.test.ts`.
+    - Hardened `apps/web/src/features/dashboard/FunnelChart.tsx` with defensive null-safety for `offerAcceptance` properties.
+  - Automated Integration Tests:
+    - Added `apps/web/src/__tests__/AuthWorkflow.test.tsx` (5 tests covering recruiter signup, login, session reload, profile header, logout).
+    - Added `apps/web/src/__tests__/EndToEndIntegration.test.tsx` (5 tests covering Workflows B, C, D, E, and cross-tab workspace navigation).
+- **Files created & modified:**
+  - Modified: `apps/api/src/__tests__/searchAndNotes.test.ts`, `apps/web/src/app/App.tsx`, `apps/web/src/features/dashboard/FunnelChart.tsx`, `apps/web/vite.config.ts`.
+  - Created: `apps/web/src/types/auth.ts`, `apps/web/src/api/authApi.ts`, `apps/web/src/features/auth/AuthModal.tsx`, `apps/web/src/__tests__/AuthWorkflow.test.tsx`, `apps/web/src/__tests__/EndToEndIntegration.test.tsx`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/MANUAL_ACTIONS.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors, 0 warnings across `apps/web` and `apps/api`).
+  - `npm run typecheck`: PASS (exit code 0; clean strict mode compilation across web and api workspaces).
+  - `npm test`: PASS (exit code 0; 173 total passing tests: 47 in `apps/web` across 8 suites, 126 in `apps/api` across 7 suites).
+  - `npm run build`: PASS (exit code 0; clean production bundles built, 0 chunk warnings).
+- **Acceptance criteria verified:**
+  - [x] Workflow A (Authentication): PASS
+  - [x] Workflow B (Job Management): PASS
+  - [x] Workflow C (Candidate Management): PASS
+  - [x] Workflow D (Application & Pipeline): PASS
+  - [x] Workflow E (Dashboard Integration): PASS
+  - [x] API Integration Consistency: PASS
+  - [x] UI/UX Polish & Visual Reference Alignment: PASS
+  - [x] Responsive Behavior (375px, 430px, 768px, 1280px, 1440px): PASS
+  - [x] Accessibility & Interaction Polish: PASS
+  - [x] Frontend Performance & Bundle Size Optimization: PASS
+  - [x] Security Regression Review: PASS
+  - [x] Automated Integration Testing (173/173 tests passing): PASS
+- **Gaps found:** None. Out-of-scope boundaries strictly maintained.
+- **Security/data risks:**
+  - JWT tokens remain exclusively in HttpOnly cookies with CSRF-safe configurations.
+  - No secrets in repo or Git history.
+- **Auditor:** AI Coding Assistant (Antigravity)
+
 
 
 

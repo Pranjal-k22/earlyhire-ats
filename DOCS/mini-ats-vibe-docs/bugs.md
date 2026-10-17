@@ -21,7 +21,7 @@
 
 ## Open issues
 
-_No confirmed open defects. Phase 5 verification complete (101/101 tests passing across API [81 tests] and Web [20 tests], zero ESLint or TypeScript issues)._
+_No confirmed open defects. Phase 8 verification complete (173/173 tests passing across API [126 tests] and Web [47 tests], zero ESLint errors/warnings, zero TypeScript issues)._
 
 ## Bug report template
 
@@ -155,5 +155,39 @@ In JSDOM test environments, `window` and DOM elements have `clientWidth = 0` and
 #### Fix and regression protection
 - Added a permanent recruitment pipeline quick-nav bar in `App.tsx` representing the 4 key stages (`Applied`, `Screening`, `Interview`, `Hired`), rendering immediately on the Overview tab while `DashboardView` loads and renders live aggregated KPIs and charts.
 - Preserved existing test suites (`App.test.tsx`, `JobsView.test.tsx`) with 100% pass rate.
+
+---
+
+### BUG-005: Backend test unused variables causing 6 ESLint warnings
+
+#### Issue summary
+- **Component:** `apps/api/src/__tests__/searchAndNotes.test.ts`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 8
+
+#### Problem description
+In Phase 7 audit, 6 ESLint warnings were detected in `apps/api/src/__tests__/searchAndNotes.test.ts` due to unused destructured variables (`_status`, `_authorId`, `_authHeader`) and an unused constant (`activeJobId`).
+
+#### Fix and regression protection
+- Removed unused destructured variable bindings and replaced unused parameters with discarded patterns.
+- Verified with `npm run lint` &rarr; exactly 0 errors and 0 warnings across monorepo.
+
+---
+
+### BUG-006: Potential TypeError in FunnelChart when offerAcceptance metrics are missing or partial
+
+#### Issue summary
+- **Component:** `apps/web/src/features/dashboard/FunnelChart.tsx`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 8
+
+#### Problem description
+In `FunnelChart.tsx`, calculations for resolved offer counts (`offersAccepted + offersRejected`) and conversion metrics performed direct property lookups on `data.offerAcceptance`. In situations where backend response has partial or undefined `offerAcceptance` structures during empty/pending cohort periods, this could trigger an uncaught runtime `TypeError`.
+
+#### Fix and regression protection
+- Implemented defensive null-safety with fallback values (`const safeOfferAcceptance = data?.offerAcceptance; const offersAccepted = safeOfferAcceptance?.offersAccepted ?? 0; ...`).
+- Added fallback rendering handling empty datasets gracefully without NaN or fabricated values.
+- Verified in `apps/web/src/__tests__/DashboardView.test.tsx` and `apps/web/src/__tests__/EndToEndIntegration.test.tsx`.
+
 
 
