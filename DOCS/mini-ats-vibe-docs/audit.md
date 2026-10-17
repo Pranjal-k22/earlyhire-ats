@@ -474,6 +474,78 @@ _Initial baseline recorded prior to Phase 1._
   - Phase 7: Recruitment Dashboard & Analytics (Funnel metrics, time-to-hire, offer acceptance rate, Recharts visualizer).
 - **Auditor:** AI Coding Assistant (Antigravity)
 
+---
+
+### 2026-10-17 — Phase 7 — Dashboard, Recruitment Analytics & Data-Driven KPIs — PASS
+- **Commit:** `feat/phase-7-analytics` working tree ready for commit
+- **Scope reviewed:**
+  - Metric Semantics and Data Integrity:
+    - Reconciled candidate vs application measures:
+      - `totalCandidates`: Total active candidate documents excluding archived (`archivedAt: null`).
+      - `openPositions`: Total active jobs with `status: "Open"` excluding archived (`archivedAt: null`).
+      - `hiredCandidates`: Distinct candidate IDs associated with applications in current stage `Hired` in cohort.
+      - `rejectedCandidates`: Distinct candidate IDs associated with applications in current stage `Rejected` in cohort.
+      - `applicationsByStage`: Current stage count of non-archived, non-withdrawn applications across all 6 stages (`Applied`, `Screening`, `Interview`, `Offer`, `Hired`, `Rejected`).
+      - `screeningConversionRate`: `reachedScreening / totalCohortApplications` (returns `null` when denominator is 0).
+      - `interviewConversionRate`: `reachedInterview / reachedScreening` (returns `null` when denominator is 0).
+      - `offerAcceptanceRate`: `hiredFromOffer / (hiredFromOffer + rejectedFromOffer)` (only resolved offers; pending offers strictly excluded from denominator; returns `null` when denominator is 0).
+      - `averageTimeInStageMs`: Average duration in ms of completed historical stage transitions (`durationMsFromPreviousStage` on `InterviewStageHistory`).
+  - Backend Analytics API:
+    - Added database indexes:
+      - `Application`: `{ currentStage: 1, status: 1 }`, `{ appliedAt: 1, status: 1 }`.
+      - `InterviewStageHistory`: `{ fromStage: 1, toStage: 1 }`, `{ fromStage: 1, durationMsFromPreviousStage: 1 }`.
+    - Endpoints implemented:
+      - `GET /api/v1/analytics/overview`: High-level recruitment KPIs, stage distributions, funnel conversions, sourcing channels, and stage velocity.
+      - `GET /api/v1/analytics/funnel`: Step-by-step pipeline throughput and dropoff rates.
+      - `GET /api/v1/dashboard/metrics`: Backward-compatible alias returning identical payload to overview.
+    - Query parameter validation via Zod: `period` ("7d", "30d", "90d", "all"), `from`, `to` with `from <= to` constraint and inclusive UTC end-of-day handling. Invalid inputs return 422 `VALIDATION_ERROR`.
+    - Protected with `requireAuth` (unauthenticated returns 401 `UNAUTHENTICATED`), accessible to authenticated recruiters and admins.
+  - Frontend Recruitment Dashboard:
+    - Installed `recharts` for accessible charting.
+    - `MetricCard`: Reusable KPI card with icons, colored pill badges, and scoped data test IDs.
+    - `DateRangeSelector`: Preset pills ("7d", "30d", "90d", "all"), custom date inputs with client-side range validation and reset button.
+    - `StageDistributionChart`: Recharts `BarChart` for 6 hiring stages with color tokens, tooltips, and accessible breakdown tables.
+    - `FunnelChart`: Progression tracks for `Applied` → `Screening` → `Interview` → `Offer` → `Hired`, with step-to-step conversion percentages, dropoff indicators, and Offer Acceptance banner (resolved offers only).
+    - `SourcingChart`: Recruitment channel breakdown with counts and percentages.
+    - `StageDurationCard`: Completed stage velocity durations formatted into human-readable representations (`days`, `hours`, `minutes`).
+    - `DashboardView`: High-level view orchestrating parallel API fetches, loading skeletons, error banner with retry, and filter reactivity.
+    - `App.tsx`: Mounted `DashboardView` under Overview tab with pipeline stage quick-nav bar.
+- **Files created & modified:**
+  - Backend: `apps/api/src/models/application.model.ts`, `apps/api/src/models/stageHistory.model.ts`, `apps/api/src/schemas/analytics.schema.ts`, `apps/api/src/controllers/analytics.controller.ts`, `apps/api/src/routes/analytics.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/__tests__/analytics.test.ts`.
+  - Frontend: `apps/web/package.json`, `apps/web/src/types/analytics.ts`, `apps/web/src/api/analyticsApi.ts`, `apps/web/src/features/dashboard/MetricCard.tsx`, `apps/web/src/features/dashboard/DateRangeSelector.tsx`, `apps/web/src/features/dashboard/StageDistributionChart.tsx`, `apps/web/src/features/dashboard/FunnelChart.tsx`, `apps/web/src/features/dashboard/SourcingChart.tsx`, `apps/web/src/features/dashboard/StageDurationCard.tsx`, `apps/web/src/features/dashboard/DashboardView.tsx`, `apps/web/src/app/App.tsx`, `apps/web/src/__tests__/DashboardView.test.tsx`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/MANUAL_ACTIONS.md`, `Architecture.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors across `apps/web` and `apps/api`).
+  - `npm run typecheck`: PASS (exit code 0; clean strict mode compilation across web and api workspaces).
+  - `npm test`: PASS (exit code 0; 163 total passing tests: 37 in `apps/web` across 6 suites, 126 in `apps/api` across 7 suites).
+  - `npm run build`: PASS (exit code 0; clean production bundles built for web and api).
+- **Acceptance criteria verified:**
+  - [x] Total active candidate count excludes archived candidates.
+  - [x] Total open positions count excludes closed/paused/archived jobs.
+  - [x] Hired and rejected candidate KPIs count distinct candidate IDs.
+  - [x] Applications by stage distribution correctly groups applications across all 6 stages (`Applied`, `Screening`, `Interview`, `Offer`, `Hired`, `Rejected`).
+  - [x] Withdrawn and archived applications excluded from active stage pipeline totals.
+  - [x] Screening conversion calculated from application cohort (`reachedScreening / totalCohort`).
+  - [x] Interview conversion calculated from screening cohort (`reachedInterview / reachedScreening`).
+  - [x] Offer acceptance denominator strictly excludes unresolved pending offers (`hiredFromOffer / (hiredFromOffer + rejectedFromOffer)`).
+  - [x] Average completed time in stage derived from historical stage duration logs in ms.
+  - [x] Zero-denominator behavior returns `null` and renders "—" (never fabricates 0%).
+  - [x] Date-range filtering applies to application `appliedAt` cohort with inclusive UTC end-of-day.
+  - [x] Date-range validation rejects invalid dates and reversed ranges (`from > to`) with HTTP 422.
+  - [x] Authentication required for analytics endpoints (unauthenticated returns 401).
+  - [x] Admin role successfully authorized to access analytics endpoints.
+  - [x] Full regression behavior preserved: candidate, job, note, pipeline, and health routes remain 100% operational.
+  - [x] Frontend dashboard loading skeletons, populated state, empty state, and error banner with retry verified.
+  - [x] Responsive layout and color-independent chart accessibility verified.
+- **Gaps found:** None. Phase 7 scope boundaries strictly respected.
+- **Security/data risks:**
+  - Aggregation pipeline injection prevented by using hardcoded MongoDB aggregation operators and Zod query schema.
+  - Candidate PII (emails, phone numbers, resume URLs) excluded from analytics responses.
+- **Follow-up tasks:**
+  - Phase 8: Integration & UI Polish (End-to-end integration flows, responsive styling polish, production configuration audit).
+- **Auditor:** AI Coding Assistant (Antigravity)
+
+
 
 
 

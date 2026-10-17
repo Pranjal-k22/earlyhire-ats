@@ -751,3 +751,61 @@ With Playwright: sign in using a seeded account, create a candidate, create/veri
 MVP does not promise high availability, multi-region redundancy, audited compliance, or enterprise performance. Keep API instances stateless, use managed MongoDB, cap list sizes, add indexes, and log request IDs and operational failures. Future enhancements may include file storage (S3-compatible), email/calendar integrations, resume parsing, CSV import/export, organization-level tenancy, event-driven notifications, advanced analytics, audit-log export, and stronger session revocation.
 
 Any future enhancement must first be written into `PRD.md`; architecture changes must be recorded in this file and non-negotiable rules kept in `Architecture-essentials.md`.
+
+---
+
+## 14. Recruitment Analytics & KPI Definitions (Phase 7)
+
+### 14.1 Metric Semantics & Integrity Rules
+The data model strictly separates Candidate (individual entity) from Application (workflow instance for a specific job). A single candidate can have multiple applications with different outcomes. To prevent contradictory counts, the following semantics are applied:
+
+1. **Total Active Candidates:**
+   - Formula: `Candidate.countDocuments({ archivedAt: null })`
+   - Scope: Complete registered active talent pool, excluding soft-deleted candidates.
+2. **Open Positions:**
+   - Formula: `Job.countDocuments({ status: "Open", archivedAt: null })`
+   - Scope: Job requisitions currently active and accepting applications.
+3. **Hired Candidates:**
+   - Formula: Distinct candidate IDs from applications whose `currentStage === "Hired"` within the active cohort (`status` not in `["Archived", "Withdrawn"]`).
+   - Guarantees: Candidates with multiple concurrent applications are counted once in people-level hiring totals.
+4. **Rejected Candidates:**
+   - Formula: Distinct candidate IDs from applications whose `currentStage === "Rejected"` within the active cohort.
+5. **Applications by Stage:**
+   - Grouping: Active applications (`status` not in `["Archived", "Withdrawn"]`) grouped by `currentStage`:
+     `Applied`, `Screening`, `Interview`, `Offer`, `Hired`, `Rejected`.
+   - Label: Displayed as "Applications by Stage" to indicate record counts rather than distinct people counts.
+6. **Screening Conversion Rate:**
+   - Cohort: Applications created (`appliedAt`) within the selected date range.
+   - Formula: `reachedScreening / totalCohortApplications`
+   - Zero denominator: Returns `null` (displayed as `—` in UI; never fabricated as `0%`).
+7. **Interview Conversion Rate:**
+   - Formula: `reachedInterview / reachedScreening`
+   - Zero denominator: Returns `null` (displayed as `—`).
+8. **Offer Acceptance Rate:**
+   - Formula: `hiredFromOffer / (hiredFromOffer + rejectedFromOffer)`
+   - Derived strictly from resolved transitions in `InterviewStageHistory`:
+     - Numerator: Applications that transitioned from `Offer` to `Hired`.
+     - Denominator: Applications that transitioned from `Offer` to `Hired` plus applications that transitioned from `Offer` to `Rejected`.
+     - Denominator exclusion: Applications currently sitting in `Offer` (unresolved / pending decisions) are strictly excluded from the denominator.
+   - Zero denominator: Returns `null` when no offers have reached a terminal outcome.
+9. **Average Time in Stage (ms):**
+   - Derived from `durationMsFromPreviousStage` on completed `InterviewStageHistory` transitions.
+   - Pending visits in current stages are excluded from completed transition averages.
+10. **Candidate Sourcing Distribution:**
+    - Breakdown of origin channels (`source` on Application or Candidate: e.g. LinkedIn, Referral, CareerPage) with counts and percentages across the active cohort.
+
+### 14.2 Date Filter Behavior
+- **Filtered Entity:** Application creation date (`appliedAt`).
+- **Range Presets:**
+  - `7d`: Applications created in the past 7 days (UTC).
+  - `30d`: Applications created in the past 30 days (UTC).
+  - `90d`: Applications created in the past 90 days (UTC).
+  - `all`: All active applications regardless of date.
+- **Custom Range:** Validated `from` and `to` ISO date strings (`YYYY-MM-DD`). End date `to` is inclusive through `23:59:59.999 UTC`. Invalid inputs or reversed ranges (`from > to`) are rejected with HTTP 422 `VALIDATION_ERROR`.
+
+### 14.3 Analytics API Endpoints
+- `GET /api/v1/analytics/overview` (Overview KPIs, stage distribution, conversion rates, sourcing, durations).
+- `GET /api/v1/analytics/funnel` (Detailed funnel step progression and dropoff rates).
+- `GET /api/v1/dashboard/metrics` (Backward-compatible alias for overview).
+- Protected with `requireAuth` (401 `UNAUTHENTICATED`).
+

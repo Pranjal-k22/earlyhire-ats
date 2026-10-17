@@ -220,4 +220,51 @@ Do not call the MVP ready for submission unless all of the following are true:
   6. Frontend UI: CandidateNotesSection list, add note, delete note, safe text rendering, candidate search/experience filters, job status filters. (7 tests)
 - **Verified by:** Antigravity (AI Coding Assistant)
 
+---
+
+### Test run — 2026-10-17 19:25 UTC (Phase 7 Verification)
+- **Commit:** `feat/phase-7-analytics` (ready for commit)
+- **Environment:** Local test runner with isolated MongoDB database (`earlyai_ats_test`)
+- **Dataset:** Synthetic isolated test fixtures with fresh teardown per test; hand-calculated fixtures
+- **`npm run lint`:** PASS — exit code: 0 (0 errors across monorepo)
+- **`npm run typecheck`:** PASS — exit code: 0 (TypeScript strict mode passed on both `web` and `api`)
+- **`npm test`:** PASS — exit code: 0; passed: 163 tests, failed: 0 across 13 test suites:
+  - `apps/web/src/__tests__/App.test.tsx`: 2 passed
+  - `apps/web/src/__tests__/JobsView.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/CandidatesView.test.tsx`: 6 passed
+  - `apps/web/src/__tests__/PipelineView.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/NotesAndSearch.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/DashboardView.test.tsx`: 10 passed
+  - `apps/api/src/__tests__/health.test.ts`: 2 passed
+  - `apps/api/src/__tests__/auth.test.ts`: 18 passed
+  - `apps/api/src/__tests__/job.test.ts`: 14 passed
+  - `apps/api/src/__tests__/candidate.test.ts`: 22 passed
+  - `apps/api/src/__tests__/application.test.ts`: 25 passed
+  - `apps/api/src/__tests__/searchAndNotes.test.ts`: 30 passed
+  - `apps/api/src/__tests__/analytics.test.ts`: 15 passed
+- **`npm run build`:** PASS — exit code: 0 (Vite frontend built `apps/web/dist` in 11.83s; `tsc` compiled `apps/api/dist`)
+- **Phase 7 Automated Test Coverage Breakdown:**
+  1. Total active candidate count & exclusion of archived candidates.
+  2. Total open positions count & exclusion of closed/paused/archived jobs.
+  3. Distinct hired and rejected candidate counting (independent of multi-application candidates).
+  4. Correct stage distribution grouping across all 6 pipeline stages (`Applied`, `Screening`, `Interview`, `Offer`, `Hired`, `Rejected`).
+  5. Exclusion of withdrawn and archived applications from active pipeline totals.
+  6. Screening conversion rate calculation (`reachedScreening / totalCohort`).
+  7. Interview conversion rate calculation (`reachedInterview / reachedScreening`).
+  8. Resolved offer acceptance rate (`hiredFromOffer / (hiredFromOffer + rejectedFromOffer)`).
+  9. Strict exclusion of pending offers from offer acceptance denominator.
+  10. Average completed time in stage in milliseconds derived from stage history logs.
+  11. Application with no history beyond initial creation handled safely.
+  12. Zero-denominator conversion handling returning `null` (never fabricating 0%).
+  13. Valid `from` and `to` date range filtering with UTC end-of-day inclusion.
+  14. Rejection of invalid date parameters (422 `VALIDATION_ERROR`).
+  15. Rejection of reversed date ranges (`from > to`) with HTTP 422.
+  16. Authentication enforcement on analytics endpoints (401 `UNAUTHENTICATED`).
+  17. Authorization verification for recruiter and admin roles.
+  18. Funnel endpoint validation for step progression and dropoff calculations.
+  19. Backward compatibility verification for `/api/v1/dashboard/metrics` alias.
+  20. Frontend dashboard loading skeletons, KPI rendering, Recharts visualizer, empty state, date preset changes, inline range validation, and API error retry.
+- **Verified by:** Antigravity (AI Coding Assistant)
+
+
 

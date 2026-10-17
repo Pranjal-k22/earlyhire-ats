@@ -142,3 +142,20 @@ This file tracks all manual actions, architecture decisions, and external infras
 - **Status:** `PENDING` (Verified on local test database; required upon Atlas deployment)
 - **Verification Evidence / Method:** Tested locally with 100% pass rate in `apps/api/src/__tests__/searchAndNotes.test.ts` (Scenarios 29 & 30).
 
+---
+
+### ACT-10: MongoDB Atlas Analytics Compound Indexes Verification (Phase 10)
+- **Action ID:** ACT-10
+- **Description:** Verify the compound indexes supporting Phase 7 recruitment analytics aggregations on the remote MongoDB Atlas cluster:
+  - `applications`: `{ currentStage: 1, status: 1 }` and `{ appliedAt: 1, status: 1 }`.
+  - `stagehistories`: `{ fromStage: 1, toStage: 1 }` and `{ fromStage: 1, durationMsFromPreviousStage: 1 }`.
+- **Reason:** Ensuring performant execution of stage-grouping, date-bounded cohort filters, and historical stage duration calculations across large historical datasets without collection scans.
+- **Required Account / Service:** MongoDB Atlas Database Admin
+- **Exact Steps:**
+  1. Connect to MongoDB Atlas via Mongo shell / Compass.
+  2. Run `db.applications.getIndexes()` and `db.stagehistories.getIndexes()`.
+  3. Confirm that the compound indexes are present or build them via `db.applications.createIndex({ currentStage: 1, status: 1 })`, `db.applications.createIndex({ appliedAt: 1, status: 1 })`, `db.stagehistories.createIndex({ fromStage: 1, toStage: 1 })`, and `db.stagehistories.createIndex({ fromStage: 1, durationMsFromPreviousStage: 1 })`.
+- **Status:** `PENDING` (Verified locally with 100% pass rate on test runners; required upon cloud deployment)
+- **Verification Evidence / Method:** Aggregation queries benchmarked in `apps/api/src/__tests__/analytics.test.ts`.
+
+

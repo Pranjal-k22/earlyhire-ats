@@ -157,8 +157,10 @@ applicationSchema.index(
   }
 );
 
-// Query optimization indexes per Architecture.md §4.4
+// Query optimization indexes per Architecture.md §4.4 and Phase 7 analytics
 applicationSchema.index({ stage: 1, status: 1, appliedAt: -1 });
+applicationSchema.index({ currentStage: 1, status: 1 });
+applicationSchema.index({ appliedAt: 1, status: 1 });
 applicationSchema.index({ jobId: 1, stage: 1 });
 applicationSchema.index({ recruiterId: 1, stage: 1 });
 applicationSchema.index({ candidateId: 1, createdAt: -1 });

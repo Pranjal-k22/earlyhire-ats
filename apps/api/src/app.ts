@@ -9,6 +9,7 @@ import jobRoutes from "./routes/job.routes.js";
 import candidateRoutes from "./routes/candidate.routes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import noteDirectRoutes from "./routes/noteDirect.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 
@@ -40,6 +41,8 @@ export const createApp = (): Express => {
   app.use("/api/v1/candidates", candidateRoutes);
   app.use("/api/v1/applications", applicationRoutes);
   app.use("/api/v1/notes", noteDirectRoutes);
+  app.use("/api/v1/analytics", analyticsRoutes);
+  app.use("/api/v1/dashboard", analyticsRoutes);
 
   // 404 Fallback
   app.use(notFoundHandler);

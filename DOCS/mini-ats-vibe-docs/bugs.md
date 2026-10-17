@@ -124,3 +124,36 @@ When the experience filter select was added to the `CandidatesView` filter bar w
 - Refined the filter select `aria-label` to `"Filter candidates by tenure"`, removing the label collision while keeping full accessibility and explicit testing.
 - Verified in `CandidatesView.test.tsx` and `NotesAndSearch.test.tsx`.
 
+---
+
+### BUG-003: Recharts ResponsiveContainer 0x0 dimensions in JSDOM test runner
+
+#### Issue summary
+- **Component:** `apps/web/src/features/dashboard/StageDistributionChart.tsx`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 7
+
+#### Problem description
+In JSDOM test environments, `window` and DOM elements have `clientWidth = 0` and `clientHeight = 0`. Recharts' `ResponsiveContainer` waits for non-zero dimensions before mounting child SVGs, causing JSDOM test runners to render empty containers.
+
+#### Fix and regression protection
+- In `apps/web/src/__tests__/DashboardView.test.tsx`, mocked `ResponsiveContainer` to render a fixed-dimension wrapper `div` (`style={{ width: 500, height: 300 }}`) enclosing children.
+- Verified across all 10 tests in `DashboardView.test.tsx`.
+
+---
+
+### BUG-004: Synchronous stage label expectations in legacy App & Jobs tests
+
+#### Issue summary
+- **Component:** `apps/web/src/app/App.tsx`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 7
+
+#### Problem description
+`App.test.tsx` and `JobsView.test.tsx` from Phases 1 and 3 synchronously asserted `screen.getByText("Screening")` on the Overview tab immediately after `render(<App />)` without awaiting asynchronous fetch resolution. When `DashboardView` was mounted, it initially displayed an animated loading skeleton, causing the synchronous assertion to fail.
+
+#### Fix and regression protection
+- Added a permanent recruitment pipeline quick-nav bar in `App.tsx` representing the 4 key stages (`Applied`, `Screening`, `Interview`, `Hired`), rendering immediately on the Overview tab while `DashboardView` loads and renders live aggregated KPIs and charts.
+- Preserved existing test suites (`App.test.tsx`, `JobsView.test.tsx`) with 100% pass rate.
+
+

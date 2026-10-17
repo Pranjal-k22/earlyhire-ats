@@ -8,16 +8,15 @@ import {
   Bell,
   ChevronDown,
   CheckCircle2,
-  Clock,
-  UserCheck,
-  XCircle,
   FileText,
-  Activity,
+  AlertTriangle,
 } from "lucide-react";
 
 import { JobsView } from "../features/jobs/JobsView";
 import { CandidatesView } from "../features/candidates/CandidatesView";
 import { PipelineView } from "../features/pipeline/PipelineView";
+
+import { DashboardView } from "../features/dashboard/DashboardView";
 
 interface HealthStatus {
   status: string;
@@ -184,112 +183,60 @@ export const App: React.FC = () => {
             <PipelineView />
           ) : (
             <>
-              {/* Page Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Overview & Pipeline Health</h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Phase 1 project skeleton & shared design tokens initialized.
-                  </p>
+              {health && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-800">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>
+                      Service: {health.service} ({health.status})
+                    </span>
+                  </span>
+                  <span className="text-emerald-700 font-mono text-[11px]">System Online</span>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-white text-slate-700 border border-slate-300 font-medium text-sm rounded-lg hover:bg-slate-50 transition-all shadow-subtle"
-                  >
-                    Documentation
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("jobs")}
-                    className="px-4 py-2 bg-brand-600 text-white font-medium text-sm rounded-lg hover:bg-brand-700 transition-all shadow-sm flex items-center gap-2"
-                  >
-                    <Briefcase className="w-4 h-4" />
-                    <span>Manage Jobs</span>
-                  </button>
+              )}
+              {error && (
+                <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-xl flex items-center justify-between text-xs text-rose-800">
+                  <span className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    <span>API Offline: {error}</span>
+                  </span>
+                  <span className="text-rose-700 font-mono text-[11px]">Service Unavailable</span>
                 </div>
-              </div>
+              )}
 
-              {/* API Verification Banner */}
-              <div className="mb-8 p-4 rounded-xl border border-blue-100 bg-blue-50/60 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                    <Activity className="w-5 h-5" />
-                  </div>
+              {/* Recruitment Pipeline Stages Quick-Nav */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between text-xs">
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">Backend Health Endpoint</p>
-                    <p className="text-xs text-blue-700 mt-0.5">
-                      Target: <code className="bg-blue-100 px-1 py-0.5 rounded">/api/v1/health</code>
-                    </p>
+                    <span className="font-semibold text-slate-700 block">Applied</span>
+                    <span className="text-[10px] text-slate-400">Stage 1: Inbound</span>
                   </div>
+                  <span className="w-2 h-2 rounded-full bg-slate-400" />
                 </div>
-
-                <div>
-                  {loading && <span className="text-xs text-slate-500">Checking health...</span>}
-                  {health && (
-                    <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-medium">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>
-                        Service: {health.service} ({health.status})
-                      </span>
-                    </div>
-                  )}
-                  {error && (
-                    <div className="flex items-center gap-2 text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-medium">
-                      <XCircle className="w-4 h-4 text-rose-600" />
-                      <span>Offline ({error})</span>
-                    </div>
-                  )}
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-sky-700 block">Screening</span>
+                    <span className="text-[10px] text-slate-400">Stage 2: Review</span>
+                  </div>
+                  <span className="w-2 h-2 rounded-full bg-sky-500" />
+                </div>
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-purple-700 block">Interview</span>
+                    <span className="text-[10px] text-slate-400">Stage 3: Evaluation</span>
+                  </div>
+                  <span className="w-2 h-2 rounded-full bg-purple-500" />
+                </div>
+                <div className="p-3.5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-emerald-700 block">Hired</span>
+                    <span className="text-[10px] text-slate-400">Stage 5: Finalized</span>
+                  </div>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 </div>
               </div>
 
-              {/* Shared Styling Tokens & Metric Card Skeleton Previews */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-card">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Applied</span>
-                    <span className="p-2 rounded-lg bg-slate-100 text-slate-600">
-                      <Clock className="w-4 h-4" />
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">0</p>
-                  <p className="text-xs text-slate-400 mt-1">Stage 1: Inbound applications</p>
-                </div>
-
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-card">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-sky-600 uppercase tracking-wider">Screening</span>
-                    <span className="p-2 rounded-lg bg-sky-50 text-sky-600">
-                      <Search className="w-4 h-4" />
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">0</p>
-                  <p className="text-xs text-slate-400 mt-1">Stage 2: Recruiter review</p>
-                </div>
-
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-card">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Interview</span>
-                    <span className="p-2 rounded-lg bg-purple-50 text-purple-600">
-                      <Users className="w-4 h-4" />
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">0</p>
-                  <p className="text-xs text-slate-400 mt-1">Stage 3: Technical / Team rounds</p>
-                </div>
-
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-card">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Hired</span>
-                    <span className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-                      <UserCheck className="w-4 h-4" />
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">0</p>
-                  <p className="text-xs text-slate-400 mt-1">Stage 5: Terminal hire</p>
-                </div>
-              </div>
+              <DashboardView />
             </>
           )}
         </main>

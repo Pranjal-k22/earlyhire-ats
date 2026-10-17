@@ -103,9 +103,11 @@ const stageHistorySchema = new Schema<
   }
 );
 
-// Indexes per Architecture.md §4.5
+// Indexes per Architecture.md §4.5 and Phase 7 analytics
 stageHistorySchema.index({ applicationId: 1, changedAt: 1 });
 stageHistorySchema.index({ actorId: 1, changedAt: -1 });
+stageHistorySchema.index({ fromStage: 1, toStage: 1 });
+stageHistorySchema.index({ fromStage: 1, durationMsFromPreviousStage: 1 });
 
 export const InterviewStageHistory = mongoose.model<
   IInterviewStageHistoryDocument,
