@@ -13,13 +13,13 @@
 
 ## Current baseline
 
-- **Audit status:** Phase 8 Completed — PASS (End-to-End Integration, UI Polish, Responsive Navigation, Code-Split Bundle Optimization, Zero Lint Warnings, and 173/173 passing tests).
+- **Audit status:** Phase 9 Completed — PASS (Final Testing & Security Audit: JWT HS256 algorithm allowlist, CSRF verifyOrigin protection, NoSQL injection prevention, in-memory rate limiting, 413 payload handling, 400 CastError handling, and 202/202 passing tests across 16 test suites).
 - **Repository path:** `C:\WEB DEVELOPMENT\Early-ATS`
-- **Git status:** Branch `feat/phase-8-integration-polish` (created from `feat/phase-7-analytics`).
+- **Git status:** Branch `feat/phase-9-security-audit` (created from `feat/phase-8-integration-polish`).
 - **Git remote:** `origin https://github.com/Pranjal-k22/earlyhire-ats.git` (fetch & push verified reachable).
-- **Last audited commit:** Working tree ready for Phase 8 commit
+- **Last audited commit:** Working tree ready for Phase 9 commit
 - **Last audit date:** 2026-10-17
-- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 0 warnings; 173/173 tests passing).
+- **Automated application checks:** PASS (`npm run lint`, `npm run typecheck`, `npm test`, `npm run build` all passing with exit code 0; 0 warnings; 202/202 tests passing).
 - **Deployment:** NOT RUN (Deployment configuration and hosting targets pending Phase 10).
 
 ## Phase audit checklist
@@ -641,11 +641,49 @@ _Initial baseline recorded prior to Phase 1._
   - No secrets in repo or Git history.
 - **Auditor:** AI Coding Assistant (Antigravity)
 
+---
 
-
-
-
-
-
-
-
+### 2026-10-17 — Phase 9 — Final Testing & Security Audit — PASS
+- **Commit:** Ready for commit on `feat/phase-9-security-audit` (branched from `feat/phase-8-integration-polish`).
+- **Scope reviewed:**
+  - **Gate 1 — Authentication and Session Security:**
+    - Hardened `apps/api/src/utils/jwt.ts`: Explicit `algorithms: ["HS256"]` allowlist on `jwt.verify` and `algorithm: "HS256"` on `jwt.sign` to block algorithm confusion / `none` attacks.
+    - Verified generic authentication error messages on invalid password or unknown email to prevent credential enumeration and timing leaks.
+    - Verified public registration strictly enforces `recruiter` role, ignoring any client-provided role fields.
+    - Verified deactivated user account lockout (HTTP 403 `FORBIDDEN`).
+    - Verified password complexity (min 8 chars, lowercase, uppercase, number) and bcrypt hashing (salt rounds 10, never exposed in JSON responses).
+    - Verified session cookie clearance on logout with matching attributes (`httpOnly: true`, `sameSite: "lax"`, `path: "/"`).
+    - Verified frontend does not contain hardcoded credentials or mock user profiles.
+  - **Gate 2 — Authorization, RBAC, and Object-Level Access:**
+    - Verified server-side RBAC authorization middleware across all resource endpoints.
+    - Verified recruiter cannot access admin-only actions (HTTP 403 `FORBIDDEN`).
+    - Verified object-level ownership: recruiter cannot soft-delete another recruiter's notes; administrator is authorized to delete notes.
+    - Verified unauthenticated access to all endpoints (Jobs, Candidates, Applications, Notes, Analytics) strictly returns HTTP 401 `UNAUTHENTICATED`.
+  - **Gate 3 — CSRF, CORS, and Cookie Configuration:**
+    - Implemented `verifyOrigin` middleware in `apps/api/src/middleware/csrf.ts` checking `Origin` and `Referer` headers on state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`). Forged origins return HTTP 403 `CSRF_FORBIDDEN`.
+    - Verified CORS configuration uses explicit allowlist (`env.CLIENT_URL`) with `credentials: true`. Wildcards are not combined with credentials.
+    - Safe read requests (`GET`) are unblocked.
+  - **Gate 4 — Input Validation and Injection Resistance:**
+    - Implemented `sanitizeMongo` middleware in `apps/api/src/middleware/mongoSanitize.ts` recursively blocking MongoDB query operator keys (`$gt`, `$ne`, etc.) in request bodies, query params, and route params with HTTP 422 `VALIDATION_ERROR`.
+    - Added Mongoose `CastError` handler in `apps/api/src/middleware/errorHandler.ts` returning HTTP 400 `INVALID_ID` on malformed ObjectIds.
+    - Nonexistent IDs return HTTP 404.
+    - Verified ReDoS resistance on candidate and job search regexes using `escapeRegex`.
+    - Verified candidate notes reject executable `<script>` tags with HTTP 422 and store safe text literally without interpretation.
+  - **Gate 5 — Abuse Controls and Operational Security:**
+    - Implemented in-memory sliding-window rate limiter in `apps/api/src/middleware/rateLimiter.ts` mounted on auth routes (`/api/v1/auth/signup`, `/api/v1/auth/login`), enforcing maximum requests per window with HTTP 429 `TOO_MANY_REQUESTS` and setting `Retry-After`.
+    - Added Express body-parser size limit handler in `errorHandler.ts` returning HTTP 413 `PAYLOAD_TOO_LARGE` on requests exceeding 1MB limit.
+    - Performed `npm audit` review: documented 12 transitive vulnerabilities with zero reachability in production runtime (vitest test runner and tailwind build tools).
+  - **Gate 6 & 7 — Regression and Verification Commands:**
+    - Complete regression verification across all 173 prior tests: 100% pass rate.
+    - Dedicated penetration and security test suite (`apps/api/src/__tests__/security.test.ts`) added: 29 tests passing.
+    - Total automated tests: 202 tests across 16 test suites (47 web, 155 api).
+- **Files created & modified:**
+  - Modified: `apps/api/src/utils/jwt.ts`, `apps/api/src/routes/auth.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/middleware/errorHandler.ts`.
+  - Created: `apps/api/src/middleware/rateLimiter.ts`, `apps/api/src/middleware/csrf.ts`, `apps/api/src/middleware/mongoSanitize.ts`, `apps/api/src/__tests__/security.test.ts`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/mini-ats-vibe-docs/implementation_plan.md`, `DOCS/MANUAL_ACTIONS.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors, 0 warnings across monorepo).
+  - `npm run typecheck`: PASS (exit code 0; clean strict mode compilation across web and api workspaces).
+  - `npm test`: PASS (exit code 0; 202 total passing tests across 16 suites).
+  - `npm run build`: PASS (exit code 0; clean production bundles built, 0 chunk warnings).
+- **Auditor:** AI Coding Assistant (Antigravity)

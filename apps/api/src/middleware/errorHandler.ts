@@ -50,6 +50,31 @@ export const errorHandler = (
     return;
   }
 
+  // Handle Mongoose CastError (e.g., malformed ObjectId)
+  if (err.name === "CastError") {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: "INVALID_ID",
+        message: "Invalid resource identifier format",
+      },
+    });
+    return;
+  }
+
+  // Handle Express body-parser payload too large
+  const errorWithStatus = err as { status?: number; statusCode?: number; type?: string };
+  if (errorWithStatus.type === "entity.too.large" || errorWithStatus.status === 413 || errorWithStatus.statusCode === 413) {
+    res.status(413).json({
+      success: false,
+      error: {
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Request payload exceeds configured size limit",
+      },
+    });
+    return;
+  }
+
   // Fallback for unexpected errors
   const isDev = env.NODE_ENV === "development";
   console.error("Unhandled Application Error:", err);

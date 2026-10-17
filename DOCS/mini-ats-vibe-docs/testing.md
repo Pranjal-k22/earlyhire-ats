@@ -306,6 +306,36 @@ Do not call the MVP ready for submission unless all of the following are true:
      - Workspace Navigation: Tab switching between Dashboard, Jobs, Candidates, and Pipeline without state corruption.
 - **Verified by:** Antigravity (AI Coding Assistant)
 
+---
 
-
-
+### Test run — 2026-10-17 20:39 UTC (Phase 9 Security Audit & Regression Verification)
+- **Commit:** `feat/phase-9-security-audit` (ready for commit)
+- **Environment:** Local test runner with isolated MongoDB database (`earlyai_ats_test`) and Vitest JSDOM
+- **Dataset:** Synthetic isolated test fixtures with fresh teardown per test; mocked API responses and React Testing Library user-event simulations
+- **`npm run lint`:** PASS — exit code: 0 (0 errors, 0 warnings across monorepo)
+- **`npm run typecheck`:** PASS — exit code: 0 (TypeScript strict mode passed on both `web` and `api`)
+- **`npm test`:** PASS — exit code: 0; passed: 202 tests, failed: 0 across 16 test suites (47 web, 155 api):
+  - `apps/web/src/__tests__/App.test.tsx`: 2 passed
+  - `apps/web/src/__tests__/JobsView.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/CandidatesView.test.tsx`: 6 passed
+  - `apps/web/src/__tests__/PipelineView.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/NotesAndSearch.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/DashboardView.test.tsx`: 10 passed
+  - `apps/web/src/__tests__/AuthWorkflow.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/EndToEndIntegration.test.tsx`: 5 passed
+  - `apps/api/src/__tests__/health.test.ts`: 2 passed
+  - `apps/api/src/__tests__/auth.test.ts`: 18 passed
+  - `apps/api/src/__tests__/job.test.ts`: 14 passed
+  - `apps/api/src/__tests__/candidate.test.ts`: 22 passed
+  - `apps/api/src/__tests__/application.test.ts`: 25 passed
+  - `apps/api/src/__tests__/searchAndNotes.test.ts`: 30 passed
+  - `apps/api/src/__tests__/analytics.test.ts`: 15 passed
+  - `apps/api/src/__tests__/security.test.ts`: 29 passed
+- **`npm run build`:** PASS — exit code: 0 (Vite frontend built `apps/web/dist` in 22.40s with Rollup `manualChunks` splitting; `tsc` compiled `apps/api/dist`; 0 chunk size warnings)
+- **Phase 9 Automated Security Test Coverage Breakdown (`security.test.ts` — 29 tests):**
+  1. Gate 1 — Authentication & Session: Missing cookie rejection (401), malformed JWT rejection (401), untrusted secret key rejection (401), "none" algorithm header rejection (401), expired JWT token rejection (401), wrong password generic error (401), unknown email generic error (401), inactive user account lockout (403), Zod password complexity enforcement (422), duplicate email rejection (409), forced recruiter role on public signup, cookie invalidation on logout, bcrypt hashing verification without credential leakage. (13 tests)
+  2. Gate 2 — Authorization & RBAC: Recruiter role blocked from admin actions (403), admin role authorized for admin actions, recruiter cannot delete another recruiter's notes (403), admin role can delete any recruiter's notes (200), unauthenticated requests return 401 across all resource families. (5 tests)
+  3. Gate 3 — CSRF & Origin Validation: Disallowed/forged Origin headers blocked on state-changing requests (403), legitimate client Origin headers allowed (201), safe read requests (GET) allowed regardless of cross-origin headers. (3 tests)
+  4. Gate 4 — Input Validation & Injection Resistance: NoSQL operator injection in request body blocked (422), NoSQL operator injection in query parameters blocked (422), malformed MongoDB ObjectId path parameters return 400 `INVALID_ID`, nonexistent valid ObjectId returns 404, ReDoS resistance on regex searches, candidate notes reject executable script tags (422) and store text safely without execution. (6 tests)
+  5. Gate 5 — Abuse Controls & Operational Security: In-memory sliding-window rate limiter throttles excessive requests with 429 `TOO_MANY_REQUESTS` and sets `Retry-After`, oversized request payloads exceeding 1MB body limit return 413 `PAYLOAD_TOO_LARGE`. (2 tests)
+- **Verified by:** Antigravity (AI Coding Assistant)

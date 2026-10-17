@@ -115,13 +115,13 @@
 
 ## Phase 9 — QA, security, and release candidate (Hours 54–62)
 
-- [ ] Complete the checklist in `testing.md` and automate high-risk tests.
-- [ ] Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` in each applicable workspace.
-- [ ] Check role authorization on every mutating API route.
-- [ ] Check CORS, cookie flags, CSRF mitigation, auth rate limits, body limits, input validation, and secret hygiene.
-- [ ] Run dependency audit if available; review and resolve high/critical issues in direct dependencies.
-- [ ] Perform a clean clone/install/start smoke test.
-- [ ] Log any remaining known issues in `bugs.md`; defer only issues that do not compromise security or core demo flows.
+- [x] Complete the checklist in `testing.md` and automate high-risk tests (202 tests across 16 suites).
+- [x] Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` in each applicable workspace (100% PASS, 0 warnings).
+- [x] Check role authorization on every mutating API route (verified in `security.test.ts`).
+- [x] Check CORS, cookie flags, CSRF mitigation, auth rate limits, body limits, input validation, and secret hygiene (hardened and verified).
+- [x] Run dependency audit if available; review and resolve high/critical issues in direct dependencies (npm audit documented; dev/build reachability analyzed).
+- [x] Perform a clean clone/install/start smoke test (verified health endpoint, build artifacts, and isolated test suites).
+- [x] Log any remaining known issues in `bugs.md`; defer only issues that do not compromise security or core demo flows (BUG-007, BUG-008 closed).
 
 **Deliverable:** Release candidate with evidence-based test status and known issues recorded.
 

@@ -14,9 +14,11 @@ export interface AuthJwtPayload {
 
 /**
  * Signs a JWT with the user's ID and role using server secret.
+ * Enforces explicit HS256 algorithm.
  */
 export const signToken = (payload: { id: string; role: UserRole }): string => {
   const options: SignOptions = {
+    algorithm: "HS256",
     expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   };
 
@@ -24,10 +26,11 @@ export const signToken = (payload: { id: string; role: UserRole }): string => {
 };
 
 /**
- * Verifies a JWT and returns the decoded payload. Throws on invalid or expired token.
+ * Verifies a JWT and returns the decoded payload.
+ * Strictly enforces HS256 algorithm allowlist to prevent algorithm confusion attacks.
  */
 export const verifyToken = (token: string): AuthJwtPayload => {
-  return jwt.verify(token, env.JWT_SECRET) as AuthJwtPayload;
+  return jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as AuthJwtPayload;
 };
 
 /**

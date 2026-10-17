@@ -12,6 +12,8 @@ import noteDirectRoutes from "./routes/noteDirect.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
+import { sanitizeMongo } from "./middleware/mongoSanitize.js";
+import { verifyOrigin } from "./middleware/csrf.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -33,6 +35,10 @@ export const createApp = (): Express => {
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
   app.use(cookieParser());
+
+  // Security sanitization and CSRF Origin protection
+  app.use(sanitizeMongo);
+  app.use(verifyOrigin);
 
   // API Routes
   app.use("/api/v1", healthRoutes);

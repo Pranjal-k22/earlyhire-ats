@@ -21,7 +21,7 @@
 
 ## Open issues
 
-_No confirmed open defects. Phase 8 verification complete (173/173 tests passing across API [126 tests] and Web [47 tests], zero ESLint errors/warnings, zero TypeScript issues)._
+_No confirmed open defects. Phase 9 verification complete (202/202 tests passing across API [155 tests] and Web [47 tests], zero ESLint errors/warnings, zero TypeScript issues)._
 
 ## Bug report template
 
@@ -189,5 +189,34 @@ In `FunnelChart.tsx`, calculations for resolved offer counts (`offersAccepted + 
 - Added fallback rendering handling empty datasets gracefully without NaN or fabricated values.
 - Verified in `apps/web/src/__tests__/DashboardView.test.tsx` and `apps/web/src/__tests__/EndToEndIntegration.test.tsx`.
 
+---
 
+### BUG-007: Mongoose CastError on invalid ObjectIds fell through to 500 INTERNAL_ERROR
 
+#### Issue summary
+- **Component:** `apps/api/src/middleware/errorHandler.ts`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 9
+
+#### Problem description
+While individual controllers implemented `mongoose.Types.ObjectId.isValid` guards, any malformed ObjectId that reached Mongoose queries (or in nested populates) threw a Mongoose `CastError`, which fell through to the unexpected error handler and returned HTTP 500 `INTERNAL_ERROR` instead of a client 400 `INVALID_ID`.
+
+#### Fix and regression protection
+- Added dedicated `err.name === "CastError"` branch in `errorHandler.ts` returning HTTP 400 `INVALID_ID` with clear error message.
+- Added regression scenario 4.3 in `apps/api/src/__tests__/security.test.ts`.
+
+---
+
+### BUG-008: Express body-parser payload limit exceeded returned 500 instead of 413
+
+#### Issue summary
+- **Component:** `apps/api/src/middleware/errorHandler.ts`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 9
+
+#### Problem description
+When a request payload exceeded Express body-parser's configured 1MB limit (`express.json({ limit: "1mb" })`), body-parser threw an error with `type: "entity.too.large"` and `status: 413`. Because this error was not an `AppError` or `ZodError`, `errorHandler.ts` treated it as an unhandled internal exception and returned HTTP 500 `INTERNAL_ERROR`.
+
+#### Fix and regression protection
+- Added explicit inspection for `err.type === "entity.too.large"` and `err.status === 413` in `errorHandler.ts`, returning standard HTTP 413 `PAYLOAD_TOO_LARGE`.
+- Added regression scenario 5.2 in `apps/api/src/__tests__/security.test.ts`.
