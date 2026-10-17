@@ -1,4 +1,5 @@
 import { IAIProvider, AIProviderResponse } from "./aiProvider.js";
+import { OllamaProvider } from "./ollamaProvider.js";
 import { GeminiProvider } from "./geminiProvider.js";
 import { GroqProvider } from "./groqProvider.js";
 import { FallbackProvider } from "./fallbackProvider.js";
@@ -24,14 +25,16 @@ import { env } from "../../config/env.js";
 
 export class AIRouter {
   private primaryProvider: IAIProvider;
-  private fallbackProvider: IAIProvider;
+  private fallbackProvider: IAIProvider | null = null;
   private heuristicProvider: FallbackProvider;
 
   constructor() {
     this.heuristicProvider = new FallbackProvider();
 
     // Configure primary provider
-    if (env.AI_PROVIDER === "groq") {
+    if (env.AI_PROVIDER === "ollama") {
+      this.primaryProvider = new OllamaProvider();
+    } else if (env.AI_PROVIDER === "groq") {
       this.primaryProvider = new GroqProvider();
     } else if (env.AI_PROVIDER === "mock") {
       this.primaryProvider = this.heuristicProvider;
@@ -40,12 +43,16 @@ export class AIRouter {
     }
 
     // Configure secondary fallback provider
-    if (env.AI_FALLBACK_PROVIDER === "gemini") {
+    if (env.AI_FALLBACK_PROVIDER === "ollama") {
+      this.fallbackProvider = new OllamaProvider();
+    } else if (env.AI_FALLBACK_PROVIDER === "gemini") {
       this.fallbackProvider = new GeminiProvider();
     } else if (env.AI_FALLBACK_PROVIDER === "groq") {
       this.fallbackProvider = new GroqProvider();
-    } else {
+    } else if (env.AI_FALLBACK_PROVIDER === "mock") {
       this.fallbackProvider = this.heuristicProvider;
+    } else {
+      this.fallbackProvider = null;
     }
   }
 
@@ -62,14 +69,20 @@ export class AIRouter {
     let lastError: Error | null = null;
     const providersToTry: IAIProvider[] = [];
 
-    if (this.primaryProvider.isAvailable()) {
+    if (this.primaryProvider && this.primaryProvider.isAvailable()) {
       providersToTry.push(this.primaryProvider);
     }
-    if (this.fallbackProvider.isAvailable() && this.fallbackProvider !== this.primaryProvider) {
+    if (
+      this.fallbackProvider &&
+      this.fallbackProvider.isAvailable() &&
+      this.fallbackProvider !== this.primaryProvider
+    ) {
       providersToTry.push(this.fallbackProvider);
     }
-    // Guaranteed fallback
-    providersToTry.push(this.heuristicProvider);
+    // Only fall back to heuristic provider if explicitly configured
+    if (env.AI_FALLBACK_PROVIDER === "mock" && !providersToTry.includes(this.heuristicProvider)) {
+      providersToTry.push(this.heuristicProvider);
+    }
 
     for (const provider of providersToTry) {
       try {

@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface FeedbackSubmission {
   interviewId: string;
@@ -43,17 +44,12 @@ export const submitFeedback = async (
 ): Promise<{ success: boolean; data: { feedback: FeedbackItem } }> => {
   const res = await fetch(`${API_BASE}/api/v1/feedback/submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Feedback submission failed: ${res.status}`);
-  }
-
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: { feedback: FeedbackItem } }>(res, "Feedback submission failed");
 };
 
 export const fetchFeedbackForApplication = async (
@@ -61,9 +57,12 @@ export const fetchFeedbackForApplication = async (
 ): Promise<{ success: boolean; data: { feedbacks: FeedbackItem[] } }> => {
   const res = await fetch(`${API_BASE}/api/v1/feedback/application/${applicationId}`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch feedback: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { feedbacks: FeedbackItem[] } }>(res, "Failed to fetch feedback");
 };
 
 export const releaseFeedback = async (
@@ -72,7 +71,10 @@ export const releaseFeedback = async (
   const res = await fetch(`${API_BASE}/api/v1/feedback/${feedbackId}/release`, {
     method: "POST",
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to release feedback: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { released: boolean; feedback: FeedbackItem } }>(res, "Failed to release feedback");
 };

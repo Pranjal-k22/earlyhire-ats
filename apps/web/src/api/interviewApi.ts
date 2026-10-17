@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface InterviewItem {
   id: string;
@@ -35,25 +36,23 @@ export const scheduleInterview = async (payload: {
 }): Promise<{ success: boolean; data: { interview: InterviewItem } }> => {
   const res = await fetch(`${API_BASE}/api/v1/interviews/schedule`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Failed to schedule interview: ${res.status}`);
-  }
-
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: { interview: InterviewItem } }>(res, "Failed to schedule interview");
 };
 
 export const fetchMyInterviews = async (): Promise<{ success: boolean; data: { interviews: InterviewItem[] } }> => {
   const res = await fetch(`${API_BASE}/api/v1/interviews/my`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch interviews: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { interviews: InterviewItem[] } }>(res, "Failed to fetch interviews");
 };
 
 export const fetchInterviewsForApplication = async (
@@ -61,9 +60,12 @@ export const fetchInterviewsForApplication = async (
 ): Promise<{ success: boolean; data: { interviews: InterviewItem[] } }> => {
   const res = await fetch(`${API_BASE}/api/v1/interviews/application/${applicationId}`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch interviews: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { interviews: InterviewItem[] } }>(res, "Failed to fetch interviews");
 };
 
 export const cancelInterview = async (
@@ -72,10 +74,10 @@ export const cancelInterview = async (
 ): Promise<{ success: boolean; data: { interview: InterviewItem } }> => {
   const res = await fetch(`${API_BASE}/api/v1/interviews/${id}/cancel`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify({ reason }),
   });
-  if (!res.ok) throw new Error(`Failed to cancel interview: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { interview: InterviewItem } }>(res, "Failed to cancel interview");
 };

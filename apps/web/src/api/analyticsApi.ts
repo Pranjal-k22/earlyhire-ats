@@ -1,5 +1,6 @@
 import { DashboardOverviewData, FunnelData, AnalyticsQueryParams } from "../types/analytics";
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 function buildQueryString(params?: AnalyticsQueryParams): string {
   if (!params) return "";
@@ -22,18 +23,10 @@ export async function fetchDashboardOverview(
     },
   });
 
-  if (!res.ok) {
-    let msg = `HTTP error! status: ${res.status}`;
-    try {
-      const errBody = await res.json();
-      if (errBody?.message) msg = errBody.message;
-    } catch {
-      // ignore JSON parse error
-    }
-    throw new Error(msg);
-  }
-
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: DashboardOverviewData }>(
+    res,
+    "Failed to fetch dashboard overview"
+  );
 }
 
 export async function fetchRecruitmentFunnel(
@@ -47,16 +40,8 @@ export async function fetchRecruitmentFunnel(
     },
   });
 
-  if (!res.ok) {
-    let msg = `HTTP error! status: ${res.status}`;
-    try {
-      const errBody = await res.json();
-      if (errBody?.message) msg = errBody.message;
-    } catch {
-      // ignore JSON parse error
-    }
-    throw new Error(msg);
-  }
-
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: FunnelData }>(
+    res,
+    "Failed to fetch recruitment funnel"
+  );
 }

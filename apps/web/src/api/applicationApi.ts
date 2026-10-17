@@ -5,6 +5,7 @@ import {
   HiringStage,
 } from "../types/application";
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export const fetchApplications = async (
   params: {
@@ -43,12 +44,7 @@ export const fetchApplications = async (
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch applications (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<ApplicationListResponse>(res, "Failed to fetch applications");
 };
 
 export const fetchApplicationById = async (
@@ -62,12 +58,7 @@ export const fetchApplicationById = async (
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch application (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleApplicationResponse>(res, "Failed to fetch application");
 };
 
 export const createApplication = async (data: {
@@ -85,12 +76,7 @@ export const createApplication = async (data: {
     body: JSON.stringify(data),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to create application (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleApplicationResponse>(res, "Failed to create application");
 };
 
 export const transitionApplicationStage = async (
@@ -112,12 +98,7 @@ export const transitionApplicationStage = async (
     body: JSON.stringify(data),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to transition stage (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleApplicationResponse>(res, "Failed to transition stage");
 };
 
 export const fetchApplicationHistory = async (
@@ -131,10 +112,5 @@ export const fetchApplicationHistory = async (
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch stage history (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<ApplicationHistoryResponse>(res, "Failed to fetch stage history");
 };

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import * as pdfParseModule from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import { AppError } from "../../middleware/errorHandler.js";
 import { env } from "../../config/env.js";
 
@@ -94,6 +94,10 @@ export class ResumeStorageService {
    * collapsing whitespace, and bounding length to 50,000 characters.
    */
   public sanitizeText(rawText: string): ExtractedResumeText {
+    if (typeof rawText !== "string") {
+      rawText = String(rawText || "");
+    }
+
     // Strip null bytes and non-printable control characters
     let cleaned = rawText
       .replace(/\0/g, "")
@@ -121,44 +125,93 @@ export class ResumeStorageService {
    * Extracts and normalizes text from supported document types.
    */
   public async extractText(buffer: Buffer, mimeType: string): Promise<string> {
+    if (!buffer || buffer.length === 0) {
+      throw new AppError("Cannot extract text from an empty document", 400, "EMPTY_FILE");
+    }
+
     try {
       if (mimeType === "application/pdf") {
-        // Use PDFParse from pdf-parse
-        const PDFParseClass =
-          (pdfParseModule as unknown as { PDFParse?: new (opts: { data: Buffer }) => { getText: () => Promise<string>; destroy: () => Promise<void> } }).PDFParse ||
-          (pdfParseModule as unknown as { default?: { PDFParse?: new (opts: { data: Buffer }) => { getText: () => Promise<string>; destroy: () => Promise<void> } } }).default?.PDFParse;
-        if (!PDFParseClass) {
-          throw new AppError("PDF parser could not be initialized", 500, "PARSER_INIT_ERROR");
+        const parser = new PDFParse({ data: buffer });
+        let textResult: { text?: string; total?: number } | string;
+        try {
+          textResult = await parser.getText();
+        } finally {
+          await parser.destroy().catch(() => {});
         }
-        const parser = new PDFParseClass({ data: buffer });
-        const extracted = await parser.getText();
-        await parser.destroy();
-        return this.sanitizeText(extracted).text;
+
+        const rawText = typeof textResult === "string" ? textResult : (textResult?.text ?? "");
+        const pageCount =
+          typeof textResult === "object" && textResult && "total" in textResult
+            ? textResult.total ?? 0
+            : 0;
+
+        // pdf-parse automatically injects page markers like "-- 1 of 1 --".
+        // Strip these markers when determining whether actual selectable text was extracted.
+        const contentWithoutPageMarkers = rawText.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim();
+
+        if (!contentWithoutPageMarkers || contentWithoutPageMarkers.length === 0) {
+          if (pageCount > 0) {
+            throw new AppError(
+              "The uploaded PDF contains no selectable text. It appears to be a scanned image or document. OCR is required to process scanned resumes.",
+              422,
+              "SCANNED_PDF_OCR_REQUIRED"
+            );
+          }
+          throw new AppError(
+            "The uploaded PDF contains no readable text or pages.",
+            422,
+            "EMPTY_DOCUMENT"
+          );
+        }
+
+        const sanitized = this.sanitizeText(rawText).text;
+        if (!sanitized || sanitized.replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "").trim().length === 0) {
+          throw new AppError(
+            "The uploaded PDF contains no readable text after normalization. OCR may be required.",
+            422,
+            "EMPTY_NORMALIZED_TEXT"
+          );
+        }
+
+        return sanitized;
       }
 
       if (mimeType === "text/plain") {
         const raw = buffer.toString("utf-8");
-        return this.sanitizeText(raw).text;
+        if (!raw || raw.trim().length === 0) {
+          throw new AppError("The uploaded text file is empty.", 422, "EMPTY_DOCUMENT");
+        }
+        const sanitized = this.sanitizeText(raw).text;
+        if (!sanitized || sanitized.trim().length === 0) {
+          throw new AppError("The uploaded text file contains no readable text.", 422, "EMPTY_NORMALIZED_TEXT");
+        }
+        return sanitized;
       }
 
       if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        // Fallback text extraction for DOCX by parsing raw xml strings or words
         const raw = buffer.toString("utf-8");
         const matches = raw.match(/<w:t[^>]*>(.*?)<\/w:t>/g);
-        if (matches) {
-          const docxText = matches
+        let docxText = "";
+        if (matches && matches.length > 0) {
+          docxText = matches
             .map((m) => m.replace(/<[^>]+>/g, ""))
             .join(" ");
-          return this.sanitizeText(docxText).text;
+        } else {
+          docxText = raw.replace(/[^\x20-\x7E\t\n\r]/g, " ");
         }
-        return this.sanitizeText(raw).text;
+
+        const sanitized = this.sanitizeText(docxText).text;
+        if (!sanitized || sanitized.trim().length === 0) {
+          throw new AppError("The uploaded DOCX file contains no readable text.", 422, "EMPTY_DOCUMENT");
+        }
+        return sanitized;
       }
 
       throw new AppError("Unsupported file type for text parsing", 400, "UNSUPPORTED_TYPE");
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(
-        `Failed to parse resume content: ${error instanceof Error ? error.message : "Malformed or encrypted document"}`,
+        `Failed to parse resume content: ${error instanceof Error ? error.message : "Malformed or unreadable document"}`,
         422,
         "PARSE_ERROR"
       );

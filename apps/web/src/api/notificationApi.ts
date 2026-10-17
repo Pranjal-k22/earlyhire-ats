@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface NotificationItem {
   id: string;
@@ -19,21 +20,38 @@ export const fetchMyNotifications = async (): Promise<{
 }> => {
   const res = await fetch(`${API_BASE}/api/v1/notifications/my`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch notifications: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{
+    success: boolean;
+    data: {
+      notifications: NotificationItem[];
+      unreadCount: number;
+    };
+  }>(res, "Failed to fetch notifications");
 };
 
 export const markNotificationRead = async (id: string): Promise<void> => {
-  await fetch(`${API_BASE}/api/v1/notifications/${id}/read`, {
+  const res = await fetch(`${API_BASE}/api/v1/notifications/${id}/read`, {
     method: "PATCH",
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
+  await parseApiResponse<void>(res, "Failed to mark notification as read");
 };
 
 export const markAllNotificationsRead = async (): Promise<void> => {
-  await fetch(`${API_BASE}/api/v1/notifications/read-all`, {
+  const res = await fetch(`${API_BASE}/api/v1/notifications/read-all`, {
     method: "PATCH",
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
+  await parseApiResponse<void>(res, "Failed to mark notifications as read");
 };

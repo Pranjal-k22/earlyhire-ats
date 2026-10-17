@@ -1,7 +1,10 @@
+import fsSync from "node:fs";
+import fs from "node:fs/promises";
 import { AtsAnalysis, IAtsAnalysisDocument } from "../../models/atsAnalysis.model.js";
 import { ResumeFile } from "../../models/resume.model.js";
 import { Job } from "../../models/job.model.js";
 import { aiRouter } from "./aiRouter.js";
+import { resumeStorage } from "../storage/resumeStorage.js";
 import { AppError } from "../../middleware/errorHandler.js";
 
 export class AtsReviewService {
@@ -45,6 +48,24 @@ export class AtsReviewService {
     const job = await Job.findById(jobId);
     if (!job) {
       throw new AppError("Job opening not found", 404, "JOB_NOT_FOUND");
+    }
+
+    // If resume text is missing or empty, attempt on-demand re-extraction from private storage
+    if (!resume.parsedText || resume.parsedText.trim().length === 0) {
+      if (resume.storagePath && fsSync.existsSync(resume.storagePath)) {
+        try {
+          const fileBuffer = await fs.readFile(resume.storagePath);
+          const reExtracted = await resumeStorage.extractText(fileBuffer, resume.mimeType);
+          if (reExtracted && reExtracted.trim().length > 0) {
+            resume.parsedText = reExtracted;
+            resume.parsingStatus = "completed";
+            resume.parsingError = null;
+            await resume.save();
+          }
+        } catch {
+          // Fall through to error below
+        }
+      }
     }
 
     // Ensure resume text is available

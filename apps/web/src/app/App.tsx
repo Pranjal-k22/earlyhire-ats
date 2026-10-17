@@ -30,6 +30,7 @@ import { NotificationsDropdown } from "../features/notifications/NotificationsDr
 import { AuthModal } from "../features/auth/AuthModal";
 import { fetchMe, logout } from "../api/authApi";
 import { API_BASE } from "../api/baseUrl";
+import { parseApiResponse } from "../api/clientHelper";
 import { User } from "../types/auth";
 
 interface HealthStatus {
@@ -58,21 +59,42 @@ export const App: React.FC = () => {
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Load API Health
+  // Load API Health with safe parsing and auto-refresh
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/health`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
+    let isMounted = true;
+
+    const checkHealth = () => {
+      fetch(`${API_BASE}/api/v1/health`, {
+        headers: { Accept: "application/json" },
       })
-      .then((data: HealthStatus) => {
-        setHealth(data);
-        setLoading(false);
-      })
-      .catch((err: Error) => {
-        setError(err.message);
-        setLoading(false);
-      });
+        .then((res) => parseApiResponse<HealthStatus>(res, "API health check failed"))
+        .then((data: HealthStatus) => {
+          if (isMounted) {
+            if (data?.status === "ok") {
+              setHealth(data);
+              setError(null);
+            } else {
+              setHealth(null);
+            }
+            setLoading(false);
+          }
+        })
+        .catch((err: Error) => {
+          if (isMounted) {
+            setHealth(null);
+            setError(err.message);
+            setLoading(false);
+          }
+        });
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 10000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Check Recruiter Session on Mount

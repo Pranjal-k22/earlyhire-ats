@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface AtsReport {
   id: string;
@@ -20,7 +21,12 @@ export interface AtsReport {
   model: string;
   status: "pending" | "in_progress" | "completed" | "failed";
   createdAt: string;
-  jobId?: {
+  resumeId?: string | {
+    id: string;
+    originalFilename?: string;
+    createdAt?: string;
+  };
+  jobId?: string | {
     id: string;
     title: string;
     department: string;
@@ -36,25 +42,23 @@ export const analyzeResume = async (params: {
 }): Promise<{ success: boolean; data: { analysis: AtsReport } }> => {
   const res = await fetch(`${API_BASE}/api/v1/ats/analyze`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify(params),
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `ATS analysis failed: ${res.status}`);
-  }
-
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: { analysis: AtsReport } }>(res, "ATS analysis failed");
 };
 
 export const fetchMyAnalyses = async (): Promise<{ success: boolean; data: { analyses: AtsReport[] } }> => {
   const res = await fetch(`${API_BASE}/api/v1/ats/my`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch analyses: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { analyses: AtsReport[] } }>(res, "Failed to fetch analyses");
 };
 
 export const fetchAnalysesForJob = async (
@@ -62,7 +66,10 @@ export const fetchAnalysesForJob = async (
 ): Promise<{ success: boolean; data: { analyses: AtsReport[] } }> => {
   const res = await fetch(`${API_BASE}/api/v1/ats/job/${jobId}`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch job analyses: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { analyses: AtsReport[] } }>(res, "Failed to fetch job analyses");
 };

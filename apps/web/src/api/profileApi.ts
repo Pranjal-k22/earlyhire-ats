@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface CandidateProfile {
   id: string;
@@ -18,11 +19,10 @@ export interface CandidateProfile {
 
 export const fetchProfile = async (): Promise<{ success: boolean; data: { user: CandidateProfile } }> => {
   const res = await fetch(`${API_BASE}/api/v1/profile`, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`Failed to fetch profile: ${res.status}`);
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: { user: CandidateProfile } }>(res, "Failed to fetch profile");
 };
 
 export const updateProfile = async (
@@ -30,10 +30,9 @@ export const updateProfile = async (
 ): Promise<{ success: boolean; data: { user: CandidateProfile } }> => {
   const res = await fetch(`${API_BASE}/api/v1/profile`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Failed to update profile: ${res.status}`);
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: { user: CandidateProfile } }>(res, "Failed to update profile");
 };

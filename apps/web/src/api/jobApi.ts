@@ -1,5 +1,6 @@
 import { JobListResponse, SingleJobResponse, JobFormData } from "../types/job";
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export const fetchJobs = async (params: {
   search?: string;
@@ -34,12 +35,7 @@ export const fetchJobs = async (params: {
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch jobs (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<JobListResponse>(res, "Failed to fetch jobs");
 };
 
 export const fetchJobById = async (id: string): Promise<SingleJobResponse> => {
@@ -51,12 +47,7 @@ export const fetchJobById = async (id: string): Promise<SingleJobResponse> => {
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch job (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleJobResponse>(res, "Failed to fetch job");
 };
 
 export const createJob = async (data: JobFormData): Promise<SingleJobResponse> => {
@@ -70,12 +61,7 @@ export const createJob = async (data: JobFormData): Promise<SingleJobResponse> =
     body: JSON.stringify(data),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to create job (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleJobResponse>(res, "Failed to create job");
 };
 
 export const updateJob = async (id: string, data: Partial<JobFormData>): Promise<SingleJobResponse> => {
@@ -89,12 +75,7 @@ export const updateJob = async (id: string, data: Partial<JobFormData>): Promise
     body: JSON.stringify(data),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to update job (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleJobResponse>(res, "Failed to update job");
 };
 
 export const archiveJob = async (id: string): Promise<SingleJobResponse> => {
@@ -106,10 +87,5 @@ export const archiveJob = async (id: string): Promise<SingleJobResponse> => {
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to archive job (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleJobResponse>(res, "Failed to archive job");
 };

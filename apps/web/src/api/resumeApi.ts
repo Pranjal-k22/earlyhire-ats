@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface ResumeItem {
   id: string;
@@ -6,6 +7,7 @@ export interface ResumeItem {
   fileSizeBytes: number;
   mimeType: string;
   parsingStatus: "pending" | "completed" | "failed";
+  parsingError?: string | null;
   parsedText?: string;
   contentSha256: string;
   createdAt: string;
@@ -21,27 +23,28 @@ export const uploadResume = async (file: File): Promise<{ success: boolean; data
     body: formData,
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Upload failed with status ${res.status}`);
-  }
-
-  return res.json();
+  return parseApiResponse<{ success: boolean; data: { resume: ResumeItem } }>(res, "Upload failed");
 };
 
 export const fetchMyResumes = async (): Promise<{ success: boolean; data: { resumes: ResumeItem[] } }> => {
   const res = await fetch(`${API_BASE}/api/v1/resumes/my`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch resumes: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { resumes: ResumeItem[] } }>(res, "Failed to fetch resumes");
 };
 
 export const deleteResume = async (id: string): Promise<{ success: boolean; data: { deleted: boolean } }> => {
   const res = await fetch(`${API_BASE}/api/v1/resumes/${id}`, {
     method: "DELETE",
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to delete resume: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { deleted: boolean } }>(res, "Failed to delete resume");
 };

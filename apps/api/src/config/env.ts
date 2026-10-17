@@ -19,8 +19,13 @@ const envSchema = z
     JWT_EXPIRES_IN: z.string().default("7d"),
     COOKIE_SAME_SITE: z.enum(["lax", "none", "strict"]).optional(),
     RESUME_STORAGE_DIR: z.string().default("uploads/resumes"),
-    AI_PROVIDER: z.enum(["gemini", "groq", "mock"]).default("gemini"),
-    AI_FALLBACK_PROVIDER: z.enum(["gemini", "groq", "mock", "none"]).default("groq"),
+    AI_PROVIDER: z.enum(["ollama", "gemini", "groq", "mock"]).default("ollama"),
+    AI_FALLBACK_PROVIDER: z.enum(["ollama", "gemini", "groq", "mock", "none"]).default("none"),
+    OLLAMA_BASE_URL: z.string().default("http://127.0.0.1:11434"),
+    OLLAMA_MODEL: z.string().default("qwen2.5:7b"),
+    OLLAMA_TIMEOUT_MS: z
+      .union([z.string().transform((val) => parseInt(val, 10)), z.number()])
+      .default(180000),
     GEMINI_API_KEY: z.string().optional(),
     GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
     GROQ_API_KEY: z.string().optional(),
@@ -34,6 +39,8 @@ const envSchema = z
       return {
         ...data,
         MONGODB_URI: process.env.MONGODB_TEST_URI || "mongodb://localhost:27017/earlyai_ats_test",
+        AI_PROVIDER: (process.env.TEST_AI_PROVIDER as "ollama" | "gemini" | "groq" | "mock") || "mock",
+        AI_FALLBACK_PROVIDER: (process.env.TEST_AI_FALLBACK_PROVIDER as "ollama" | "gemini" | "groq" | "mock" | "none") || "mock",
       };
     }
     return data;

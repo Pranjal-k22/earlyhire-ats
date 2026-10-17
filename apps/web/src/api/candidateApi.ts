@@ -4,6 +4,7 @@ import {
   CandidateFormData,
 } from "../types/candidate";
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export const fetchCandidates = async (
   params: {
@@ -44,12 +45,7 @@ export const fetchCandidates = async (
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch candidates (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<CandidateListResponse>(res, "Failed to fetch candidates");
 };
 
 export const fetchCandidateById = async (id: string): Promise<SingleCandidateResponse> => {
@@ -61,12 +57,7 @@ export const fetchCandidateById = async (id: string): Promise<SingleCandidateRes
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch candidate (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleCandidateResponse>(res, "Failed to fetch candidate");
 };
 
 export const createCandidate = async (
@@ -82,12 +73,7 @@ export const createCandidate = async (
     body: JSON.stringify(data),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to create candidate (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleCandidateResponse>(res, "Failed to create candidate");
 };
 
 export const updateCandidate = async (
@@ -104,12 +90,7 @@ export const updateCandidate = async (
     body: JSON.stringify(data),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to update candidate (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleCandidateResponse>(res, "Failed to update candidate");
 };
 
 export const archiveCandidate = async (id: string): Promise<SingleCandidateResponse> => {
@@ -121,10 +102,5 @@ export const archiveCandidate = async (id: string): Promise<SingleCandidateRespo
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to archive candidate (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleCandidateResponse>(res, "Failed to archive candidate");
 };

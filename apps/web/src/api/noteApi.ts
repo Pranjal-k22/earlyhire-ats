@@ -1,5 +1,6 @@
 import { NoteListResponse, SingleNoteResponse, DeleteNoteResponse } from "../types/note";
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export const fetchCandidateNotes = async (
   candidateId: string,
@@ -19,12 +20,7 @@ export const fetchCandidateNotes = async (
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to fetch notes (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<NoteListResponse>(res, "Failed to fetch notes");
 };
 
 export const createCandidateNote = async (
@@ -41,12 +37,7 @@ export const createCandidateNote = async (
     body: JSON.stringify(noteData),
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to create note (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<SingleNoteResponse>(res, "Failed to create note");
 };
 
 export const deleteCandidateNote = async (
@@ -65,10 +56,5 @@ export const deleteCandidateNote = async (
     },
   });
 
-  const body = await res.json();
-  if (!res.ok) {
-    throw new Error(body?.error?.message || `Failed to delete note (HTTP ${res.status})`);
-  }
-
-  return body;
+  return parseApiResponse<DeleteNoteResponse>(res, "Failed to delete note");
 };

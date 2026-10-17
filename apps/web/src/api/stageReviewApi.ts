@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface StageReview {
   id: string;
@@ -32,12 +33,12 @@ export const fetchOrGenerateStageReview = async (
 ): Promise<{ success: boolean; data: { review: StageReview } }> => {
   const res = await fetch(`${API_BASE}/api/v1/stage-reviews/application/${applicationId}`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Failed to fetch stage review: ${res.status}`);
-  }
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { review: StageReview } }>(res, "Failed to fetch stage review");
 };
 
 export const recordHumanDecision = async (
@@ -47,10 +48,10 @@ export const recordHumanDecision = async (
 ): Promise<{ success: boolean; data: { review: StageReview } }> => {
   const res = await fetch(`${API_BASE}/api/v1/stage-reviews/${reviewId}/decision`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify({ decision, notes }),
   });
-  if (!res.ok) throw new Error(`Failed to record decision: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { review: StageReview } }>(res, "Failed to record decision");
 };

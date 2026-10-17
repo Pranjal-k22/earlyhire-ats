@@ -39,14 +39,29 @@ export const uploadResume = async (req: Request, res: Response, next: NextFuncti
 
     // 2. Extract and sanitize text
     let parsedText = "";
-    let parsingStatus: "completed" | "failed" = "completed";
-    let parsingError: string | null = null;
-
     try {
       parsedText = await resumeStorage.extractText(fileBuffer, validation.mimeType);
     } catch (parseErr) {
-      parsingStatus = "failed";
-      parsingError = parseErr instanceof Error ? parseErr.message : "Failed to parse text";
+      if (parseErr instanceof AppError) {
+        return next(parseErr);
+      }
+      return next(
+        new AppError(
+          `Failed to parse resume content: ${parseErr instanceof Error ? parseErr.message : "Malformed or unreadable document"}`,
+          422,
+          "PARSE_ERROR"
+        )
+      );
+    }
+
+    if (!parsedText || parsedText.trim().length === 0) {
+      return next(
+        new AppError(
+          "The uploaded resume contains no readable text. If this is a scanned document, OCR is required.",
+          422,
+          "EMPTY_RESUME_TEXT"
+        )
+      );
     }
 
     // 3. Save to private storage
@@ -63,8 +78,8 @@ export const uploadResume = async (req: Request, res: Response, next: NextFuncti
       fileSizeBytes: fileBuffer.length,
       contentSha256: storageResult.contentSha256,
       parsedText,
-      parsingStatus,
-      parsingError,
+      parsingStatus: "completed",
+      parsingError: null,
     });
 
     // 5. Update user's active resumeId

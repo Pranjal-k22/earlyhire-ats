@@ -1,4 +1,5 @@
 import { API_BASE } from "./baseUrl";
+import { parseApiResponse } from "./clientHelper";
 
 export interface PlatformUser {
   id: string;
@@ -55,9 +56,12 @@ export const fetchPlatformUsers = async (): Promise<{
 }> => {
   const res = await fetch(`${API_BASE}/api/v1/platform/users`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch platform users: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { users: PlatformUser[] } }>(res, "Failed to fetch platform users");
 };
 
 export const updatePlatformUserRole = async (
@@ -66,15 +70,12 @@ export const updatePlatformUserRole = async (
 ): Promise<{ success: boolean; data: { user: PlatformUser } }> => {
   const res = await fetch(`${API_BASE}/api/v1/platform/users/${userId}/role`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
     credentials: "include",
     body: JSON.stringify({ role }),
   });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Failed to update user role: ${res.status}`);
-  }
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: { user: PlatformUser } }>(res, "Failed to update user role");
 };
 
 export const fetchAIUsageMetrics = async (): Promise<{
@@ -83,9 +84,12 @@ export const fetchAIUsageMetrics = async (): Promise<{
 }> => {
   const res = await fetch(`${API_BASE}/api/v1/platform/ai-metrics`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch AI usage metrics: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: AIUsageMetrics }>(res, "Failed to fetch AI usage metrics");
 };
 
 export const fetchSystemIntegrationsHealth = async (): Promise<{
@@ -94,7 +98,10 @@ export const fetchSystemIntegrationsHealth = async (): Promise<{
 }> => {
   const res = await fetch(`${API_BASE}/api/v1/platform/health`, {
     credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
   });
-  if (!res.ok) throw new Error(`Failed to fetch system integrations health: ${res.status}`);
-  return res.json();
+
+  return parseApiResponse<{ success: boolean; data: SystemIntegrationsHealth }>(res, "Failed to fetch system integrations health");
 };

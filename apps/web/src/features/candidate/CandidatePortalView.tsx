@@ -69,13 +69,13 @@ export const CandidatePortalView: React.FC = () => {
       setJobs(jobsRes.data || []);
 
       if (analysesRes.data.analyses?.length > 0) {
-        setCurrentAnalysis(analysesRes.data.analyses[0]);
+        setCurrentAnalysis((prev) => prev || analysesRes.data.analyses[0]);
       }
       if (jobsRes.data?.length > 0) {
-        setSelectedJobId(jobsRes.data[0].id);
+        setSelectedJobId((prev) => prev || jobsRes.data[0].id);
       }
       if (resumesRes.data.resumes?.length > 0) {
-        setSelectedResumeId(resumesRes.data.resumes[0].id);
+        setSelectedResumeId((prev) => prev || resumesRes.data.resumes[0].id);
       }
     } catch (err) {
       console.error("Failed to load candidate portal data:", err);
@@ -90,7 +90,7 @@ export const CandidatePortalView: React.FC = () => {
 
   const showNotification = (text: string, type: "success" | "error" = "success") => {
     setMessage({ text, type });
-    setTimeout(() => setMessage(null), 4000);
+    setTimeout(() => setMessage(null), 5000);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -159,12 +159,29 @@ export const CandidatePortalView: React.FC = () => {
       const res = await analyzeResume({
         jobId: selectedJobId,
         resumeId: selectedResumeId || undefined,
+        forceRefresh: true,
       });
       setCurrentAnalysis(res.data.analysis);
       setAnalyses([res.data.analysis, ...analyses.filter((a) => a.id !== res.data.analysis.id)]);
-      showNotification("ATS match score calculated successfully!");
+      // Update selected resume status if it was completed via on-demand extraction
+      if (selectedResumeId) {
+        setResumes((prev) =>
+          prev.map((r) =>
+            r.id === selectedResumeId ? { ...r, parsingStatus: "completed", parsingError: null } : r
+          )
+        );
+      }
+      showNotification("ATS match score calculated successfully with local AI!");
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : "Failed to run analysis", "error");
+      const errMsg = err instanceof Error ? err.message : "Failed to run analysis";
+      if (errMsg.toLowerCase().includes("ollama") || errMsg.toLowerCase().includes("unreachable")) {
+        showNotification(
+          "Local AI service (Ollama) cannot be reached. Please ensure Ollama is running locally ('ollama serve').",
+          "error"
+        );
+      } else {
+        showNotification(errMsg, "error");
+      }
     } finally {
       setActionLoading(false);
     }
@@ -490,57 +507,129 @@ export const CandidatePortalView: React.FC = () => {
       )}
 
       {/* TAB 3: ATS Match Analyzer */}
-      {activeTab === "ats" && (
-        <div className="bg-white p-6 sm:p-8 rounded-b-xl border border-t-0 border-slate-200 shadow-sm space-y-8">
-          {/* Controls Bar */}
-          <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
-                1. Select Job Opening
-              </label>
-              <select
-                value={selectedJobId}
-                onChange={(e) => setSelectedJobId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
-              >
-                {jobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title} — {job.department}
-                  </option>
-                ))}
-              </select>
+      {activeTab === "ats" && (() => {
+        const selectedResume = resumes.find((r) => r.id === selectedResumeId) || resumes[0];
+        const isCurrentAnalyzed =
+          Boolean(currentAnalysis &&
+          (typeof currentAnalysis.resumeId === "string"
+            ? currentAnalysis.resumeId === selectedResume?.id
+            : currentAnalysis.resumeId?.id === selectedResume?.id) &&
+          (typeof currentAnalysis.jobId === "string"
+            ? currentAnalysis.jobId === selectedJobId
+            : currentAnalysis.jobId?.id === selectedJobId));
+
+        return (
+          <div className="bg-white p-6 sm:p-8 rounded-b-xl border border-t-0 border-slate-200 shadow-sm space-y-6">
+            {/* Status & Guidance Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border bg-slate-50 border-slate-200">
+              <div className="flex items-center gap-2.5">
+                {actionLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-brand-600" />
+                    <span className="text-sm font-semibold text-brand-900">Analysis in progress</span>
+                    <span className="text-xs text-brand-600 hidden md:inline">— Evaluating resume against job criteria using local Ollama model...</span>
+                  </>
+                ) : !selectedResume ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-slate-500" />
+                    <span className="text-sm font-semibold text-slate-700">No resume available</span>
+                    <span className="text-xs text-slate-500 hidden md:inline">— Please upload a resume in the Resumes tab first.</span>
+                  </>
+                ) : selectedResume.parsingStatus === "failed" ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-900">Parsing issue detected</span>
+                    <span className="text-xs text-amber-700 hidden md:inline">
+                      — {selectedResume.parsingError || "No text extracted. If scanned PDF, OCR is required."}
+                    </span>
+                  </>
+                ) : isCurrentAnalyzed ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-emerald-900">Analysis completed</span>
+                    <span className="text-xs text-emerald-700 hidden md:inline">
+                      — Evaluated with {currentAnalysis?.provider} ({currentAnalysis?.model})
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-indigo-600" />
+                    <span className="text-sm font-semibold text-indigo-900">Ready for analysis</span>
+                    <span className="text-xs text-indigo-700 hidden md:inline">— Resume verified. Click below to run local ATS match analysis.</span>
+                  </>
+                )}
+              </div>
+
+              {selectedResume?.parsingStatus === "failed" && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("resumes")}
+                  className="text-xs font-semibold text-amber-800 underline hover:text-amber-950 shrink-0"
+                >
+                  Upload New Resume →
+                </button>
+              )}
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
-                2. Select Resume Version
-              </label>
-              <select
-                value={selectedResumeId}
-                onChange={(e) => setSelectedResumeId(e.target.value)}
-                disabled={resumes.length === 0}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-hidden disabled:bg-slate-100"
-              >
-                {resumes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.originalFilename} ({new Date(r.createdAt).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Controls Bar */}
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                  1. Select Job Opening
+                </label>
+                <select
+                  value={selectedJobId}
+                  onChange={(e) => setSelectedJobId(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
+                >
+                  {jobs.map((job) => (
+                    <option key={job.id} value={job.id}>
+                      {job.title} — {job.department}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div>
-              <button
-                type="button"
-                onClick={handleRunAnalysis}
-                disabled={actionLoading || resumes.length === 0}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-brand-700 hover:to-indigo-700 shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>{actionLoading ? "Analyzing Match..." : "Calculate ATS Match Score"}</span>
-              </button>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                  2. Select Resume Version
+                </label>
+                <select
+                  value={selectedResumeId}
+                  onChange={(e) => setSelectedResumeId(e.target.value)}
+                  disabled={resumes.length === 0}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-hidden disabled:bg-slate-100"
+                >
+                  {resumes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.originalFilename} ({new Date(r.createdAt).toLocaleDateString()})
+                      {r.parsingStatus === "failed" ? " [Parsing Issue]" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleRunAnalysis}
+                  disabled={actionLoading || resumes.length === 0}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-brand-700 hover:to-indigo-700 shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {actionLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Analyzing with Local AI...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Calculate ATS Match Score</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
 
           {/* Analysis Results Display */}
           {currentAnalysis ? (
@@ -650,7 +739,8 @@ export const CandidatePortalView: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* TAB 4: Interviews & Google Meet */}
       {activeTab === "interviews" && (

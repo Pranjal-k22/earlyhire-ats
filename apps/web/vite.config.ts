@@ -10,6 +10,22 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:5000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("error", (_err, _req, res) => {
+            if (!res.headersSent) {
+              res.writeHead(503, { "Content-Type": "application/json" });
+              res.end(
+                JSON.stringify({
+                  success: false,
+                  error: {
+                    code: "API_OFFLINE",
+                    message: "API server is offline on http://localhost:5000. Start it with `npm run dev:api`.",
+                  },
+                })
+              );
+            }
+          });
+        },
       },
     },
   },
