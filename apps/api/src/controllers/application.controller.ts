@@ -260,6 +260,59 @@ export const getApplications = async (
       filter.status = query.status;
     }
 
+    // Applied date range filter
+    if (query.appliedFrom || query.appliedTo) {
+      const dateFilter: Record<string, Date> = {};
+      if (query.appliedFrom) {
+        const fromDate = new Date(query.appliedFrom);
+        if (!isNaN(fromDate.getTime())) {
+          dateFilter.$gte = fromDate;
+        }
+      }
+      if (query.appliedTo) {
+        const toDate = new Date(query.appliedTo);
+        if (!isNaN(toDate.getTime())) {
+          toDate.setHours(23, 59, 59, 999);
+          dateFilter.$lte = toDate;
+        }
+      }
+      if (Object.keys(dateFilter).length > 0) {
+        filter.appliedAt = dateFilter;
+      }
+    }
+
+    // Search by candidate name/email or job title
+    if (query.search && query.search.trim()) {
+      const sanitized = query.search.trim().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      const [matchedCandidates, matchedJobs] = await Promise.all([
+        Candidate.find({
+          $or: [
+            { name: { $regex: sanitized, $options: "i" } },
+            { fullName: { $regex: sanitized, $options: "i" } },
+            { email: { $regex: sanitized, $options: "i" } },
+          ],
+        }).select("_id"),
+        Job.find({
+          title: { $regex: sanitized, $options: "i" },
+        }).select("_id"),
+      ]);
+
+      const candIds = matchedCandidates.map((c) => c._id);
+      const jobIds = matchedJobs.map((j) => j._id);
+
+      const searchConditions: Record<string, unknown>[] = [
+        { candidateId: { $in: candIds } },
+        { jobId: { $in: jobIds } },
+      ];
+
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: searchConditions }];
+        delete filter.$or;
+      } else {
+        filter.$or = searchConditions;
+      }
+    }
+
     const skip = (query.page - 1) * query.limit;
     const sortField = query.sort === "stage" ? "stage" : query.sort;
     const sortOrder = query.order === "asc" ? 1 : -1;

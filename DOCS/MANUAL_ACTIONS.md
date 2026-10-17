@@ -127,3 +127,18 @@ This file tracks all manual actions, architecture decisions, and external infras
   3. Validate secure cookie transmission in end-to-end production smoke test.
 - **Status:** `PENDING` (Follow-up work for Phase 10 deployment)
 - **Verification Evidence / Method:** Cookie persists across authenticated requests in cross-domain staging preview environment without browser cookie blocking warnings.
+
+---
+
+### ACT-09: MongoDB Atlas Partial Unique Index Verification (Phase 10)
+- **Action ID:** ACT-09
+- **Description:** Verify the Application partial unique index `{ candidateId: 1, jobId: 1 }, { unique: true, partialFilterExpression: { status: "Active" } }` on the remote MongoDB Atlas cluster.
+- **Reason:** In Phase 6, the application uniqueness constraint was reconciled to allow re-application when a prior application is Withdrawn or Archived, while strictly prohibiting duplicate active applications. Mongoose creates indexes automatically in development (`autoIndex: true`), but in production MongoDB Atlas clusters or clusters where an old unconditional unique index was previously created, the index should be verified or rebuilt via `db.applications.dropIndex("candidateId_1_jobId_1")` followed by `db.applications.createIndex({ candidateId: 1, jobId: 1 }, { unique: true, partialFilterExpression: { status: "Active" } })`.
+- **Required Account / Service:** MongoDB Atlas Database Admin
+- **Exact Steps:**
+  1. Connect to MongoDB Atlas via Mongo shell / Compass.
+  2. Run `db.applications.getIndexes()` and confirm the `candidateId_1_jobId_1` index includes `partialFilterExpression: { status: "Active" }`.
+  3. If an old unconditional unique index exists, drop and recreate it.
+- **Status:** `PENDING` (Verified on local test database; required upon Atlas deployment)
+- **Verification Evidence / Method:** Tested locally with 100% pass rate in `apps/api/src/__tests__/searchAndNotes.test.ts` (Scenarios 29 & 30).
+

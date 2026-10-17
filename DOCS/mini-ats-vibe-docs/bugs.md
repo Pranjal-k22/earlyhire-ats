@@ -82,4 +82,45 @@ Paste sanitized error messages/logs. Remove secrets and candidate personal data.
 
 ## Closed issues
 
-_Move resolved issue records here rather than deleting them, so the team can learn from recurring failures._
+### BUG-001: Unconditional Application compound unique index blocks legitimate re-application after withdrawal or archival
+
+#### Issue summary
+- **Component:** `apps/api/src/models/application.model.ts`
+- **Severity:** P2 — Medium
+- **Status:** Closed / Resolved in Phase 6
+
+#### Problem description
+In Phase 5, the Application schema enforced a strict unique compound index on `{ candidateId: 1, jobId: 1 }`. While this effectively blocked duplicate active applications, it also permanently prevented a candidate from reapplying to a job opening if their previous application had been withdrawn or archived.
+
+#### Root cause
+The compound unique index lacked a partial filter expression, enforcing uniqueness across all historical applications regardless of lifecycle `status`.
+
+#### Fix and regression protection
+- Changed index in `apps/api/src/models/application.model.ts` to:
+  `applicationSchema.index({ candidateId: 1, jobId: 1 }, { unique: true, partialFilterExpression: { status: "Active" } });`
+- Added integration test scenarios 29 and 30 in `apps/api/src/__tests__/searchAndNotes.test.ts` proving:
+  1. Duplicate active application returns HTTP 409 `DUPLICATE_APPLICATION`.
+  2. Withdrawn or archived applications permit a new active application for the same candidate and job.
+
+#### Verification
+- `npm run lint`: PASS (exit code 0)
+- `npm run typecheck`: PASS (exit code 0)
+- `npm test`: PASS (exit code 0, 138/138 passing)
+- `npm run build`: PASS (exit code 0)
+
+---
+
+### BUG-002: Form label collision in CandidatesView modal test
+
+#### Issue summary
+- **Component:** `apps/web/src/features/candidates/CandidatesView.tsx`
+- **Severity:** P3 — Low
+- **Status:** Closed / Resolved in Phase 6
+
+#### Problem description
+When the experience filter select was added to the `CandidatesView` filter bar with `aria-label="Filter by minimum experience"`, existing modal tests querying `getByLabelText(/experience/i)` found multiple elements (the filter dropdown and the modal form input `experienceYears`).
+
+#### Fix and regression protection
+- Refined the filter select `aria-label` to `"Filter candidates by tenure"`, removing the label collision while keeping full accessibility and explicit testing.
+- Verified in `CandidatesView.test.tsx` and `NotesAndSearch.test.tsx`.
+

@@ -161,11 +161,13 @@ export const updateCandidateSchema = z
 export const candidateQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().optional(),
-  skill: z.string().trim().optional(),
+  search: z.string().trim().max(100, "Search query cannot exceed 100 characters").optional(),
+  skill: z.string().trim().max(50, "Skill filter cannot exceed 50 characters").optional(),
   source: z.string().trim().optional(),
   createdFrom: z.string().trim().optional(),
   createdTo: z.string().trim().optional(),
+  experienceMin: z.coerce.number().min(0).max(60).optional(),
+  experienceMax: z.coerce.number().min(0).max(60).optional(),
   sort: z.enum(["createdAt", "name", "fullName", "experienceYears"]).default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
   includeArchived: z

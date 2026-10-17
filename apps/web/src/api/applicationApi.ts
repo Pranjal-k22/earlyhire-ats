@@ -13,6 +13,9 @@ export const fetchApplications = async (
     candidateId?: string;
     stage?: HiringStage;
     status?: string;
+    search?: string;
+    appliedFrom?: string;
+    appliedTo?: string;
     sort?: string;
     order?: "asc" | "desc";
   } = {}
@@ -24,6 +27,9 @@ export const fetchApplications = async (
   if (params.candidateId) query.set("candidateId", params.candidateId);
   if (params.stage && (params.stage as string) !== "all") query.set("stage", params.stage);
   if (params.status) query.set("status", params.status);
+  if (params.search) query.set("search", params.search);
+  if (params.appliedFrom) query.set("appliedFrom", params.appliedFrom);
+  if (params.appliedTo) query.set("appliedTo", params.appliedTo);
   if (params.sort) query.set("sort", params.sort);
   if (params.order) query.set("order", params.order);
 

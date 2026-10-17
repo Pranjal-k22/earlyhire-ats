@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Candidate } from "../../types/candidate";
 import { CandidateSourceBadge } from "./CandidateSourceBadge";
+import { CandidateNotesSection } from "./CandidateNotesSection";
 
 interface Props {
   candidate: Candidate | null;
@@ -179,15 +180,20 @@ export const CandidateDetailModal: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Summary / Notes Section */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5">
-              Candidate Summary & Notes
-            </h4>
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
-              {candidate.summary || "No profile summary or recruiter notes provided."}
+          {/* Profile Summary */}
+          {candidate.summary && (
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                Candidate Summary & Notes
+              </h4>
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+                {candidate.summary}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Recruiter Notes Section */}
+          <CandidateNotesSection candidateId={candidate.id} />
 
           {/* Metadata Footer */}
           <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">

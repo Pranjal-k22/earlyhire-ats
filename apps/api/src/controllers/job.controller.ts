@@ -76,9 +76,35 @@ export const getJobs = async (req: Request, res: Response, next: NextFunction): 
       filter.department = { $regex: escapeRegex(query.department.trim()), $options: "i" };
     }
 
+    // Optional location filter
+    if (query.location && query.location.trim()) {
+      filter.location = { $regex: escapeRegex(query.location.trim()), $options: "i" };
+    }
+
     // Optional employment type filter
     if (query.employmentType && query.employmentType.trim()) {
       filter.employmentType = query.employmentType.trim();
+    }
+
+    // Optional created date range filter
+    if (query.createdFrom || query.createdTo) {
+      const dateFilter: Record<string, Date> = {};
+      if (query.createdFrom) {
+        const fromDate = new Date(query.createdFrom);
+        if (!isNaN(fromDate.getTime())) {
+          dateFilter.$gte = fromDate;
+        }
+      }
+      if (query.createdTo) {
+        const toDate = new Date(query.createdTo);
+        if (!isNaN(toDate.getTime())) {
+          toDate.setHours(23, 59, 59, 999);
+          dateFilter.$lte = toDate;
+        }
+      }
+      if (Object.keys(dateFilter).length > 0) {
+        filter.createdAt = dateFilter;
+      }
     }
 
     const total = await Job.countDocuments(filter);

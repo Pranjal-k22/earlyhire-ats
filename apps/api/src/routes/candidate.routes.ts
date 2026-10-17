@@ -7,11 +7,15 @@ import {
   deleteCandidate,
 } from "../controllers/candidate.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import noteRoutes from "./note.routes.js";
 
 const router = Router();
 
 // Protect all candidate endpoints with authentication
 router.use(requireAuth);
+
+// Notes subroute: /api/v1/candidates/:candidateId/notes
+router.use("/:candidateId/notes", noteRoutes);
 
 // Candidate Read Endpoints (All authenticated roles: admin, recruiter, hiring_manager)
 router.get("/", getCandidates);

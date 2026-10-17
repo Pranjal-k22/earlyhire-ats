@@ -202,6 +202,19 @@ export const JobsView: React.FC = () => {
               </button>
             );
           })}
+          {(searchQuery || selectedStatus !== "all") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedStatus("all");
+                setPage(1);
+              }}
+              className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors shrink-0 ml-1"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -260,14 +273,29 @@ export const JobsView: React.FC = () => {
               ? "No roles match your current search criteria. Try modifying your filter or clear search terms."
               : "No job postings have been created yet. Publish an open role to begin receiving applicants."}
           </p>
-          <button
-            type="button"
-            onClick={handleOpenCreateModal}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create First Job</span>
-          </button>
+          {searchQuery || selectedStatus !== "all" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedStatus("all");
+                setPage(1);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Clear All Filters</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create First Job</span>
+            </button>
+          )}
         </div>
       )}
 

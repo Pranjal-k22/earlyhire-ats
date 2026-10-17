@@ -137,6 +137,14 @@ export const getCandidates = async (
       }
     }
 
+    // Experience range filter
+    if (query.experienceMin !== undefined || query.experienceMax !== undefined) {
+      const expFilter: Record<string, number> = {};
+      if (query.experienceMin !== undefined) expFilter.$gte = query.experienceMin;
+      if (query.experienceMax !== undefined) expFilter.$lte = query.experienceMax;
+      filter.experienceYears = expFilter;
+    }
+
     const page = query.page;
     const limit = query.limit;
     const skip = (page - 1) * limit;

@@ -63,7 +63,9 @@ export const applicationQuerySchema = z.object({
   status: z.enum(APPLICATION_STATUSES).optional(),
   sort: z.enum(["appliedAt", "lastStageChangedAt", "createdAt", "stage"]).default("appliedAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
-  search: z.string().trim().optional(),
+  search: z.string().trim().max(100, "Search query cannot exceed 100 characters").optional(),
+  appliedFrom: z.string().trim().optional(),
+  appliedTo: z.string().trim().optional(),
 });
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;

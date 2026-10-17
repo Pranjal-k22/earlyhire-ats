@@ -398,6 +398,83 @@ _Initial baseline recorded prior to Phase 1._
   - Phase 6: Search, Filters & Recruiter Notes (Full-text candidate search, note history, soft deletion of notes).
 - **Auditor:** AI Coding Assistant (Antigravity)
 
+---
+
+### 2026-10-17 — Phase 6 — Search, Advanced Filters & Recruiter Notes — PASS
+- **Commit:** `feat/phase-6-search-notes` working tree ready for commit
+- **Scope reviewed:**
+  - Application uniqueness policy reconciliation:
+    - Replaced the restrictive compound unique index `{ candidateId: 1, jobId: 1 }` with a database-enforced partial unique index:
+      `{ candidateId: 1, jobId: 1 }, { unique: true, partialFilterExpression: { status: "Active" } }` in `apps/api/src/models/application.model.ts`.
+    - Decision & verified behavior: Multiple active applications for the same candidate and job opening are strictly blocked with HTTP 409 `DUPLICATE_APPLICATION`. However, if a prior application was Withdrawn or Archived, legitimate re-application with `status: "Active"` is permitted.
+  - Recruiter Notes data model & schema (`Architecture.md` §4.6):
+    - Created Mongoose `Note` schema (`notes` collection) with `candidateId`, `authorId`, `body`, `deletedAt`, `deletedBy` (`apps/api/src/models/note.model.ts`).
+    - Compound indexes added: `{ candidateId: 1, createdAt: -1 }` (for deterministic candidate note queries) and `{ authorId: 1, createdAt: -1 }`.
+    - Notes are candidate-level and immutable in content (audit trail preserved; no inline editing).
+    - Soft deletion supported: note record is kept for historical audit with `deletedAt: new Date()` and `deletedBy: req.user._id`, and excluded from ordinary queries.
+  - Recruiter Notes API:
+    - Routes implemented:
+      - `POST /api/v1/candidates/:candidateId/notes` (creates note, validates body with Zod, sets author strictly from session).
+      - `GET /api/v1/candidates/:candidateId/notes` (returns active notes chronologically, populates author details `name`, `email`, `role`).
+      - `DELETE /api/v1/candidates/:candidateId/notes/:noteId` and `DELETE /api/v1/notes/:noteId` (authorizes deletion: author or admin only; soft-deletes).
+    - Role permissions: `admin`, `recruiter`, `hiring_manager` can create and view notes. Non-authors without admin role attempting note deletion are rejected with 403 `FORBIDDEN`.
+  - Candidate Search & Advanced Filters:
+    - Query parameters supported: `search` (case-insensitive, regex-escaped, matches `name`, `fullName`, `email`, `skills`, `currentTitle`), `source`, `createdFrom`, `createdTo`, `experienceMin`, `experienceMax`, `includeArchived`, `sort`, `order`, `page`, `limit`.
+    - Input bounds: search strings capped at 100 chars, limit bounded between 1 and 100.
+  - Job Search & Status Filters:
+    - Query parameters supported: `search` (matches `title`, `department`, `location`), `status` (`Open`, `Paused`, `Closed`, `Archived`), `employmentType`, `location`, `createdFrom`, `createdTo`, `includeArchived`.
+    - Archived jobs excluded by default unless explicitly requested.
+  - Application & Pipeline Filtering:
+    - Query parameters supported: `stage`, `jobId`, `search` (candidate name/email matching), `appliedFrom`, `appliedTo`.
+    - Server-side state machine and validation preserved without bypass.
+  - Frontend Implementation:
+    - `CandidateNotesSection`: integrated into `CandidateDetailModal` with note list, author and timestamp rendering, inline note creation form, soft deletion with confirmation, and safe plain-text rendering (no raw HTML).
+    - `CandidatesView`: added search input, source tabs, minimum experience dropdown filter, and Clear Filters action.
+    - `JobsView`: added status filter tabs, search input, and Clear Filters action.
+    - `PipelineView`: candidate live search and job opening dropdown filters with server-backed data refreshing.
+- **Files created & modified:**
+  - Backend: `apps/api/src/models/note.model.ts`, `apps/api/src/models/application.model.ts`, `apps/api/src/schemas/note.schema.ts`, `apps/api/src/schemas/candidate.schema.ts`, `apps/api/src/schemas/job.schema.ts`, `apps/api/src/schemas/application.schema.ts`, `apps/api/src/controllers/note.controller.ts`, `apps/api/src/controllers/candidate.controller.ts`, `apps/api/src/controllers/job.controller.ts`, `apps/api/src/controllers/application.controller.ts`, `apps/api/src/routes/note.routes.ts`, `apps/api/src/routes/noteDirect.routes.ts`, `apps/api/src/routes/candidate.routes.ts`, `apps/api/src/app.ts`, `apps/api/src/__tests__/searchAndNotes.test.ts`.
+  - Frontend: `apps/web/src/types/note.ts`, `apps/web/src/api/noteApi.ts`, `apps/web/src/api/candidateApi.ts`, `apps/web/src/api/jobApi.ts`, `apps/web/src/api/applicationApi.ts`, `apps/web/src/features/candidates/CandidateNotesSection.tsx`, `apps/web/src/features/candidates/CandidateDetailModal.tsx`, `apps/web/src/features/candidates/CandidatesView.tsx`, `apps/web/src/features/jobs/JobsView.tsx`, `apps/web/src/__tests__/NotesAndSearch.test.tsx`.
+  - Documentation: `DOCS/mini-ats-vibe-docs/audit.md`, `DOCS/mini-ats-vibe-docs/testing.md`, `DOCS/mini-ats-vibe-docs/bugs.md`, `DOCS/mini-ats-vibe-docs/task_today.md`, `DOCS/MANUAL_ACTIONS.md`.
+- **Commands and outcomes:**
+  - `npm run lint`: PASS (exit code 0; 0 errors across `apps/web` and `apps/api`).
+  - `npm run typecheck`: PASS (exit code 0; TypeScript strict mode compiles cleanly on both workspaces).
+  - `npm test`: PASS (exit code 0; 138 total tests passing: 27 in `apps/web` across 5 suites, 111 in `apps/api` across 6 suites).
+  - `npm run build`: PASS (exit code 0; Vite frontend built `apps/web/dist` in 6.00s, `tsc` compiled `apps/api/dist`).
+- **Acceptance criteria verified:**
+  - [x] Create a valid note for a candidate.
+  - [x] Reject empty or whitespace-only note text (422 `VALIDATION_ERROR`).
+  - [x] Reject overlong note text (>5000 chars) with 422.
+  - [x] Author derives strictly from authenticated user session; client-supplied author is ignored.
+  - [x] Reject unauthorized note writes (unauthenticated returns 401).
+  - [x] List notes in deterministic order (chronological by creation timestamp).
+  - [x] Exclude soft-deleted notes from ordinary candidate note queries.
+  - [x] Only note author or admin can soft-delete notes; other recruiters/hiring managers receive 403 `FORBIDDEN`.
+  - [x] Reject invalid candidate and note IDs (400 `INVALID_ID`).
+  - [x] Return 404 for nonexistent candidate references.
+  - [x] Note content safely rendered as plain text in React UI without HTML/script execution.
+  - [x] Search candidates by name, email, skills, and current position.
+  - [x] Filter candidates by source, experience range, and creation date range.
+  - [x] Enforce pagination bounds and safe sort parameters on candidates endpoint.
+  - [x] Exclude archived candidates by default.
+  - [x] Escape all search strings to prevent regular expression injection / ReDoS abuse.
+  - [x] Search jobs by title, department, and location.
+  - [x] Filter jobs by status (`Open`, `Paused`, `Closed`, `Archived`).
+  - [x] Exclude archived jobs by default.
+  - [x] Filter applications by stage, job, candidate text, and application date range.
+  - [x] Preserve valid stage transitions and continue rejecting invalid stage transitions.
+  - [x] Reconcile duplicate application behavior: duplicate active blocked (409), re-application after withdrawal/archival allowed.
+  - [x] Preserved full regression behavior: auth, health, jobs CRUD, candidates CRUD, and application pipelines all passing.
+- **Gaps found:** None. Phase 6 scope boundaries strictly respected.
+- **Security/data risks:**
+  - XSS mitigation: Note text rendered strictly as React text children `<p>{note.body}</p>`, with `<script>` tag rejection in Zod schema.
+  - ReDoS mitigation: `escapeRegex` utility neutralizes all special regex meta-characters. Query length capped at 100 chars.
+  - Authorization: Strict server-side ownership check prevents unauthorized note deletion.
+- **Follow-up tasks:**
+  - Phase 7: Recruitment Dashboard & Analytics (Funnel metrics, time-to-hire, offer acceptance rate, Recharts visualizer).
+- **Auditor:** AI Coding Assistant (Antigravity)
+
+
 
 
 

@@ -190,3 +190,34 @@ Do not call the MVP ready for submission unless all of the following are true:
 - **`npm run build`:** PASS — exit code: 0 (Vite frontend built in 8.32s; `tsc` compiled backend)
 - **Verified by:** Antigravity (AI Coding Assistant)
 
+---
+
+### Test run — 2026-10-17 18:45 UTC (Phase 6 Verification)
+- **Commit:** `feat/phase-6-search-notes` (ready for commit)
+- **Environment:** Local test runner with isolated MongoDB database (`earlyai_ats_test`)
+- **Dataset:** Synthetic isolated test fixtures with fresh teardown per test
+- **`npm run lint`:** PASS — exit code: 0 (0 errors, 0 warnings across monorepo)
+- **`npm run typecheck`:** PASS — exit code: 0 (TypeScript strict mode passed on both `web` and `api`)
+- **`npm test`:** PASS — exit code: 0; passed: 138 tests, failed: 0 across 11 test suites:
+  - `apps/web/src/__tests__/App.test.tsx`: 2 passed
+  - `apps/web/src/__tests__/JobsView.test.tsx`: 5 passed
+  - `apps/web/src/__tests__/CandidatesView.test.tsx`: 6 passed
+  - `apps/web/src/__tests__/PipelineView.test.tsx`: 7 passed
+  - `apps/web/src/__tests__/NotesAndSearch.test.tsx`: 7 passed
+  - `apps/api/src/__tests__/health.test.ts`: 2 passed
+  - `apps/api/src/__tests__/auth.test.ts`: 18 passed
+  - `apps/api/src/__tests__/job.test.ts`: 14 passed
+  - `apps/api/src/__tests__/candidate.test.ts`: 22 passed
+  - `apps/api/src/__tests__/application.test.ts`: 25 passed
+  - `apps/api/src/__tests__/searchAndNotes.test.ts`: 30 passed
+- **`npm run build`:** PASS — exit code: 0 (Vite frontend built in 6.00s; `tsc` compiled backend)
+- **Phase 6 Automated Test Coverage Breakdown:**
+  1. Notes: Create note, reject empty/whitespace, reject overlong, session author, unauth rejection, chronological order, soft delete exclusion, authorization (author/admin only), invalid IDs, nonexistent candidate, safe plain-text rendering. (11 tests)
+  2. Candidate Search & Filters: Search by name, email, skills, position, filter by source, created date range, experience range, combined filters, pagination bounds, invalid sort handling, archived exclusion, regex escaping ReDoS protection. (11 tests)
+  3. Job Search & Status Filters: Title/department/location search, status filter, exclude archived by default. (3 tests)
+  4. Pipeline Filters: Stage filter, job filter, combined pipeline filters. (3 tests)
+  5. Application Uniqueness: Block duplicate active application (409), allow re-application after withdrawal/archival. (2 tests)
+  6. Frontend UI: CandidateNotesSection list, add note, delete note, safe text rendering, candidate search/experience filters, job status filters. (7 tests)
+- **Verified by:** Antigravity (AI Coding Assistant)
+
+

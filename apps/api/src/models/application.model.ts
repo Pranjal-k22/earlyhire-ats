@@ -148,8 +148,14 @@ applicationSchema.pre("validate", function () {
   }
 });
 
-// Compound unique index: prevent duplicate applications for candidate and job
-applicationSchema.index({ candidateId: 1, jobId: 1 }, { unique: true });
+// Partial compound unique index: prevent duplicate active applications for candidate and job
+applicationSchema.index(
+  { candidateId: 1, jobId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "Active" },
+  }
+);
 
 // Query optimization indexes per Architecture.md §4.4
 applicationSchema.index({ stage: 1, status: 1, appliedAt: -1 });

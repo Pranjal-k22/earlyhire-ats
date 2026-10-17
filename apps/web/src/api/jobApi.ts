@@ -4,6 +4,10 @@ export const fetchJobs = async (params: {
   search?: string;
   status?: string;
   department?: string;
+  location?: string;
+  employmentType?: string;
+  createdFrom?: string;
+  createdTo?: string;
   page?: number;
   limit?: number;
   includeArchived?: boolean;
@@ -12,6 +16,10 @@ export const fetchJobs = async (params: {
   if (params.search) query.set("search", params.search);
   if (params.status && params.status !== "all") query.set("status", params.status);
   if (params.department) query.set("department", params.department);
+  if (params.location) query.set("location", params.location);
+  if (params.employmentType) query.set("employmentType", params.employmentType);
+  if (params.createdFrom) query.set("createdFrom", params.createdFrom);
+  if (params.createdTo) query.set("createdTo", params.createdTo);
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
   if (params.includeArchived) query.set("includeArchived", "true");

@@ -14,6 +14,8 @@ export const fetchCandidates = async (
     createdFrom?: string;
     createdTo?: string;
     includeArchived?: boolean;
+    experienceMin?: number;
+    experienceMax?: number;
     sort?: string;
     order?: "asc" | "desc";
   } = {}
@@ -26,6 +28,8 @@ export const fetchCandidates = async (
   if (params.source && params.source !== "all") query.set("source", params.source);
   if (params.createdFrom) query.set("createdFrom", params.createdFrom);
   if (params.createdTo) query.set("createdTo", params.createdTo);
+  if (params.experienceMin !== undefined) query.set("experienceMin", String(params.experienceMin));
+  if (params.experienceMax !== undefined) query.set("experienceMax", String(params.experienceMax));
   if (params.includeArchived) query.set("includeArchived", "true");
   if (params.sort) query.set("sort", params.sort);
   if (params.order) query.set("order", params.order);
