@@ -2,21 +2,30 @@ import { Request, Response, NextFunction } from "express";
 import { AppError } from "./errorHandler.js";
 import { env } from "../config/env.js";
 
+export const getAllowedOrigins = (): string[] => {
+  return env.CLIENT_URL.split(",")
+    .map((s) => s.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+};
+
 /**
  * Validates whether an origin string is in the allowed list.
  */
 export const isAllowedOrigin = (origin: string): boolean => {
-  if (origin === env.CLIENT_URL) {
+  const normalizedOrigin = origin.trim().replace(/\/+$/, "");
+  const allowed = getAllowedOrigins();
+
+  if (allowed.includes(normalizedOrigin)) {
     return true;
   }
 
   // In test and development modes, allow localhost and 127.0.0.1 variants
   if (env.NODE_ENV !== "production") {
     if (
-      origin.startsWith("http://localhost:") ||
-      origin.startsWith("http://127.0.0.1:") ||
-      origin === "http://localhost" ||
-      origin === "http://127.0.0.1"
+      normalizedOrigin.startsWith("http://localhost:") ||
+      normalizedOrigin.startsWith("http://127.0.0.1:") ||
+      normalizedOrigin === "http://localhost" ||
+      normalizedOrigin === "http://127.0.0.1"
     ) {
       return true;
     }

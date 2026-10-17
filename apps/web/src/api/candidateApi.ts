@@ -3,6 +3,7 @@ import {
   SingleCandidateResponse,
   CandidateFormData,
 } from "../types/candidate";
+import { API_BASE } from "./baseUrl";
 
 export const fetchCandidates = async (
   params: {
@@ -35,7 +36,7 @@ export const fetchCandidates = async (
   if (params.order) query.set("order", params.order);
 
   const qs = query.toString() ? `?${query.toString()}` : "";
-  const res = await fetch(`/api/v1/candidates${qs}`, {
+  const res = await fetch(`${API_BASE}/api/v1/candidates${qs}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -52,7 +53,7 @@ export const fetchCandidates = async (
 };
 
 export const fetchCandidateById = async (id: string): Promise<SingleCandidateResponse> => {
-  const res = await fetch(`/api/v1/candidates/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/candidates/${id}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -71,7 +72,7 @@ export const fetchCandidateById = async (id: string): Promise<SingleCandidateRes
 export const createCandidate = async (
   data: CandidateFormData
 ): Promise<SingleCandidateResponse> => {
-  const res = await fetch("/api/v1/candidates", {
+  const res = await fetch(`${API_BASE}/api/v1/candidates`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -93,7 +94,7 @@ export const updateCandidate = async (
   id: string,
   data: Partial<CandidateFormData>
 ): Promise<SingleCandidateResponse> => {
-  const res = await fetch(`/api/v1/candidates/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/candidates/${id}`, {
     method: "PATCH",
     credentials: "include",
     headers: {
@@ -112,7 +113,7 @@ export const updateCandidate = async (
 };
 
 export const archiveCandidate = async (id: string): Promise<SingleCandidateResponse> => {
-  const res = await fetch(`/api/v1/candidates/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/candidates/${id}`, {
     method: "DELETE",
     credentials: "include",
     headers: {

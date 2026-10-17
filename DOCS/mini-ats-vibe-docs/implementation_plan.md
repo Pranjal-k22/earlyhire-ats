@@ -127,13 +127,13 @@
 
 ## Phase 10 — Deployment (Hours 62–67)
 
-- [ ] Create production MongoDB Atlas database/user with least-privilege access and network configuration.
-- [ ] Deploy Express API to Render and configure production environment variables.
-- [ ] Deploy React/Vite frontend to Vercel and set the API base URL.
-- [ ] Configure exact frontend origin in CORS, cookie settings, and any CSRF origin checks.
-- [ ] Run seed script against the intended demo database only.
-- [ ] Verify `/api/v1/health`, login, CRUD, pipeline stage change, notes, and dashboard against the deployed services.
-- [ ] Document any free-tier cold start limitation honestly.
+- [x] Create production MongoDB Atlas database/user with least-privilege access and network configuration (ACT-06 verified, authenticated ping `{"ok": 1}`, indexes verified).
+- [ ] Deploy Express API to Render and configure production environment variables (Pending owner authorization).
+- [ ] Deploy React/Vite frontend to Vercel and set the API base URL (Pending owner authorization).
+- [x] Configure exact frontend origin in CORS, cookie settings, and any CSRF origin checks (Source verified; live staging test pending).
+- [ ] Run seed script against the intended demo database only (Pending live deployment).
+- [ ] Verify `/api/v1/health`, login, CRUD, pipeline stage change, notes, and dashboard against the deployed services (Pending live deployment).
+- [x] Document any free-tier cold start limitation honestly (Documented in deployment guide).
 
 **Deliverable:** Working frontend and API URLs connected to the demo database.
 

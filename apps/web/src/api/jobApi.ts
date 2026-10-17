@@ -1,4 +1,5 @@
 import { JobListResponse, SingleJobResponse, JobFormData } from "../types/job";
+import { API_BASE } from "./baseUrl";
 
 export const fetchJobs = async (params: {
   search?: string;
@@ -25,7 +26,7 @@ export const fetchJobs = async (params: {
   if (params.includeArchived) query.set("includeArchived", "true");
 
   const qs = query.toString() ? `?${query.toString()}` : "";
-  const res = await fetch(`/api/v1/jobs${qs}`, {
+  const res = await fetch(`${API_BASE}/api/v1/jobs${qs}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -42,7 +43,7 @@ export const fetchJobs = async (params: {
 };
 
 export const fetchJobById = async (id: string): Promise<SingleJobResponse> => {
-  const res = await fetch(`/api/v1/jobs/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/jobs/${id}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -59,7 +60,7 @@ export const fetchJobById = async (id: string): Promise<SingleJobResponse> => {
 };
 
 export const createJob = async (data: JobFormData): Promise<SingleJobResponse> => {
-  const res = await fetch("/api/v1/jobs", {
+  const res = await fetch(`${API_BASE}/api/v1/jobs`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -78,7 +79,7 @@ export const createJob = async (data: JobFormData): Promise<SingleJobResponse> =
 };
 
 export const updateJob = async (id: string, data: Partial<JobFormData>): Promise<SingleJobResponse> => {
-  const res = await fetch(`/api/v1/jobs/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/jobs/${id}`, {
     method: "PATCH",
     credentials: "include",
     headers: {
@@ -97,7 +98,7 @@ export const updateJob = async (id: string, data: Partial<JobFormData>): Promise
 };
 
 export const archiveJob = async (id: string): Promise<SingleJobResponse> => {
-  const res = await fetch(`/api/v1/jobs/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/jobs/${id}`, {
     method: "DELETE",
     credentials: "include",
     headers: {

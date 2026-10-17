@@ -2,7 +2,6 @@ import express, { Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import jobRoutes from "./routes/job.routes.js";
@@ -13,7 +12,7 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 import { sanitizeMongo } from "./middleware/mongoSanitize.js";
-import { verifyOrigin } from "./middleware/csrf.js";
+import { verifyOrigin, isAllowedOrigin } from "./middleware/csrf.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -21,10 +20,18 @@ export const createApp = (): Express => {
   // Security HTTP headers
   app.use(helmet());
 
-  // CORS configuration
+  // CORS configuration with explicit origin allowlist and credential support
   app.use(
     cors({
-      origin: env.CLIENT_URL,
+      origin: (requestOrigin, callback) => {
+        if (!requestOrigin) {
+          return callback(null, true);
+        }
+        if (isAllowedOrigin(requestOrigin)) {
+          return callback(null, true);
+        }
+        return callback(null, false);
+      },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],

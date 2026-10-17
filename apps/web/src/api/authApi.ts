@@ -1,7 +1,8 @@
 import { AuthResponse, LoginPayload, SignupPayload } from "../types/auth";
+import { API_BASE } from "./baseUrl";
 
 export const signup = async (payload: SignupPayload): Promise<AuthResponse> => {
-  const res = await fetch("/api/v1/auth/signup", {
+  const res = await fetch(`${API_BASE}/api/v1/auth/signup`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -20,7 +21,7 @@ export const signup = async (payload: SignupPayload): Promise<AuthResponse> => {
 };
 
 export const login = async (payload: LoginPayload): Promise<AuthResponse> => {
-  const res = await fetch("/api/v1/auth/login", {
+  const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -39,7 +40,7 @@ export const login = async (payload: LoginPayload): Promise<AuthResponse> => {
 };
 
 export const logout = async (): Promise<{ success: boolean; data: { loggedOut: boolean } }> => {
-  const res = await fetch("/api/v1/auth/logout", {
+  const res = await fetch(`${API_BASE}/api/v1/auth/logout`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -56,7 +57,7 @@ export const logout = async (): Promise<{ success: boolean; data: { loggedOut: b
 };
 
 export const fetchMe = async (): Promise<AuthResponse> => {
-  const res = await fetch("/api/v1/auth/me", {
+  const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
     method: "GET",
     credentials: "include",
     headers: {

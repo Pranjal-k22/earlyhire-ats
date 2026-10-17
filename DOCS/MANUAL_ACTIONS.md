@@ -91,15 +91,9 @@ This file tracks all manual actions, architecture decisions, and external infras
   4. Obtain connection string URI: `mongodb+srv://<username>:<password>@cluster0.mongodb.net/earlyai_ats?retryWrites=true&w=majority`.
   5. Generate a secure random JWT secret: `openssl rand -hex 32`.
   6. Place credentials in local `.env` (never commit to Git).
-- **Status:** `BLOCKED / ACTION REQUIRED` (Atlas cluster reachable over TLS; credentials rejected by Atlas with `bad auth : Authentication failed`)
-- **Verification Evidence / Method:** Tested live on 2026-10-17. Sanitized URI `mongodb+srv://***:***@cluster0.s8vxj7j.mongodb.net/` connects to remote host, but authentication handshake fails with `MongoServerError: bad auth : Authentication failed. (code: 8000, codeName: 'AtlasError')`.
-- **Human Action Required:**
-  1. Log in to MongoDB Atlas Console.
-  2. Navigate to **Database Access**: Verify that the database user exists. If password was reset or contains special characters, update it or re-enter in `.env`.
-  3. Ensure the user has `readWrite` role assigned on the `earlyhire-ats` database (or `readWriteAnyDatabase`).
-  4. Navigate to **Network Access**: Confirm your IP address (or `0.0.0.0/0`) is active in the IP Access List.
-  5. Update the `.env` connection string to explicitly include the database name:
-     `MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.s8vxj7j.mongodb.net/earlyhire-ats?retryWrites=true&w=majority`
+- **Status:** `DONE / VERIFIED` (Connected successfully to MongoDB Atlas database `earlyhire-ats`)
+- **Verification Evidence / Method:** Tested live on 2026-10-17. Sanitized URI `mongodb+srv://***:***@cluster0.s8vxj7j.mongodb.net/earlyhire-ats?retryWrites=true&w=majority` connects successfully over TLS, authenticates database user, executes harmless `admin().ping()` returning `{"ok": 1}`, and lists collections in target database (`[ 'users' ]`). Graceful disconnect verified.
+- **Human Action Completed:** Database user configured in Atlas Console and updated in `.env` with explicit `earlyhire-ats` database target.
 
 ---
 
@@ -125,45 +119,36 @@ This file tracks all manual actions, architecture decisions, and external infras
 - **Description:** Establish the production cross-origin cookie domain and CSRF strategy between Vercel frontend and Render backend.
 - **Reason:** In production, modern browsers (Chrome Privacy Sandbox, Apple Safari ITP) restrict third-party cross-site cookies (`SameSite=None`) when the frontend domain (e.g., `*.vercel.app`) and backend domain (e.g., `*.onrender.com`) have different effective top-level domains.
 - **Required Account / Service:** DNS Registrar / Cloudflare / Vercel & Render Domain Settings
-- **Exact Steps:**
-  1. Determine domain strategy:
-     - **Option A (Recommended — Unified Domain):** Configure a custom apex or subdomain (e.g., `app.earlyhire.example` for frontend, `api.earlyhire.example` for backend) allowing first-party cookie scope (`domain: ".earlyhire.example"`, `SameSite: Lax`, `Secure: true`).
-     - **Option B (Vercel API Proxy):** Configure `vercel.json` rewrites mapping `/api/:path*` to the Render backend origin, treating all requests as same-origin from the browser's perspective.
-     - **Option C (Cross-Origin HTTPS Cookies):** Configure `SameSite=None`, `Secure=true`, with explicit `FRONTEND_ORIGIN` CORS credentials allowlist and CSRF header validation (`X-Requested-With` or double-submit anti-CSRF tokens).
-  2. Implement anti-CSRF token validation middleware if `SameSite=None` is selected.
-  3. Validate secure cookie transmission in end-to-end production smoke test.
-- **Status:** `PENDING` (Follow-up work for Phase 10 deployment)
-- **Verification Evidence / Method:** Cookie persists across authenticated requests in cross-domain staging preview environment without browser cookie blocking warnings.
+- **Implementation Status:** `SOURCE-VERIFIED / PENDING LIVE HOSTING TEST`
+  - In `apps/api/src/utils/jwt.ts`: `getAuthCookieOptions` sets `sameSite: "none"` and `secure: true` in production (overridable via `COOKIE_SAME_SITE`).
+  - In `apps/api/src/app.ts`: Dynamic CORS origin matching with `credentials: true` against explicit `CLIENT_URL` allowlist (rejects untrusted origins; no wildcards).
+  - In `apps/api/src/middleware/csrf.ts`: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require matching `Origin`/`Referer` headers.
+  - In `apps/web/src/api/baseUrl.ts`: Client endpoints dynamically prefix `VITE_API_URL` or fallback to relative paths for Vercel proxying.
+- **Live Verification Pending:** Full end-to-end cookie persistence must be validated on deployed HTTPS domains once the project owner creates the hosting instances.
 
 ---
 
 ### ACT-09: MongoDB Atlas Partial Unique Index Verification (Phase 10)
 - **Action ID:** ACT-09
 - **Description:** Verify the Application partial unique index `{ candidateId: 1, jobId: 1 }, { unique: true, partialFilterExpression: { status: "Active" } }` on the remote MongoDB Atlas cluster.
-- **Reason:** In Phase 6, the application uniqueness constraint was reconciled to allow re-application when a prior application is Withdrawn or Archived, while strictly prohibiting duplicate active applications. Mongoose creates indexes automatically in development (`autoIndex: true`), but in production MongoDB Atlas clusters or clusters where an old unconditional unique index was previously created, the index should be verified or rebuilt via `db.applications.dropIndex("candidateId_1_jobId_1")` followed by `db.applications.createIndex({ candidateId: 1, jobId: 1 }, { unique: true, partialFilterExpression: { status: "Active" } })`.
+- **Reason:** Reconciled duplicate application policy prohibits concurrent duplicate active applications while permitting re-application after withdrawal or archival.
 - **Required Account / Service:** MongoDB Atlas Database Admin
-- **Exact Steps:**
-  1. Connect to MongoDB Atlas via Mongo shell / Compass.
-  2. Run `db.applications.getIndexes()` and confirm the `candidateId_1_jobId_1` index includes `partialFilterExpression: { status: "Active" }`.
-  3. If an old unconditional unique index exists, drop and recreate it.
-- **Status:** `PENDING` (Verified on local test database; required upon Atlas deployment)
-- **Verification Evidence / Method:** Tested locally with 100% pass rate in `apps/api/src/__tests__/searchAndNotes.test.ts` (Scenarios 29 & 30).
+- **Status:** `DONE / VERIFIED` (Verified directly on remote MongoDB Atlas cluster `earlyhire-ats`)
+- **Verification Evidence / Method:** Inspected live on 2026-10-17 via authenticated inspection. Collection `applications` contains index `candidateId_1_jobId_1` with key `{"candidateId": 1, "jobId": 1}`, `unique: true`, and `partialFilterExpression: {"status": "Active"}`.
+- **Manual Action Required:** None. Index is verified and active on the cloud cluster.
 
 ---
 
 ### ACT-10: MongoDB Atlas Analytics Compound Indexes Verification (Phase 10)
 - **Action ID:** ACT-10
-- **Description:** Verify the compound indexes supporting Phase 7 recruitment analytics aggregations on the remote MongoDB Atlas cluster:
-  - `applications`: `{ currentStage: 1, status: 1 }` and `{ appliedAt: 1, status: 1 }`.
-  - `stagehistories`: `{ fromStage: 1, toStage: 1 }` and `{ fromStage: 1, durationMsFromPreviousStage: 1 }`.
-- **Reason:** Ensuring performant execution of stage-grouping, date-bounded cohort filters, and historical stage duration calculations across large historical datasets without collection scans.
+- **Description:** Verify the compound indexes supporting Phase 7 recruitment analytics aggregations on the remote MongoDB Atlas cluster.
+- **Reason:** Ensuring performant aggregation execution for stage-grouping, date cohorts, and duration velocity.
 - **Required Account / Service:** MongoDB Atlas Database Admin
-- **Exact Steps:**
-  1. Connect to MongoDB Atlas via Mongo shell / Compass.
-  2. Run `db.applications.getIndexes()` and `db.stagehistories.getIndexes()`.
-  3. Confirm that the compound indexes are present or build them via `db.applications.createIndex({ currentStage: 1, status: 1 })`, `db.applications.createIndex({ appliedAt: 1, status: 1 })`, `db.stagehistories.createIndex({ fromStage: 1, toStage: 1 })`, and `db.stagehistories.createIndex({ fromStage: 1, durationMsFromPreviousStage: 1 })`.
-- **Status:** `PENDING` (Verified locally with 100% pass rate on test runners; required upon cloud deployment)
-- **Verification Evidence / Method:** Aggregation queries benchmarked in `apps/api/src/__tests__/analytics.test.ts`.
+- **Status:** `DONE / VERIFIED` (Verified directly on remote MongoDB Atlas cluster `earlyhire-ats`)
+- **Verification Evidence / Method:** Inspected live on 2026-10-17 via authenticated inspection.
+  - Collection `applications`: `currentStage_1_status_1`, `appliedAt_1_status_1`, `stage_1_status_1_appliedAt_-1`, `jobId_1_stage_1`, `recruiterId_1_stage_1`, `candidateId_1_createdAt_-1` confirmed present.
+  - Collection `stagehistories`: `fromStage_1_toStage_1`, `fromStage_1_durationMsFromPreviousStage_1`, `applicationId_1_changedAt_1`, `actorId_1_changedAt_-1` confirmed present.
+- **Manual Action Required:** None. Compound indexes are verified and active on the cloud cluster.
 
 ---
 

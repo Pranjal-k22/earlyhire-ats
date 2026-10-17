@@ -8,7 +8,7 @@ import { User, IUserDocument } from "../models/user.model.js";
 import { Job } from "../models/job.model.js";
 import { signToken, AUTH_COOKIE_NAME } from "../utils/jwt.js";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/earlyai_ats_test";
+const TEST_DB_URI = process.env.MONGODB_TEST_URI || "mongodb://localhost:27017/earlyai_ats_test";
 
 describe("Phase 4 — Candidate Management Integration Test Suite", () => {
   let app: ReturnType<typeof createApp>;

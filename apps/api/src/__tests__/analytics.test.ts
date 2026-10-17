@@ -17,8 +17,8 @@ describe("Phase 7 — Recruitment Analytics & Dashboard KPIs Test Suite", () => 
   let adminCookie: string;
 
   beforeAll(async () => {
-    process.env.MONGODB_URI = "mongodb://localhost:27017/earlyai_ats_test";
-    await connectDB();
+    const TEST_DB_URI = process.env.MONGODB_TEST_URI || "mongodb://localhost:27017/earlyai_ats_test";
+    await connectDB(TEST_DB_URI);
 
     await User.deleteMany({});
     await Job.deleteMany({});

@@ -10,7 +10,7 @@ import { Application } from "../models/application.model.js";
 import { User, IUserDocument } from "../models/user.model.js";
 import { signToken, AUTH_COOKIE_NAME } from "../utils/jwt.js";
 
-const TEST_DB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/earlyai_ats_test";
+const TEST_DB_URI = process.env.MONGODB_TEST_URI || "mongodb://localhost:27017/earlyai_ats_test";
 
 describe("Phase 6 — Search, Advanced Filters & Recruiter Notes Test Suite", () => {
   let app: ReturnType<typeof createApp>;

@@ -372,7 +372,8 @@ describe("Phase 9 — Final Security Audit & Penetration Testing Suite", { timeo
       ];
 
       for (const ep of endpoints) {
-        const res = await (request(app) as any)[ep.method](ep.path);
+        const agent = request(app) as unknown as Record<string, (url: string) => request.Test>;
+        const res = await agent[ep.method](ep.path);
         expect(res.status).toBe(401);
         expect(res.body.error.code).toBe("UNAUTHENTICATED");
       }

@@ -1,4 +1,5 @@
 import { NoteListResponse, SingleNoteResponse, DeleteNoteResponse } from "../types/note";
+import { API_BASE } from "./baseUrl";
 
 export const fetchCandidateNotes = async (
   candidateId: string,
@@ -10,7 +11,7 @@ export const fetchCandidateNotes = async (
   if (params.order) query.set("order", params.order);
 
   const qs = query.toString() ? `?${query.toString()}` : "";
-  const res = await fetch(`/api/v1/candidates/${candidateId}/notes${qs}`, {
+  const res = await fetch(`${API_BASE}/api/v1/candidates/${candidateId}/notes${qs}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -30,7 +31,7 @@ export const createCandidateNote = async (
   candidateId: string,
   noteData: { body: string }
 ): Promise<SingleNoteResponse> => {
-  const res = await fetch(`/api/v1/candidates/${candidateId}/notes`, {
+  const res = await fetch(`${API_BASE}/api/v1/candidates/${candidateId}/notes`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -53,8 +54,8 @@ export const deleteCandidateNote = async (
   candidateId?: string
 ): Promise<DeleteNoteResponse> => {
   const url = candidateId
-    ? `/api/v1/candidates/${candidateId}/notes/${noteId}`
-    : `/api/v1/notes/${noteId}`;
+    ? `${API_BASE}/api/v1/candidates/${candidateId}/notes/${noteId}`
+    : `${API_BASE}/api/v1/notes/${noteId}`;
 
   const res = await fetch(url, {
     method: "DELETE",

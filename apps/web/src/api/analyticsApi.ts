@@ -1,4 +1,5 @@
 import { DashboardOverviewData, FunnelData, AnalyticsQueryParams } from "../types/analytics";
+import { API_BASE } from "./baseUrl";
 
 function buildQueryString(params?: AnalyticsQueryParams): string {
   if (!params) return "";
@@ -14,7 +15,7 @@ export async function fetchDashboardOverview(
   params?: AnalyticsQueryParams
 ): Promise<{ success: boolean; data: DashboardOverviewData }> {
   const qs = buildQueryString(params);
-  const res = await fetch(`/api/v1/analytics/overview${qs}`, {
+  const res = await fetch(`${API_BASE}/api/v1/analytics/overview${qs}`, {
     credentials: "include",
     headers: {
       Accept: "application/json",
@@ -39,7 +40,7 @@ export async function fetchRecruitmentFunnel(
   params?: AnalyticsQueryParams
 ): Promise<{ success: boolean; data: FunnelData }> {
   const qs = buildQueryString(params);
-  const res = await fetch(`/api/v1/analytics/funnel${qs}`, {
+  const res = await fetch(`${API_BASE}/api/v1/analytics/funnel${qs}`, {
     credentials: "include",
     headers: {
       Accept: "application/json",

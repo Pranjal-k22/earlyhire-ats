@@ -687,3 +687,41 @@ _Initial baseline recorded prior to Phase 1._
   - `npm test`: PASS (exit code 0; 202 total passing tests across 16 suites).
   - `npm run build`: PASS (exit code 0; clean production bundles built, 0 chunk warnings).
 - **Auditor:** AI Coding Assistant (Antigravity)
+
+---
+
+### Audit 11: Phase 10 — Deployment Readiness & Cloud Release Verification
+
+- **Date:** 2026-10-17
+- **Branch:** `feat/phase-10-deployment-readiness`
+- **Scope:** Complete deployment readiness review, production hosting configuration audit, cross-origin cookie and CSRF topology, live MongoDB Atlas cluster collection and index inspection, and final regression verification.
+- **Key Findings & Verifications:**
+  - **Gate 1 — Git & Worktree Safety:**
+    - Branch `feat/phase-10-deployment-readiness` cleanly cut from verified Phase 9 commit `fbfca12`.
+    - Gitignore verified: `.env`, `apps/api/.env`, `apps/web/.env` strictly ignored via `.gitignore:7:.env`.
+  - **Gate 2 — Production Configuration Audit:**
+    - API binds to explicit `env.HOST` (`0.0.0.0`) and `env.PORT` ensuring container ingress compatibility on Render Web Services.
+    - Production build commands verified: `apps/web` builds to `dist/` with code splitting; `apps/api` compiles via `tsc` to `dist/server.js`.
+    - Added `apps/web/vercel.json` for client-side SPA routing (`/(.*)` -> `/index.html`) preventing 404s on browser refresh.
+    - Added `apps/web/src/api/baseUrl.ts` and `apps/web/src/vite-env.d.ts` supporting `VITE_API_URL` prefixing.
+    - Production environment validation verified in `apps/api/src/config/env.ts`: fails fast on missing or localhost `MONGODB_URI` or weak `JWT_SECRET` in production mode.
+    - Verified zero mock data in production application bundle.
+  - **Gate 3 — MongoDB Atlas Cloud Index Verification:**
+    - Authenticated connection to remote Atlas cluster `cluster0.s8vxj7j.mongodb.net` and target database `earlyhire-ats` verified live.
+    - Harmless inspection confirmed all 6 collections: `applications`, `notes`, `stagehistories`, `candidates`, `jobs`, `users`.
+    - **ACT-09 Verified (PASS):** Collection `applications` contains `candidateId_1_jobId_1` unique index with `partialFilterExpression: {"status": "Active"}`.
+    - **ACT-10 Verified (PASS):** Collection `applications` contains compound indexes (`currentStage_1_status_1`, `appliedAt_1_status_1`, `stage_1_status_1_appliedAt_-1`, `jobId_1_stage_1`, `recruiterId_1_stage_1`, `candidateId_1_createdAt_-1`). Collection `stagehistories` contains compound indexes (`fromStage_1_toStage_1`, `fromStage_1_durationMsFromPreviousStage_1`, `applicationId_1_changedAt_1`, `actorId_1_changedAt_-1`).
+  - **Gate 4 — Production Authentication, Cookies, CORS & CSRF:**
+    - `apps/api/src/utils/jwt.ts`: `getAuthCookieOptions` sets `sameSite: "none"` and `secure: true` in production (overridable via `COOKIE_SAME_SITE`).
+    - `apps/api/src/app.ts`: Dynamic CORS origin matching with `credentials: true` against explicit `CLIENT_URL` allowlist (rejects untrusted origins; no wildcards).
+    - `apps/api/src/middleware/csrf.ts`: State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require matching `Origin` / `Referer` headers from `getAllowedOrigins()`.
+    - Cookie clearing in `logout` strictly preserves identical attributes (`httpOnly`, `sameSite`, `secure`, `path`).
+  - **Gate 5 — Final Local Regression Checks:**
+    - `npm run lint`: PASS (exit code 0; 0 errors, 0 warnings across all workspaces).
+    - `npm run typecheck`: PASS (exit code 0; clean strict mode compilation across web and api workspaces).
+    - `npm test`: PASS (exit code 0; 202/202 passing tests across 16 test suites: 47 web, 155 api).
+    - `npm run build`: PASS (exit code 0; clean production bundles built, 0 chunk warnings).
+  - **Gate 6 — Hosting Configuration & Smoke-Test Plan:**
+    - Full repository-specific deployment instructions and environment variable specs prepared for Vercel and Render.
+    - Comprehensive smoke-test checklist prepared covering Authentication, Jobs, Candidates, Applications, Notes, and Analytics.
+- **Auditor:** AI Coding Assistant (Antigravity)

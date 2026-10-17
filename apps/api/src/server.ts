@@ -7,10 +7,10 @@ const startServer = async () => {
     // Connect to database before accepting requests
     await connectDB();
 
-    const server = app.listen(env.PORT, () => {
-      console.log(`🚀 EarlyAI ATS API server listening on http://localhost:${env.PORT}`);
+    const server = app.listen(env.PORT, env.HOST, () => {
+      console.log(`🚀 EarlyAI ATS API server listening on http://${env.HOST}:${env.PORT}`);
       console.log(`   Environment: ${env.NODE_ENV}`);
-      console.log(`   Health check: http://localhost:${env.PORT}/api/v1/health`);
+      console.log(`   Health check: http://${env.HOST === "0.0.0.0" ? "localhost" : env.HOST}:${env.PORT}/api/v1/health`);
     });
 
     const handleShutdown = (signal: string) => {

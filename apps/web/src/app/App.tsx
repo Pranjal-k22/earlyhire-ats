@@ -24,6 +24,7 @@ import { PipelineView } from "../features/pipeline/PipelineView";
 import { DashboardView } from "../features/dashboard/DashboardView";
 import { AuthModal } from "../features/auth/AuthModal";
 import { fetchMe, logout } from "../api/authApi";
+import { API_BASE } from "../api/baseUrl";
 import { User } from "../types/auth";
 
 interface HealthStatus {
@@ -52,7 +53,7 @@ export const App: React.FC = () => {
 
   // Load API Health
   useEffect(() => {
-    fetch("/api/v1/health")
+    fetch(`${API_BASE}/api/v1/health`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();

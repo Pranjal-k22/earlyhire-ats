@@ -4,6 +4,7 @@ import {
   ApplicationHistoryResponse,
   HiringStage,
 } from "../types/application";
+import { API_BASE } from "./baseUrl";
 
 export const fetchApplications = async (
   params: {
@@ -34,7 +35,7 @@ export const fetchApplications = async (
   if (params.order) query.set("order", params.order);
 
   const qs = query.toString() ? `?${query.toString()}` : "";
-  const res = await fetch(`/api/v1/applications${qs}`, {
+  const res = await fetch(`${API_BASE}/api/v1/applications${qs}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -53,7 +54,7 @@ export const fetchApplications = async (
 export const fetchApplicationById = async (
   id: string
 ): Promise<SingleApplicationResponse> => {
-  const res = await fetch(`/api/v1/applications/${id}`, {
+  const res = await fetch(`${API_BASE}/api/v1/applications/${id}`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -74,7 +75,7 @@ export const createApplication = async (data: {
   jobId: string;
   source?: string;
 }): Promise<SingleApplicationResponse> => {
-  const res = await fetch("/api/v1/applications", {
+  const res = await fetch(`${API_BASE}/api/v1/applications`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -101,7 +102,7 @@ export const transitionApplicationStage = async (
     expectedVersion?: number;
   }
 ): Promise<SingleApplicationResponse> => {
-  const res = await fetch(`/api/v1/applications/${id}/stage`, {
+  const res = await fetch(`${API_BASE}/api/v1/applications/${id}/stage`, {
     method: "PATCH",
     credentials: "include",
     headers: {
@@ -122,7 +123,7 @@ export const transitionApplicationStage = async (
 export const fetchApplicationHistory = async (
   id: string
 ): Promise<ApplicationHistoryResponse> => {
-  const res = await fetch(`/api/v1/applications/${id}/history`, {
+  const res = await fetch(`${API_BASE}/api/v1/applications/${id}/history`, {
     method: "GET",
     credentials: "include",
     headers: {
