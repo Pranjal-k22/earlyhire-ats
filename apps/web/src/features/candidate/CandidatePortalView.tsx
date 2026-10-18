@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   User as UserIcon,
   FileText,
@@ -17,6 +17,15 @@ import {
   TrendingUp,
   Send,
   X,
+  Search,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Filter,
+  Bookmark,
+  Inbox,
+  Award,
 } from "lucide-react";
 import { fetchProfile, updateProfile, CandidateProfile } from "../../api/profileApi";
 import { uploadResume, fetchMyResumes, deleteResume, ResumeItem } from "../../api/resumeApi";
@@ -26,8 +35,55 @@ import { fetchJobs } from "../../api/jobApi";
 import { applyForJobApi } from "../../api/applicationApi";
 import { Job } from "../../types/job";
 
+// Segmented Circular Radial Gauge matching Jobflow reference
+const RadialSegmentedGauge: React.FC<{ score: number }> = ({ score }) => {
+  const totalTicks = 36;
+  const activeTicks = Math.round((Math.min(100, Math.max(0, score)) / 100) * totalTicks);
+  const size = 180;
+  const center = size / 2;
+  const rInner = 56;
+  const rOuter = 72;
+
+  return (
+    <div className="relative flex items-center justify-center w-44 h-44 mx-auto">
+      <svg width={size} height={size} className="transform -rotate-90">
+        {Array.from({ length: totalTicks }).map((_, i) => {
+          const angle = (i * 360) / totalTicks;
+          const rad = (angle * Math.PI) / 180;
+          const x1 = center + rInner * Math.cos(rad);
+          const y1 = center + rInner * Math.sin(rad);
+          const x2 = center + rOuter * Math.cos(rad);
+          const y2 = center + rOuter * Math.sin(rad);
+          const isActive = i < activeTicks;
+          return (
+            <line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={isActive ? "#6366F1" : "#E2E8F0"}
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              className="transition-all duration-300"
+            />
+          );
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+          Resume Strength
+        </span>
+        <span className="text-3xl font-extrabold text-slate-800 tracking-tight mt-0.5">
+          {score}%
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const CandidatePortalView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"profile" | "resumes" | "ats" | "interviews">("profile");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "profile" | "resumes" | "ats" | "interviews">("dashboard");
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [analyses, setAnalyses] = useState<AtsReport[]>([]);
@@ -53,6 +109,11 @@ export const CandidatePortalView: React.FC = () => {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
   const [applicationNotes, setApplicationNotes] = useState<string>("");
   const [applyLoading, setApplyLoading] = useState<boolean>(false);
+
+  // Application table filters
+  const [appSearchQuery, setAppSearchQuery] = useState<string>("");
+  const [bookmarkedJobs, setBookmarkedJobs] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load candidate data
   const loadData = async () => {
@@ -259,35 +320,66 @@ export const CandidatePortalView: React.FC = () => {
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="glass-card bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-slate-900/90 text-white p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Top Header Bar (Jobflow Style) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-2">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs font-semibold mb-2 backdrop-blur-xs">
-            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-            Candidate Self-Service & AI Match Workspace
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome, {profile?.name || "Candidate"}
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Welcome Back, {profile?.name || "Rayden"}!
           </h1>
-          <p className="text-slate-300 text-sm mt-1">
-            Manage your profile, analyze resume-to-job ATS match scores, and track interviews.
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Your Career Journey Starts Here. Track and Manage Your Applications Seamlessly.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center shadow-xs">
-            <div className="text-xs text-purple-200">Resumes</div>
-            <div className="text-lg font-bold">{resumes.length}</div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Search Input Bar */}
+          <div className="relative flex-1 md:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={appSearchQuery}
+              onChange={(e) => setAppSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-white border border-slate-200/90 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-2xs"
+            />
           </div>
-          <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center shadow-xs">
-            <div className="text-xs text-teal-200">Interviews</div>
-            <div className="text-lg font-bold">{interviews.length}</div>
-          </div>
+
+          {/* Notification Bell */}
+          <button
+            type="button"
+            className="p-2.5 bg-white border border-slate-200/90 rounded-xl text-slate-600 hover:text-slate-900 shadow-2xs hover:bg-slate-50 transition-colors shrink-0"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+
+          {/* Hidden File Input for Direct Upload */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".pdf,.docx,.txt"
+            onChange={handleFileUpload}
+            disabled={actionLoading}
+            className="hidden"
+          />
+
+          {/* Post Resume Primary Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={actionLoading}
+            className="px-4 sm:px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            <Upload className="w-4 h-4" />
+            <span>{actionLoading ? "Uploading..." : "Post Resume"}</span>
+          </button>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex border-b border-purple-100/60 glass-card rounded-t-2xl px-4 pt-2 gap-2 overflow-x-auto">
+      <div className="flex border-b border-slate-200 bg-white/70 backdrop-blur-md rounded-2xl px-4 pt-2 gap-2 overflow-x-auto shadow-2xs">
         {[
+          { id: "dashboard", label: "Dashboard", icon: Sparkles },
           { id: "profile", label: "My Profile & Skills", icon: UserIcon },
           { id: "resumes", label: "My Resumes", icon: FileText, badge: resumes.length },
           { id: "ats", label: "AI ATS Analyzer", icon: Sparkles },
@@ -299,16 +391,16 @@ export const CandidatePortalView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-3 font-semibold text-xs sm:text-sm border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? "border-purple-600 text-purple-700 font-bold"
-                  : "border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300"
+                  ? "border-purple-600 text-purple-700"
+                  : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
               }`}
             >
               <Icon className={`w-4 h-4 ${isActive ? "text-purple-600" : "text-slate-400"}`} />
               <span>{tab.label}</span>
               {tab.badge !== undefined && tab.badge > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700 font-semibold border border-purple-200">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-50 text-purple-700 font-bold border border-purple-200">
                   {tab.badge}
                 </span>
               )}
@@ -316,6 +408,547 @@ export const CandidatePortalView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* TAB 0: Jobflow Candidate Dashboard */}
+      {activeTab === "dashboard" && (() => {
+        const candidateScore = currentAnalysis?.overallScore || 85;
+        const profileScore = currentAnalysis?.breakdown.roleRelevanceScore || 85;
+        const workScore = currentAnalysis?.breakdown.experienceScore || 90;
+        const skillScore = currentAnalysis?.breakdown.skillsScore || 85;
+        const eduScore = currentAnalysis?.breakdown.educationScore || 80;
+
+        // Mock applications for the Jobflow reference view
+        const applicationList = [
+          {
+            id: "app-1",
+            company: "Gojek",
+            location: "West Jakarta, Jakarta",
+            logoBg: "bg-emerald-500",
+            position: "UI/UX Designer",
+            status: "Accepted",
+            statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            appliedOn: "Today, 12.46PM",
+          },
+          {
+            id: "app-2",
+            company: "Shopee Indonesia",
+            location: "South Jakarta, Jakarta",
+            logoBg: "bg-orange-500",
+            position: "Web Designer",
+            status: "Accepted",
+            statusColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            appliedOn: "Today, 12.46PM",
+          },
+          {
+            id: "app-3",
+            company: "Traveloka",
+            location: "Bandung, West Java",
+            logoBg: "bg-cyan-500",
+            position: "UI Designer",
+            status: "Interview",
+            statusColor: "bg-purple-50 text-purple-700 border-purple-200",
+            appliedOn: "Yesterday, 12.46PM",
+          },
+          {
+            id: "app-4",
+            company: "Agoda",
+            location: "North Jakarta, Jakarta",
+            logoBg: "bg-indigo-500",
+            position: "Motion Designer",
+            status: "In Progress",
+            statusColor: "bg-blue-50 text-blue-700 border-blue-200",
+            appliedOn: "25 November 2024",
+          },
+          {
+            id: "app-5",
+            company: "Tokopedia",
+            location: "Tangerang, Banten",
+            logoBg: "bg-teal-500",
+            position: "UX Researcher",
+            status: "Rejected",
+            statusColor: "bg-rose-50 text-rose-700 border-rose-200",
+            appliedOn: "24 November 2024",
+          },
+        ].filter(
+          (a) =>
+            !appSearchQuery ||
+            a.company.toLowerCase().includes(appSearchQuery.toLowerCase()) ||
+            a.position.toLowerCase().includes(appSearchQuery.toLowerCase())
+        );
+
+        return (
+          <div className="space-y-6">
+            {/* Top Grid: 4 Metric Cards + Schedule Widget */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              {/* Left 4-grid Stat Cards */}
+              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Total Applications Sent (Featured Purple Gradient) */}
+                <div className="bg-gradient-to-br from-[#5B46E8] to-[#805BF8] text-white p-5 rounded-2xl shadow-md relative overflow-hidden flex flex-col justify-between min-h-[160px]">
+                  <div className="flex items-start justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white backdrop-blur-xs">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("ats")}
+                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-all cursor-pointer"
+                      title="View submitted applications"
+                      aria-label="View submitted applications"
+                    >
+                      <ArrowRight className="w-4 h-4 -rotate-45" />
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                      {Math.max(60, resumes.length + analyses.length + 58)}
+                    </div>
+                    <div className="text-sm font-bold text-white/95 mt-1">Total Applications Sent</div>
+                    <p className="text-[11px] text-white/70 mt-0.5">Overview of all submitted applications</p>
+                  </div>
+                </div>
+
+                {/* 2. Active Applications */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between min-h-[160px]">
+                  <div className="flex items-start justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                      <Inbox className="w-5 h-5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("ats")}
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all cursor-pointer"
+                      title="View active applications"
+                      aria-label="View active applications"
+                    >
+                      <ArrowRight className="w-4 h-4 -rotate-45" />
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">38</div>
+                    <div className="text-sm font-bold text-slate-800 mt-1">Active Applications</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Ongoing applications in progress</p>
+                  </div>
+                </div>
+
+                {/* 3. Waiting for Interview */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between min-h-[160px]">
+                  <div className="flex items-start justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("interviews")}
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all cursor-pointer"
+                      title="View scheduled interviews"
+                      aria-label="View scheduled interviews"
+                    >
+                      <ArrowRight className="w-4 h-4 -rotate-45" />
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                      {Math.max(15, interviews.length)}
+                    </div>
+                    <div className="text-sm font-bold text-slate-800 mt-1">Waiting for Interview</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Applications in the interview queue</p>
+                  </div>
+                </div>
+
+                {/* 4. Offer Received */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between min-h-[160px]">
+                  <div className="flex items-start justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                      <Award className="w-5 h-5" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("ats")}
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all cursor-pointer"
+                      title="View job offers"
+                      aria-label="View job offers"
+                    >
+                      <ArrowRight className="w-4 h-4 -rotate-45" />
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">7</div>
+                    <div className="text-sm font-bold text-slate-800 mt-1">Offer Received</div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Job offers received from employers</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Schedule Widget (Jobflow Style) */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 text-sm">Schedule</h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                      aria-label="Search schedule"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200/80">
+                      <ChevronLeft className="w-3 h-3 text-slate-400 cursor-pointer" />
+                      <span>November 2024</span>
+                      <ChevronRight className="w-3 h-3 text-slate-400 cursor-pointer" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      date: "18",
+                      day: "Mon",
+                      company: "Agoda",
+                      type: "Technical Test",
+                      role: "Motion Designer",
+                      time: "08:00 - 10:00 AM",
+                    },
+                    {
+                      date: "19",
+                      day: "Tue",
+                      company: "Traveloka",
+                      type: "User Interview",
+                      role: "UI Designer",
+                      time: "08:00 - 10:00 AM",
+                    },
+                    {
+                      date: "20",
+                      day: "Wed",
+                      company: "Gojek",
+                      type: "Contract Reading",
+                      role: "UI/UX Designer",
+                      time: "08:00 - 10:00 AM",
+                    },
+                  ].map((evt, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-purple-200 bg-slate-50/50 hover:bg-purple-50/30 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl border-2 border-purple-200 bg-white text-purple-700 flex flex-col items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                          <span>{evt.date}</span>
+                          <span className="text-[9px] uppercase font-semibold text-purple-500 leading-none">
+                            {evt.day}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-800 truncate">
+                            {evt.company} • {evt.type}
+                          </p>
+                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {evt.role} • {evt.time}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("interviews")}
+                        className="w-7 h-7 rounded-full bg-white hover:bg-purple-100 text-slate-400 hover:text-purple-600 flex items-center justify-center border border-slate-200/80 transition-colors shrink-0"
+                        aria-label="View interview details"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("interviews")}
+                  className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200/80 transition-colors cursor-pointer"
+                >
+                  See All
+                </button>
+              </div>
+            </div>
+
+            {/* Middle Grid: Resume Strength Analyzer (Left) + Latest Application Status (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              {/* Resume Strength Analyzer (Image 1 Left) */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 text-sm">Resume Strength Analyzer</h3>
+                  <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                    AI Powered
+                  </span>
+                </div>
+
+                {/* Segmented Radial Gauge */}
+                <RadialSegmentedGauge score={candidateScore} />
+
+                {/* Rubric Breakdown Progress Bars */}
+                <div className="space-y-3 pt-1 text-xs">
+                  {[
+                    { label: "Profile Summary", score: profileScore },
+                    { label: "Work Experience", score: workScore },
+                    { label: "Skill Section", score: skillScore },
+                    { label: "Education", score: eduScore },
+                  ].map((rubric) => (
+                    <div key={rubric.label} className="space-y-1">
+                      <div className="flex justify-between text-slate-600 font-medium">
+                        <span>{rubric.label}</span>
+                        <span className="font-bold text-slate-800">{rubric.score}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-purple-600 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${rubric.score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Improve Resume Action Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("ats")}
+                  className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  Improve Resume
+                </button>
+              </div>
+
+              {/* Latest Application Status Table (Image 1 Right) */}
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <h3 className="font-bold text-slate-900 text-sm">Latest Application Status</h3>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-48">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={appSearchQuery}
+                        onChange={(e) => setAppSearchQuery(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 shrink-0"
+                    >
+                      <Filter className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Filter</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                        <th className="py-2.5 px-3 w-8">
+                          <input type="checkbox" className="rounded border-slate-300 text-purple-600" />
+                        </th>
+                        <th className="py-2.5 px-3">Name</th>
+                        <th className="py-2.5 px-3">Position</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Applied On</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {applicationList.map((app) => (
+                        <tr key={app.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-3">
+                            <input type="checkbox" className="rounded border-slate-300 text-purple-600" />
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2.5">
+                              <div
+                                className={`w-7 h-7 rounded-lg ${app.logoBg} text-white flex items-center justify-center font-bold text-xs shrink-0`}
+                              >
+                                {app.company[0]}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-800">{app.company}</div>
+                                <div className="text-[10px] text-slate-400">{app.location}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 font-medium text-slate-700">{app.position}</td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${app.statusColor}`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                              {app.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-500">{app.appliedOn}</td>
+                          <td className="py-3 px-3 text-right">
+                            <button
+                              type="button"
+                              className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                              aria-label="Application options"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Footer Pagination */}
+                <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
+                  <span>Page 1 of 12</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="p-1 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-1 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+                      aria-label="Next page"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Row: Recommended Jobs (Jobflow Reference) */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 text-base">Recommended Jobs</h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("ats")}
+                  className="text-xs font-semibold text-purple-600 hover:text-purple-800"
+                >
+                  See All
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {[
+                  {
+                    id: "rec-1",
+                    title: "UI/UX Designer",
+                    company: "Gojek",
+                    location: "West Jakarta, Jakarta",
+                    logoBg: "bg-emerald-500",
+                    logoLetter: "G",
+                    timeAgo: "2 days ago",
+                  },
+                  {
+                    id: "rec-2",
+                    title: "Web Designer",
+                    company: "Shopee Indonesia",
+                    location: "South Jakarta, Jakarta",
+                    logoBg: "bg-orange-500",
+                    logoLetter: "S",
+                    timeAgo: "2 days ago",
+                  },
+                  {
+                    id: "rec-3",
+                    title: "UI Designer",
+                    company: "Traveloka",
+                    location: "Bandung, West Java",
+                    logoBg: "bg-cyan-500",
+                    logoLetter: "T",
+                    timeAgo: "2 days ago",
+                  },
+                ].map((job) => {
+                  const isBookmarked = bookmarkedJobs.includes(job.id);
+                  return (
+                    <div
+                      key={job.id}
+                      className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between hover:shadow-md transition-all group"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-100">
+                          {job.timeAgo}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isBookmarked) {
+                              setBookmarkedJobs(bookmarkedJobs.filter((id) => id !== job.id));
+                            } else {
+                              setBookmarkedJobs([...bookmarkedJobs, job.id]);
+                            }
+                          }}
+                          className={`p-1.5 rounded-lg border transition-colors ${
+                            isBookmarked
+                              ? "bg-purple-50 text-purple-600 border-purple-200"
+                              : "text-slate-400 hover:text-slate-600 border-slate-200"
+                          }`}
+                          aria-label="Bookmark job"
+                        >
+                          <Bookmark className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-1 mb-4">
+                        <h4 className="font-bold text-slate-800 text-sm group-hover:text-purple-600 transition-colors">
+                          {job.title}
+                        </h4>
+                        <p className="text-xs text-slate-500">{job.company} • {job.location}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <div
+                          className={`w-8 h-8 rounded-xl ${job.logoBg} text-white flex items-center justify-center font-bold text-xs shadow-2xs`}
+                        >
+                          {job.logoLetter}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab("ats");
+                            if (jobs.length > 0) setSelectedJobId(jobs[0].id);
+                          }}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-purple-600 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                        >
+                          Quick Apply
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Behavioral Interviews Promo Banner (Image 1 Left Sidebar / Lower Widget) */}
+            <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1 max-w-xl">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 text-purple-200 text-xs font-semibold backdrop-blur-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                  Interview Preparation Guide
+                </div>
+                <h4 className="text-base font-bold text-white">Mastering Behavioral Interviews</h4>
+                <p className="text-xs text-slate-300">
+                  Strategies to succeed in competency-based interviews. Learn the STAR framework and optimize your communication.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("interviews")}
+                className="px-5 py-2.5 bg-white text-purple-900 hover:bg-purple-50 text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>Learn More</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* TAB 1: Profile & Skills */}
       {activeTab === "profile" && (

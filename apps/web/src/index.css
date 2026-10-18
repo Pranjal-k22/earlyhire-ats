@@ -3,6 +3,20 @@
 @tailwind utilities;
 
 :root {
+  /* Unified Design Tokens */
+  --color-primary-blue: #315CFF;
+  --color-purple: #8B2BFF;
+  --color-lavender: #F1E9FF;
+  --color-light-blue: #EEF5FF;
+  --color-soft-white: #FFFFFF;
+  --color-bg-base: #F8FAFC;
+  --color-text-primary: #172033;
+  --color-text-secondary: #667085;
+  --color-success: #16A34A;
+  --color-error: #DC2626;
+  --color-border-subtle: #E5E7EB;
+
+  /* Legacy & Workspace Accent Tokens */
   --color-primary: #8b5cf6;
   --color-primary-hover: #7c3aed;
   --color-teal: #06b6d4;
@@ -19,9 +33,43 @@ body {
     radial-gradient(circle at 85% 15%, rgba(6, 182, 212, 0.09) 0%, transparent 35%),
     radial-gradient(circle at 50% 90%, rgba(168, 85, 247, 0.05) 0%, transparent 40%);
   background-attachment: fixed;
-  color: #0f172a;
+  color: #172033;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Atmospheric Auth Page Styling matching Reference Screenshot */
+.auth-atmosphere-bg {
+  background-color: #F8FAFC;
+  background-image:
+    radial-gradient(circle at 35% 45%, rgba(139, 43, 255, 0.09) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(49, 92, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 45% 75%, rgba(244, 114, 182, 0.05) 0%, transparent 45%),
+    linear-gradient(180deg, #F8FAFC 0%, #EEF5FF 50%, #F1E9FF 100%);
+  background-attachment: fixed;
+}
+
+.auth-card-shadow {
+  box-shadow: 0 20px 50px -15px rgba(49, 92, 255, 0.12), 0 0 1px 1px rgba(229, 231, 235, 0.8);
+}
+
+.gradient-btn-primary {
+  background: linear-gradient(135deg, #315CFF 0%, #8B2BFF 100%);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gradient-btn-primary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 10px 25px -5px rgba(49, 92, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.gradient-btn-primary:active {
+  transform: translateY(0);
+}
+
+.gradient-badge-brand {
+  background: linear-gradient(135deg, #315CFF 0%, #8B2BFF 100%);
 }
 
 @layer utilities {
