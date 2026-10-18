@@ -62,9 +62,9 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
   });
 
   // 1. Successful signup
-  it("Scenario 1: creates a new recruiter account on valid signup", async () => {
+  it("Scenario 1: creates a new candidate account on valid public signup", async () => {
     const res = await request(app).post("/api/v1/auth/signup").send({
-      name: "Asha Recruiter",
+      name: "Asha Candidate",
       email: "asha@example.com",
       password: "StrongPass!234",
     });
@@ -72,9 +72,10 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.user).toMatchObject({
-      name: "Asha Recruiter",
+      name: "Asha Candidate",
       email: "asha@example.com",
-      role: "recruiter",
+      role: "candidate",
+      canonicalRole: "candidate",
     });
     expect(res.body.data.user.id).toBeDefined();
 
@@ -268,7 +269,8 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
     expect(meRes.body.data.user).toMatchObject({
       name: "Session User",
       email: "session@example.com",
-      role: "recruiter",
+      role: "candidate",
+      canonicalRole: "candidate",
     });
     expect(meRes.body.data.user).not.toHaveProperty("passwordHash");
   });
@@ -331,19 +333,37 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
   });
 
   // 13. Signup role-escalation attempts
-  it("Scenario 13: ignores or rejects role escalation during public signup", async () => {
-    const res = await request(app).post("/api/v1/auth/signup").send({
-      name: "Hacker Aspirant",
-      email: "hacker@example.com",
+  it("Scenario 13: strictly rejects attempted role escalation during public signup with 403 FORBIDDEN", async () => {
+    const privilegedRoles = ["admin", "platform_manager", "hiring_team", "recruiter", "hiring_manager"];
+
+    for (const role of privilegedRoles) {
+      const email = `escalate-${role}@example.com`;
+      const res = await request(app).post("/api/v1/auth/signup").send({
+        name: `Attacker ${role}`,
+        email,
+        password: "StrongPass!234",
+        role, // Client attempting privilege escalation
+      });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe("FORBIDDEN");
+      expect(res.body.error.message).toMatch(/Public registration is restricted to candidate accounts/i);
+
+      // Verify no user record was persisted in database
+      const userInDb = await User.findOne({ email });
+      expect(userInDb).toBeNull();
+    }
+
+    // Omitted role or explicit candidate role succeeds as candidate
+    const resCandidate = await request(app).post("/api/v1/auth/signup").send({
+      name: "Legit Candidate",
+      email: "legit.candidate@example.com",
       password: "StrongPass!234",
-      role: "admin", // Client attempting privilege escalation
+      role: "candidate",
     });
-
-    expect(res.status).toBe(201);
-    expect(res.body.data.user.role).toBe("recruiter"); // Enforced as recruiter
-
-    const userInDb = await User.findOne({ email: "hacker@example.com" });
-    expect(userInDb?.role).toBe("recruiter");
+    expect(resCandidate.status).toBe(201);
+    expect(resCandidate.body.data.user.role).toBe("candidate");
   });
 
   // 14. Authentication middleware returning HTTP 401
@@ -357,8 +377,8 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
   // 15. Role middleware returning HTTP 403 when appropriate
   it("Scenario 15: requireRole returns 403 FORBIDDEN when user lacks required role", async () => {
     const signupRes = await request(app).post("/api/v1/auth/signup").send({
-      name: "Ordinary Recruiter",
-      email: "recruiter.only@example.com",
+      name: "Ordinary Candidate",
+      email: "candidate.only@example.com",
       password: "StrongPass!234",
     });
 
@@ -376,13 +396,21 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
 
   // 16. Authorization success for an allowed role
   it("Scenario 16: grants access to route when user possesses an authorized role", async () => {
-    const signupRes = await request(app).post("/api/v1/auth/signup").send({
-      name: "Allowed Recruiter",
-      email: "allowed.recruiter@example.com",
+    // Authorized hiring team user provisioned directly
+    const recruiterUser = await User.create({
+      name: "Authorized Recruiter",
+      email: "authorized.recruiter@example.com",
+      passwordHash: await User.hashPassword("StrongPass!234"),
+      role: "recruiter",
+      isActive: true,
+    });
+
+    const loginRes = await request(app).post("/api/v1/auth/login").send({
+      email: recruiterUser.email,
       password: "StrongPass!234",
     });
 
-    const cookieHeader = signupRes.headers["set-cookie"][0].split(";")[0];
+    const cookieHeader = loginRes.headers["set-cookie"][0].split(";")[0];
 
     const res = await request(testApp)
       .get("/test-recruiter-allowed")

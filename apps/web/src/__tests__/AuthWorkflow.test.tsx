@@ -57,7 +57,7 @@ describe("Phase 8 — Workflow A: Recruiter Authentication & Session UI Verifica
     const registerTab = screen.getByTestId("auth-tab-signup");
     fireEvent.click(registerTab);
 
-    expect(screen.getByRole("heading", { name: /create recruiter account/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /create (candidate|recruiter) account/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
 
     // Close dialog
@@ -65,7 +65,7 @@ describe("Phase 8 — Workflow A: Recruiter Authentication & Session UI Verifica
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: /create recruiter account/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /create (candidate|recruiter) account/i })).not.toBeInTheDocument();
     });
   });
 

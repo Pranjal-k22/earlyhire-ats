@@ -5,6 +5,6 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 const router = Router();
 
 router.use(requireAuth);
-router.delete("/:noteId", requireRole("admin", "recruiter", "hiring_manager"), deleteNote);
+router.delete("/:noteId", requireRole("hiring_team", "platform_manager"), deleteNote);
 
 export default router;

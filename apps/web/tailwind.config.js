@@ -34,9 +34,37 @@ export default {
           hired: "#16a34a",
           rejected: "#dc2626",
         },
+        navy: {
+          950: "#030817",
+          900: "#07152F",
+          800: "#0D2048",
+          700: "#132E63",
+        },
+        electric: "#2563EB",
+        cyanAccent: "#22D3EE",
+        lavender: "#8B5CF6",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+      },
+      animation: {
+        "float-slow": "float 6s ease-in-out infinite",
+        "float-reverse": "floatReverse 7s ease-in-out infinite",
+        "pulse-subtle": "pulseSubtle 3s ease-in-out infinite",
+      },
+      keyframes: {
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        floatReverse: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(8px)" },
+        },
+        pulseSubtle: {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.85", transform: "scale(1.03)" },
+        },
       },
       borderRadius: {
         xl: "0.75rem",

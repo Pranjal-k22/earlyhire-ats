@@ -48,6 +48,7 @@ tmp/
 temp/
 uploads/
 apps/api/uploads/
+screenshots/
 
 # Documentation
 DOCS/

@@ -19,6 +19,17 @@ export const RejectModal: React.FC<RejectModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !application) return null;
 
   const candidateName =
@@ -46,9 +57,13 @@ export const RejectModal: React.FC<RejectModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="reject-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 cursor-pointer"
     >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-100">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-100 cursor-default"
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-rose-50/50">
           <div className="flex items-center gap-2 text-rose-700">
             <AlertTriangle className="w-5 h-5 text-rose-600" />

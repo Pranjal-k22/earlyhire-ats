@@ -18,7 +18,7 @@ const signupSchema = z.object({
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     "Password must contain an uppercase letter, lowercase letter, and number"
   ),
-  role: z.enum(["candidate", "recruiter", "hiring_team"]),
+  role: z.literal("candidate"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -146,12 +146,12 @@ export const AuthModal: React.FC<Props> = ({
               </div>
               <div>
                 <h2 id="auth-modal-title" className="text-base font-bold text-slate-900">
-                  {mode === "login" ? "Sign In to EarlyAI ATS" : "Create Recruiter Account"}
+                  {mode === "login" ? "Sign In to EarlyAI ATS" : "Create Candidate Account"}
                 </h2>
                 <p className="text-xs text-slate-500">
                   {mode === "login"
                     ? "Welcome back! Enter credentials to access ATS workspace."
-                    : "Register to manage jobs, candidates, and hiring workflows."}
+                    : "Register to manage profile, upload resumes, and view AI ATS scores."}
                 </p>
               </div>
             </div>
@@ -389,21 +389,17 @@ export const AuthModal: React.FC<Props> = ({
                 </p>
               </div>
 
-              <div>
-                <label
-                  htmlFor="signup-role"
-                  className="block text-xs font-semibold text-slate-700 mb-1"
-                >
-                  Account Purpose <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="signup-role"
-                  {...registerSignup("role")}
-                  className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-800"
-                >
-                  <option value="candidate">Candidate (Self-Service Profile & AI ATS Analysis)</option>
-                  <option value="recruiter">Hiring Team (Recruiting Pipeline & Reviews)</option>
-                </select>
+              <div className="p-3 bg-brand-50/70 border border-brand-200/60 rounded-xl text-xs text-brand-900 flex items-start gap-2.5">
+                <input type="hidden" {...registerSignup("role")} value="candidate" />
+                <div className="w-5 h-5 rounded-md bg-brand-600 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">
+                  ✓
+                </div>
+                <div>
+                  <p className="font-semibold text-brand-900">Candidate Portal Account</p>
+                  <p className="text-[11px] text-brand-700/90 mt-0.5 leading-relaxed">
+                    Public registration creates candidate accounts for profile self-service and AI ATS analysis. Hiring-team and platform-manager accounts are provisioned by administrators.
+                  </p>
+                </div>
               </div>
 
               <div className="pt-2">

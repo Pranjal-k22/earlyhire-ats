@@ -31,6 +31,17 @@ export const CandidateDetailModal: React.FC<Props> = ({
   onEdit,
   onArchive,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !candidate) return null;
 
   const displayName = candidate.fullName || candidate.name;
@@ -45,12 +56,16 @@ export const CandidateDetailModal: React.FC<Props> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
       role="dialog"
       aria-modal="true"
       aria-labelledby="candidate-detail-title"
+      onClick={onClose}
     >
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200 cursor-default"
+      >
         {/* Header Banner */}
         <div className="px-6 py-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-brand-50/30 flex items-start justify-between">
           <div className="flex items-center gap-4">

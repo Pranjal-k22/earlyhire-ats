@@ -101,7 +101,7 @@ describe("Phase B — Canonical RBAC & Candidate Profile Suite", { timeout: 1500
       expect(dbUser?.role).toBe("candidate");
     });
 
-    it("prevents privilege escalation when attempting to register as platform_manager", async () => {
+    it("strictly prevents privilege escalation when attempting to register as platform_manager", async () => {
       const res = await request(app).post("/api/v1/auth/signup").send({
         name: "Hacker Attempt",
         email: "hacker@example.com",
@@ -109,10 +109,13 @@ describe("Phase B — Canonical RBAC & Candidate Profile Suite", { timeout: 1500
         role: "platform_manager",
       });
 
-      expect(res.status).toBe(201);
-      // Public signup must coerce away from platform_manager
-      expect(res.body.data.user.role).not.toBe("platform_manager");
-      expect(res.body.data.user.role).toBe("recruiter");
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe("FORBIDDEN");
+      expect(res.body.error.message).toMatch(/Public registration is restricted to candidate accounts/i);
+
+      const dbUser = await User.findOne({ email: "hacker@example.com" });
+      expect(dbUser).toBeNull();
     });
   });
 

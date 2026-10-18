@@ -36,7 +36,9 @@ describe("App Shell Component", () => {
     expect(screen.getByText("Applied")).toBeInTheDocument();
     expect(screen.getByText("Screening")).toBeInTheDocument();
     expect(screen.getByText("Interview")).toBeInTheDocument();
+    expect(screen.getByText("Offer")).toBeInTheDocument();
     expect(screen.getByText("Hired")).toBeInTheDocument();
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
 
     await waitFor(
       () => {

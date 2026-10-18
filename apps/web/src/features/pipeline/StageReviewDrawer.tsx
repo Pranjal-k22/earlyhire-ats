@@ -58,6 +58,17 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
     }
   }, [isOpen, application]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !application) return null;
 
   const handleDecision = async (decision: "advance" | "hold" | "reject") => {
@@ -77,8 +88,17 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs transition-opacity">
-      <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stage-review-drawer-title"
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs transition-opacity cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left cursor-default"
+      >
         {/* Header */}
         <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white shrink-0">
           <div className="flex items-center gap-3">
@@ -86,7 +106,7 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
               <Sparkles className="w-5 h-5 text-brand-400" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 id="stage-review-drawer-title" className="text-base font-bold text-white">
                 {application.candidateId?.name} — {application.currentStage} Review
               </h3>
               <p className="text-xs text-slate-300">

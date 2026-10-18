@@ -11,9 +11,9 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.post("/submit", requireRole("hiring_team"), submitFeedback);
+router.post("/submit", requireRole("hiring_team", "hiring_manager", "platform_manager"), submitFeedback);
 router.get("/application/:applicationId", getFeedbackForApplication);
-router.post("/:id/release", requireRole("hiring_team"), releaseFeedback);
-router.post("/synthesize/:applicationId", requireRole("hiring_team"), synthesizeFeedback);
+router.post("/:id/release", requireRole("hiring_team", "hiring_manager", "platform_manager"), releaseFeedback);
+router.post("/synthesize/:applicationId", requireRole("hiring_team", "hiring_manager", "platform_manager"), synthesizeFeedback);
 
 export default router;

@@ -24,12 +24,12 @@ router.get("/:id", getApplicationById);
 router.get("/:id/history", getApplicationHistory);
 router.get("/:id/stage-history", getApplicationHistory);
 
-// Application Mutating Endpoints (Restricted to admin and recruiter roles)
-router.post("/", requireRole("admin", "recruiter"), createApplication);
-router.patch("/:id", requireRole("admin", "recruiter"), updateApplication);
+// Application Mutating Endpoints (Restricted to hiring_team and platform_manager roles)
+router.post("/", requireRole("hiring_team", "platform_manager"), createApplication);
+router.patch("/:id", requireRole("hiring_team", "platform_manager"), updateApplication);
 
 // Stage Transition Endpoints (Supporting both PATCH and POST per contract flexibility)
-router.patch("/:id/stage", requireRole("admin", "recruiter"), transitionStage);
-router.post("/:id/stage", requireRole("admin", "recruiter"), transitionStage);
+router.patch("/:id/stage", requireRole("hiring_team", "platform_manager"), transitionStage);
+router.post("/:id/stage", requireRole("hiring_team", "platform_manager"), transitionStage);
 
 export default router;

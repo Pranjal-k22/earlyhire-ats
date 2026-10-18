@@ -17,9 +17,9 @@ router.use(requireAuth);
 router.get("/", getJobs);
 router.get("/:id", getJobById);
 
-// Write operations restricted to Admin and Recruiter roles per RBAC matrix
-router.post("/", requireRole("admin", "recruiter"), createJob);
-router.patch("/:id", requireRole("admin", "recruiter"), updateJob);
-router.delete("/:id", requireRole("admin", "recruiter"), deleteJob);
+// Write operations restricted to hiring_team and platform_manager roles
+router.post("/", requireRole("hiring_team", "platform_manager"), createJob);
+router.patch("/:id", requireRole("hiring_team", "platform_manager"), updateJob);
+router.delete("/:id", requireRole("hiring_team", "platform_manager"), deleteJob);
 
 export default router;

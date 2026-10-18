@@ -112,16 +112,36 @@ export const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 max-h-[90vh] flex flex-col">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="feedback-modal-title"
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 max-h-[90vh] flex flex-col cursor-default"
+      >
         <div className="p-6 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-300 flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-brand-400" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white">Structured Interview Evaluation</h3>
+              <h3 id="feedback-modal-title" className="font-bold text-sm text-white">Structured Interview Evaluation</h3>
               <p className="text-xs text-slate-300">
                 {application.candidateId?.name} — {application.jobId?.title}
               </p>

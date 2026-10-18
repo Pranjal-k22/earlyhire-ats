@@ -260,10 +260,10 @@ export const CandidatePortalView: React.FC = () => {
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-brand-900 via-indigo-900 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="glass-card bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-slate-900/90 text-white p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-200 text-xs font-semibold mb-2 backdrop-blur-xs">
-            <Sparkles className="w-3.5 h-3.5 text-brand-300" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs font-semibold mb-2 backdrop-blur-xs">
+            <Sparkles className="w-3.5 h-3.5 text-purple-300" />
             Candidate Self-Service & AI Match Workspace
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -274,19 +274,19 @@ export const CandidatePortalView: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center">
-            <div className="text-xs text-slate-300">Resumes</div>
+          <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center shadow-xs">
+            <div className="text-xs text-purple-200">Resumes</div>
             <div className="text-lg font-bold">{resumes.length}</div>
           </div>
-          <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center">
-            <div className="text-xs text-slate-300">Interviews</div>
+          <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-center shadow-xs">
+            <div className="text-xs text-teal-200">Interviews</div>
             <div className="text-lg font-bold">{interviews.length}</div>
           </div>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex border-b border-slate-200 bg-white rounded-t-xl px-4 pt-2 gap-2 overflow-x-auto">
+      <div className="flex border-b border-purple-100/60 glass-card rounded-t-2xl px-4 pt-2 gap-2 overflow-x-auto">
         {[
           { id: "profile", label: "My Profile & Skills", icon: UserIcon },
           { id: "resumes", label: "My Resumes", icon: FileText, badge: resumes.length },
@@ -299,16 +299,16 @@ export const CandidatePortalView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? "border-brand-600 text-brand-600 font-semibold"
+                  ? "border-purple-600 text-purple-700 font-bold"
                   : "border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-brand-600" : "text-slate-400"}`} />
+              <Icon className={`w-4 h-4 ${isActive ? "text-purple-600" : "text-slate-400"}`} />
               <span>{tab.label}</span>
               {tab.badge !== undefined && tab.badge > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-xs bg-slate-100 text-slate-600 font-semibold">
+                <span className="px-1.5 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700 font-semibold border border-purple-200">
                   {tab.badge}
                 </span>
               )}
@@ -319,7 +319,7 @@ export const CandidatePortalView: React.FC = () => {
 
       {/* TAB 1: Profile & Skills */}
       {activeTab === "profile" && (
-        <div className="bg-white p-6 sm:p-8 rounded-b-xl border border-t-0 border-slate-200 shadow-sm">
+        <div className="glass-card p-6 sm:p-8 rounded-b-2xl border-t-0 shadow-sm">
           <form onSubmit={handleSaveProfile} className="space-y-6 max-w-3xl">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
@@ -441,7 +441,7 @@ export const CandidatePortalView: React.FC = () => {
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="px-6 py-2.5 bg-brand-600 text-white rounded-xl hover:bg-brand-700 font-semibold text-sm shadow-sm transition-all disabled:opacity-50"
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 hover:opacity-95 text-white rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50 cursor-pointer"
               >
                 {actionLoading ? "Saving..." : "Save Profile Details"}
               </button>
@@ -452,18 +452,18 @@ export const CandidatePortalView: React.FC = () => {
 
       {/* TAB 2: Resumes */}
       {activeTab === "resumes" && (
-        <div className="bg-white p-6 sm:p-8 rounded-b-xl border border-t-0 border-slate-200 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+        <div className="glass-card p-6 sm:p-8 rounded-b-2xl border-t-0 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-6 bg-purple-50/40 rounded-2xl border border-dashed border-purple-200/80">
             <div>
               <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <Upload className="w-5 h-5 text-brand-600" />
+                <Upload className="w-5 h-5 text-purple-600" />
                 Upload New Resume
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 Supported formats: PDF, DOCX, TXT. Content inspected via magic bytes; max 5MB.
               </p>
             </div>
-            <label className="cursor-pointer px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2">
+            <label className="cursor-pointer px-5 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 hover:opacity-95 text-white text-sm font-semibold rounded-xl shadow-md transition-all flex items-center gap-2">
               <Upload className="w-4 h-4" />
               <span>Select File</span>
               <input
@@ -558,15 +558,15 @@ export const CandidatePortalView: React.FC = () => {
             : currentAnalysis.jobId?.id === selectedJobId));
 
         return (
-          <div className="bg-white p-6 sm:p-8 rounded-b-xl border border-t-0 border-slate-200 shadow-sm space-y-6">
+          <div className="glass-card p-6 sm:p-8 rounded-b-2xl border-t-0 shadow-sm space-y-6">
             {/* Status & Guidance Banner */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border bg-slate-50 border-slate-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border bg-purple-50/30 border-purple-100/60">
               <div className="flex items-center gap-2.5">
                 {actionLoading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-brand-600" />
-                    <span className="text-sm font-semibold text-brand-900">Analysis in progress</span>
-                    <span className="text-xs text-brand-600 hidden md:inline">— Evaluating resume against job criteria using local Ollama model...</span>
+                    <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
+                    <span className="text-sm font-semibold text-purple-900">Analysis in progress</span>
+                    <span className="text-xs text-purple-600 hidden md:inline">— Evaluating resume against job criteria using local Ollama model...</span>
                   </>
                 ) : !selectedResume ? (
                   <>
@@ -603,7 +603,7 @@ export const CandidatePortalView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab("resumes")}
-                  className="text-xs font-semibold text-amber-800 underline hover:text-amber-950 shrink-0"
+                  className="text-xs font-semibold text-amber-800 underline hover:text-amber-950 shrink-0 cursor-pointer"
                 >
                   Upload New Resume →
                 </button>
@@ -611,7 +611,7 @@ export const CandidatePortalView: React.FC = () => {
             </div>
 
             {/* Controls Bar */}
-            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="p-6 bg-white/70 backdrop-blur-md rounded-2xl border border-purple-100/60 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
                   1. Select Job Opening
@@ -619,7 +619,7 @@ export const CandidatePortalView: React.FC = () => {
                 <select
                   value={selectedJobId}
                   onChange={(e) => setSelectedJobId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
                 >
                   {jobs.map((job) => (
                     <option key={job.id} value={job.id}>
@@ -637,7 +637,7 @@ export const CandidatePortalView: React.FC = () => {
                   value={selectedResumeId}
                   onChange={(e) => setSelectedResumeId(e.target.value)}
                   disabled={resumes.length === 0}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-hidden disabled:bg-slate-100"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-purple-500 focus:outline-hidden disabled:bg-slate-100"
                 >
                   {resumes.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -653,7 +653,7 @@ export const CandidatePortalView: React.FC = () => {
                   type="button"
                   onClick={handleRunAnalysis}
                   disabled={actionLoading || resumes.length === 0}
-                  className="w-full py-2.5 px-4 bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-brand-700 hover:to-indigo-700 shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 text-white font-semibold rounded-xl hover:opacity-95 shadow-md transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {actionLoading ? (
                     <>
@@ -674,7 +674,7 @@ export const CandidatePortalView: React.FC = () => {
           {currentAnalysis ? (
             <div className="space-y-6">
               {/* Overall Score Card */}
-              <div className="p-6 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="p-6 bg-gradient-to-br from-purple-950 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-purple-800/40">
                 <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
                     <CheckCircle className="w-3.5 h-3.5" />
@@ -682,7 +682,7 @@ export const CandidatePortalView: React.FC = () => {
                   </div>
                   <h3 className="text-xl font-bold text-white">Overall ATS Alignment</h3>
                   <p className="text-slate-300 text-sm max-w-xl">{currentAnalysis.summary}</p>
-                  <div className="text-xs text-slate-400 pt-1">
+                  <div className="text-xs text-purple-300 pt-1">
                     Evaluated with {currentAnalysis.provider} ({currentAnalysis.model}) • Advisory match indicator
                   </div>
                 </div>
@@ -703,12 +703,12 @@ export const CandidatePortalView: React.FC = () => {
                   { label: "Education & Foundations", score: currentAnalysis.breakdown.educationScore },
                   { label: "Role Relevance", score: currentAnalysis.breakdown.roleRelevanceScore },
                 ].map((item) => (
-                  <div key={item.label} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div key={item.label} className="p-4 bg-white/80 rounded-xl border border-purple-100/60 shadow-2xs">
                     <div className="text-xs text-slate-500 font-medium">{item.label}</div>
                     <div className="text-2xl font-bold text-slate-800 mt-1">{item.score}%</div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="w-full bg-slate-200/80 h-2 rounded-full mt-2 overflow-hidden">
                       <div
-                        className="bg-brand-600 h-full rounded-full transition-all"
+                        className="bg-gradient-to-r from-purple-600 to-teal-400 h-full rounded-full transition-all"
                         style={{ width: `${item.score}%` }}
                       />
                     </div>
@@ -888,9 +888,9 @@ export const CandidatePortalView: React.FC = () => {
               )}
 
               {/* Ready to Apply Submission Banner */}
-              <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-slate-800">
+              <div className="p-6 bg-gradient-to-r from-purple-950/90 via-indigo-950/90 to-slate-900/90 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-purple-800/40">
                 <div className="space-y-1.5">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 text-xs font-semibold">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs font-semibold">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Immutable ATS Snapshot Included
                   </div>
@@ -903,7 +903,7 @@ export const CandidatePortalView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsApplyModalOpen(true)}
-                  className="px-6 py-3 bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center gap-2 shrink-0 cursor-pointer"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 hover:opacity-95 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center gap-2 shrink-0 cursor-pointer"
                 >
                   <span>Submit Application</span>
                   <ArrowRight className="w-4 h-4" />
@@ -911,8 +911,8 @@ export const CandidatePortalView: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-12 border rounded-2xl border-slate-200 text-slate-400">
-              <Sparkles className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+            <div className="text-center py-12 border rounded-2xl border-purple-100/60 bg-white/40 text-slate-400">
+              <Sparkles className="w-12 h-12 mx-auto mb-2 text-purple-300" />
               <p className="text-sm font-medium">Select a job and resume above to view match breakdown.</p>
             </div>
           )}
@@ -922,17 +922,17 @@ export const CandidatePortalView: React.FC = () => {
 
       {/* TAB 4: Interviews & Google Meet */}
       {activeTab === "interviews" && (
-        <div className="bg-white p-6 sm:p-8 rounded-b-xl border border-t-0 border-slate-200 shadow-sm space-y-6">
+        <div className="glass-card p-6 sm:p-8 rounded-b-2xl border-t-0 shadow-sm space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-brand-600" />
+              <Calendar className="w-5 h-5 text-purple-600" />
               Scheduled Candidate Interviews ({interviews.length})
             </h3>
           </div>
 
           {interviews.length === 0 ? (
-            <div className="text-center py-12 border rounded-2xl border-slate-200 text-slate-400">
-              <Calendar className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+            <div className="text-center py-12 border rounded-2xl border-purple-100/60 bg-white/40 text-slate-400">
+              <Calendar className="w-12 h-12 mx-auto mb-2 text-purple-300" />
               <p className="text-sm font-medium">No interviews scheduled yet.</p>
               <p className="text-xs text-slate-400 mt-1">
                 When recruiters advance your application, your Google Meet links will appear here.
@@ -943,7 +943,7 @@ export const CandidatePortalView: React.FC = () => {
               {interviews.map((interview) => (
                 <div
                   key={interview.id}
-                  className="p-6 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all"
+                  className="p-6 rounded-2xl border border-purple-100/60 bg-white/80 hover:bg-white shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all"
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
@@ -981,7 +981,7 @@ export const CandidatePortalView: React.FC = () => {
                       href={interview.googleMeetLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md flex items-center gap-2 transition-all shrink-0"
+                      className="px-5 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 hover:opacity-95 text-white text-sm font-semibold rounded-xl shadow-md flex items-center gap-2 transition-all shrink-0 cursor-pointer"
                     >
                       <Video className="w-4 h-4" />
                       <span>Join Google Meet</span>
@@ -1006,11 +1006,11 @@ export const CandidatePortalView: React.FC = () => {
             aria-labelledby="apply-modal-title"
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
           >
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95 duration-150">
+            <div className="glass-card bg-white/95 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-purple-100/80 space-y-6 animate-in zoom-in-95 duration-150">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold">
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold border border-purple-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
                     Application Snapshot Confirmation
                   </div>
                   <h3 id="apply-modal-title" className="text-xl font-bold text-slate-900">
@@ -1023,14 +1023,14 @@ export const CandidatePortalView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsApplyModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Assessment Snapshot Preview */}
-              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
+              <div className="p-4 rounded-2xl border border-purple-100/80 bg-purple-50/30 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase text-slate-500">Selected Resume</span>
                   <span className="text-xs font-bold text-slate-800">
@@ -1039,14 +1039,14 @@ export const CandidatePortalView: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase text-slate-500">ATS Snapshot Score</span>
-                  <span className="text-base font-black text-brand-600">
+                  <span className="text-base font-black text-purple-600">
                     {currentAnalysis?.overallScore !== undefined
                       ? `${currentAnalysis.overallScore}%`
                       : "Pending Analysis"}
                   </span>
                 </div>
                 {currentAnalysis && (
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-[11px] text-slate-600">
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-purple-100 text-[11px] text-slate-600">
                     <div>Skills Match: <strong>{currentAnalysis.breakdown.skillsScore}%</strong></div>
                     <div>Experience: <strong>{currentAnalysis.breakdown.experienceScore}%</strong></div>
                     <div>Education: <strong>{currentAnalysis.breakdown.educationScore}%</strong></div>
@@ -1079,7 +1079,7 @@ export const CandidatePortalView: React.FC = () => {
                   value={applicationNotes}
                   onChange={(e) => setApplicationNotes(e.target.value)}
                   placeholder="Share any additional context or highlights for this application..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-hidden"
                 />
               </div>
 
@@ -1089,7 +1089,7 @@ export const CandidatePortalView: React.FC = () => {
                   type="button"
                   onClick={() => setIsApplyModalOpen(false)}
                   disabled={applyLoading}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1097,7 +1097,7 @@ export const CandidatePortalView: React.FC = () => {
                   type="button"
                   onClick={handleSubmitApplication}
                   disabled={applyLoading}
-                  className="px-5 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:bg-brand-800 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-500 hover:opacity-95 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {applyLoading ? (
                     <>

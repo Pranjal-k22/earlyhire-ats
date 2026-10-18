@@ -62,10 +62,35 @@ export const requireRole = (...allowedRoles: (UserRole | CanonicalRole)[]) => {
     const userCanonicalRole = normalizeRole(userExactRole);
 
     const isAuthorized = allowedRoles.some((allowed) => {
+      // 1. Direct exact role match
       if (allowed === userExactRole) return true;
-      if (allowed === userCanonicalRole) return true;
-      if (allowed === "hiring_team" && (userExactRole === "recruiter" || userExactRole === "hiring_manager" || userExactRole === "admin")) return true;
-      if (allowed === "platform_manager" && userExactRole === "admin") return true;
+
+      // 2. Platform managers / admins possess all recruiter and hiring_team permissions
+      if (
+        (userCanonicalRole === "platform_manager" || userExactRole === "admin") &&
+        (allowed === "platform_manager" || allowed === "admin" || allowed === "hiring_team" || allowed === "recruiter" || allowed === "hiring_manager")
+      ) {
+        return true;
+      }
+
+      // 3. Authorized canonical hiring_team and legacy recruiter have full recruitment permissions
+      if (
+        (userExactRole === "hiring_team" || userExactRole === "recruiter") &&
+        (allowed === "hiring_team" || allowed === "recruiter" || allowed === "hiring_manager")
+      ) {
+        return true;
+      }
+
+      // 4. Legacy hiring_manager has read-only access and only matches when hiring_manager is explicitly allowed
+      if (userExactRole === "hiring_manager") {
+        return allowed === "hiring_manager";
+      }
+
+      // 5. Canonical candidate match
+      if (userCanonicalRole === "candidate" && allowed === "candidate") {
+        return true;
+      }
+
       return false;
     });
 
@@ -102,9 +127,22 @@ export const requireSelfOrRole = (
     const userCanonicalRole = normalizeRole(userExactRole);
 
     const isPrivileged = privilegedRoles.some((role) => {
-      if (role === userExactRole || role === userCanonicalRole) return true;
-      if (role === "hiring_team" && (userExactRole === "recruiter" || userExactRole === "hiring_manager" || userExactRole === "admin")) return true;
-      if (role === "platform_manager" && userExactRole === "admin") return true;
+      if (role === userExactRole) return true;
+      if (
+        (userCanonicalRole === "platform_manager" || userExactRole === "admin") &&
+        (role === "platform_manager" || role === "admin" || role === "hiring_team" || role === "recruiter" || role === "hiring_manager")
+      ) {
+        return true;
+      }
+      if (
+        (userExactRole === "hiring_team" || userExactRole === "recruiter") &&
+        (role === "hiring_team" || role === "recruiter" || role === "hiring_manager")
+      ) {
+        return true;
+      }
+      if (userExactRole === "hiring_manager") {
+        return role === "hiring_manager";
+      }
       return false;
     });
 

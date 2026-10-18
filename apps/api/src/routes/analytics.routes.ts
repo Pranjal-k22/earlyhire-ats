@@ -9,7 +9,7 @@ const router = Router();
 
 // Analytics endpoints require authentication and recruiter/management privileges
 router.use(requireAuth);
-router.use(requireRole("admin", "recruiter", "hiring_manager"));
+router.use(requireRole("hiring_team", "platform_manager"));
 
 router.get("/overview", getDashboardOverview);
 router.get("/funnel", getRecruitmentFunnel);

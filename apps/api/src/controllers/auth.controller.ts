@@ -25,15 +25,20 @@ export const signup = async (req: Request, res: Response, next: NextFunction): P
     // Securely hash password
     const passwordHash = await User.hashPassword(validated.password);
 
-    // Public signups allow candidate or hiring team; strictly forbids admin / platform_manager
-    let assignedRole: UserRole = "recruiter";
-    if (validated.role === "candidate") {
-      assignedRole = "candidate";
-    } else if (validated.role === "hiring_team") {
-      assignedRole = "hiring_team";
-    } else {
-      assignedRole = "recruiter";
+    // Phase A — Public registration security:
+    // 1. Public registration strictly creates candidate accounts.
+    // 2. Reject attempted privilege escalation (admin, platform_manager, hiring_team, recruiter, hiring_manager) with 403 FORBIDDEN.
+    if (validated.role && validated.role !== "candidate") {
+      return next(
+        new AppError(
+          "Public registration is restricted to candidate accounts. Privileged accounts (hiring_team, platform_manager) must be provisioned through an authorized process.",
+          403,
+          "FORBIDDEN"
+        )
+      );
     }
+
+    const assignedRole: UserRole = "candidate";
 
     const user = await User.create({
       name: validated.name.trim(),

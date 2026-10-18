@@ -230,7 +230,7 @@ describe("Phase 9 — Final Security Audit & Penetration Testing Suite", { timeo
       expect(resDup.body.error.code).toBe("EMAIL_EXISTS");
     });
 
-    it("1.11 public signup strictly forces recruiter role and ignores client-supplied 'admin'", async () => {
+    it("1.11 public signup strictly rejects privilege escalation attempts with 403 FORBIDDEN", async () => {
       const res = await request(app).post("/api/v1/auth/signup").send({
         name: "Privilege Escalation Attempt",
         email: "privilege@example.com",
@@ -238,11 +238,23 @@ describe("Phase 9 — Final Security Audit & Penetration Testing Suite", { timeo
         role: "admin", // Malicious attempt to elevate role
       });
 
-      expect(res.status).toBe(201);
-      expect(res.body.data.user.role).toBe("recruiter"); // Role strictly forced to recruiter
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe("FORBIDDEN");
+      expect(res.body.error.message).toMatch(/Public registration is restricted to candidate accounts/i);
 
       const dbUser = await User.findOne({ email: "privilege@example.com" });
-      expect(dbUser?.role).toBe("recruiter");
+      expect(dbUser).toBeNull();
+
+      // Normal signup strictly receives candidate role
+      const resCandidate = await request(app).post("/api/v1/auth/signup").send({
+        name: "Honest Candidate",
+        email: "honest.cand@example.com",
+        password: "StrongPassword1!",
+      });
+      expect(resCandidate.status).toBe(201);
+      expect(resCandidate.body.data.user.role).toBe("candidate");
+      expect(resCandidate.body.data.user.canonicalRole).toBe("candidate");
     });
 
     it("1.12 logout clears the session cookie with matching attributes", async () => {

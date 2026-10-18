@@ -27,8 +27,8 @@ export const signupSchema = z.object({
     .toLowerCase()
     .email("Please provide a valid email address"),
   password: passwordSchema,
-  // Note: Even if a client passes a role field, it will not be trusted;
-  // public signup strictly creates accounts with 'recruiter' role only.
+  // Public signup strictly creates candidate accounts.
+  // Any attempt to supply privileged roles (admin, platform_manager, hiring_team, etc.) is rejected with 403 FORBIDDEN.
   role: z.string().optional(),
 });
 
