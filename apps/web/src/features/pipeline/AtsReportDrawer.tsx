@@ -59,6 +59,11 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
   const overallScore = snapshot?.overallScore ?? 0;
   const isHighMatch = overallScore >= 70;
 
+  const resumeFilename =
+    (typeof report?.resumeId === "object" && report.resumeId?.originalFilename) ||
+    (typeof application.resumeId === "object" && application.resumeId?.originalFilename) ||
+    "Submitted Resume";
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs transition-opacity">
       <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left">
@@ -121,40 +126,104 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                 </div>
 
                 <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shrink-0 min-w-[140px]">
-                  <div
-                    className={`text-4xl sm:text-5xl font-black ${
-                      isHighMatch ? "text-emerald-400" : "text-amber-400"
-                    }`}
-                  >
-                    {overallScore}%
-                  </div>
-                  <div className="text-xs uppercase font-semibold text-slate-300 mt-1">
-                    {isHighMatch ? "Strong Alignment" : "Coaching Review"}
-                  </div>
+                  {snapshot.status === "pending" || snapshot.status === "in_progress" ? (
+                    <>
+                      <div className="text-2xl sm:text-3xl font-black text-slate-300">
+                        Pending
+                      </div>
+                      <div className="text-xs uppercase font-semibold text-slate-400 mt-1">
+                        In Progress
+                      </div>
+                    </>
+                  ) : snapshot.status === "failed" ? (
+                    <>
+                      <div className="text-xl sm:text-2xl font-black text-amber-400">
+                        Unavailable
+                      </div>
+                      <div className="text-xs uppercase font-semibold text-slate-400 mt-1">
+                        Offline Fallback
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div
+                        className={`text-4xl sm:text-5xl font-black ${
+                          isHighMatch ? "text-emerald-400" : "text-amber-400"
+                        }`}
+                      >
+                        {overallScore}/100
+                      </div>
+                      <div className="text-xs uppercase font-semibold text-slate-300 mt-1">
+                        {isHighMatch ? "Strong Alignment" : "Coaching Review"}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
+              {/* Subsequent Assessment Difference Notice if Candidate rechecked later */}
+              {report && report.overallScore !== snapshot.overallScore && (
+                <div className="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/70 text-xs text-indigo-900 flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Later Candidate Assessment Recorded:</span>
+                    <span>
+                      A subsequent check was performed after application (Score: {report.overallScore}/100). The application record remains bound to this submitted snapshot ({snapshot.overallScore}/100).
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Resume Quality & Parseability Warning if low confidence */}
+              {report?.confidence === "low" && (
+                <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50 text-xs text-amber-900 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Resume Parseability Notice:</span>
+                    <span>
+                      Text extraction detected limited section structure. Column layouts or styling in the original file may affect automated matching.
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Submission Provenance Metadata */}
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-slate-600">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-600">
                 <div>
-                  <span className="text-slate-400 block font-medium">Resume Version</span>
-                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                    <FileText className="w-3.5 h-3.5 text-slate-500" />
-                    v{snapshot.resumeVersion || 1}
+                  <span className="text-slate-400 block font-medium">Submitted Resume</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5 truncate" title={resumeFilename}>
+                    <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span className="truncate">{resumeFilename}</span>
                   </span>
+                  <span className="text-[10px] text-slate-400">Version {snapshot.resumeVersion || 1}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block font-medium">Assessment Status</span>
-                  <span className="font-semibold text-slate-800 uppercase mt-0.5">
+                  <span className="font-semibold text-slate-800 uppercase mt-0.5 block">
                     {snapshot.status}
+                  </span>
+                  {snapshot.resumeContentHash && (
+                    <span className="text-[10px] text-slate-400 font-mono truncate block" title={snapshot.resumeContentHash}>
+                      SHA: {snapshot.resumeContentHash.slice(0, 8)}...
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-slate-400 block font-medium">AI Model Provenance</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block truncate">
+                    {snapshot.provider}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block truncate">
+                    {snapshot.model}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block font-medium">Assessed At</span>
                   <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                     {snapshot.assessedAt ? new Date(snapshot.assessedAt).toLocaleDateString() : "At Submission"}
                   </span>
+                  <span className="text-[10px] text-slate-400">Snapshot time</span>
                 </div>
               </div>
 
@@ -172,7 +241,7 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                   ].map((item) => (
                     <div key={item.label} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <div className="text-[11px] text-slate-500 font-medium">{item.label}</div>
-                      <div className="text-xl font-bold text-slate-800 mt-1">{item.score}%</div>
+                      <div className="text-xl font-bold text-slate-800 mt-1">{item.score}/100</div>
                       <div className="w-full bg-slate-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
                         <div
                           className="bg-brand-600 h-full rounded-full transition-all"
@@ -201,6 +270,24 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Supporting Resume Evidence & Achievements */}
+              {report?.experienceEvidence && report.experienceEvidence.length > 0 && (
+                <div className="p-5 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    Supporting Resume Evidence & Achievements
+                  </h4>
+                  <ul className="space-y-1.5 text-xs text-slate-700">
+                    {report.experienceEvidence.map((ev, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-emerald-600 font-bold">•</span>
+                        <span>{ev}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 

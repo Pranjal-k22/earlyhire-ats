@@ -334,47 +334,73 @@ export const applyForJob = async (
     let analysis: IAtsAnalysisDocument | null = await AtsAnalysis.findOne({
       resumeId: resume._id,
       jobId: job._id,
+      rubricVersion: "v2.0-deterministic-hybrid",
       status: { $in: ["completed", "dual_complete", "partial_ollama", "partial_gemini"] },
     });
 
     if (!analysis) {
-      analysis = await atsReviewService.analyzeResumeAgainstJob({
-        resumeId: resume.id,
-        jobId: job.id,
-        candidateUserId: req.user.id,
-      });
+      try {
+        analysis = await atsReviewService.analyzeResumeAgainstJob({
+          resumeId: resume.id,
+          jobId: job.id,
+          candidateUserId: req.user.id,
+        });
+      } catch (err) {
+        console.warn("[applyForJob] On-demand ATS analysis error, setting status to pending/failed:", err);
+        analysis = null;
+      }
     }
 
-    if (!analysis) {
-      return next(new AppError("Failed to generate or retrieve ATS analysis", 500, "ATS_ANALYSIS_FAILED"));
-    }
-
-    // 6. Build Immutable ATS Snapshot
-    const atsSnapshot = {
-      overallScore: analysis.overallScore,
-      breakdown: analysis.breakdown,
-      status: analysis.status as
-        | "dual_complete"
-        | "partial_ollama"
-        | "partial_gemini"
-        | "completed"
-        | "in_progress"
-        | "pending"
-        | "failed",
-      provider: analysis.provider,
-      model: analysis.model,
-      resumeVersion: analysis.resumeVersion || resume.version || 1,
-      resumeContentHash: analysis.resumeContentHash || resume.contentSha256 || null,
-      jobContentHash: analysis.jobContentHash || null,
-      promptVersion: analysis.promptVersion || "v1.0",
-      rubricVersion: analysis.rubricVersion || "v2.0-deterministic-hybrid",
-      assessedAt: new Date(),
-      snapshotTimestamp: new Date(),
-      reportRef: analysis._id,
-      matchedSkills: analysis.requiredSkillsFound || [],
-      requiredSkillsFound: analysis.requiredSkillsFound || [],
-      missingCriteria: analysis.missingCriteria || [],
-    };
+    // 6. Build Immutable ATS Snapshot (handles valid analysis or explicit pending state)
+    const atsSnapshot = analysis
+      ? {
+          overallScore: analysis.overallScore,
+          breakdown: analysis.breakdown,
+          status: analysis.status as
+            | "dual_complete"
+            | "partial_ollama"
+            | "partial_gemini"
+            | "completed"
+            | "in_progress"
+            | "pending"
+            | "failed",
+          provider: analysis.provider,
+          model: analysis.model,
+          resumeVersion: analysis.resumeVersion || resume.version || 1,
+          resumeContentHash: analysis.resumeContentHash || resume.contentSha256 || null,
+          jobContentHash: analysis.jobContentHash || null,
+          promptVersion: analysis.promptVersion || "v1.0",
+          rubricVersion: analysis.rubricVersion || "v2.0-deterministic-hybrid",
+          assessedAt: new Date(),
+          snapshotTimestamp: new Date(),
+          reportRef: analysis._id,
+          matchedSkills: analysis.requiredSkillsFound || [],
+          requiredSkillsFound: analysis.requiredSkillsFound || [],
+          missingCriteria: analysis.missingCriteria || [],
+        }
+      : {
+          overallScore: 0,
+          breakdown: {
+            skillsScore: 0,
+            experienceScore: 0,
+            educationScore: 0,
+            roleRelevanceScore: 0,
+          },
+          status: "pending" as const,
+          provider: "none",
+          model: "none",
+          resumeVersion: resume.version || 1,
+          resumeContentHash: resume.contentSha256 || null,
+          jobContentHash: null,
+          promptVersion: "v1.0",
+          rubricVersion: "v2.0-deterministic-hybrid",
+          assessedAt: new Date(),
+          snapshotTimestamp: new Date(),
+          reportRef: null,
+          matchedSkills: [],
+          requiredSkillsFound: [],
+          missingCriteria: [],
+        };
 
     // 7. Create Application & Initial Stage History
     let createdApplication: IApplicationDocument;
@@ -390,7 +416,7 @@ export const applyForJob = async (
             jobId: job._id,
             recruiterId,
             resumeId: resume._id,
-            atsAnalysisId: analysis!._id,
+            atsAnalysisId: analysis ? analysis._id : null,
             atsSnapshot,
             stage: "Applied",
             currentStage: "Applied",
@@ -423,12 +449,14 @@ export const applyForJob = async (
       );
       const historyDoc = historyDocs[0];
 
-      // Link application reference back to analysis
-      await AtsAnalysis.findByIdAndUpdate(
-        analysis!._id,
-        { applicationId: appDoc._id },
-        session ? { session } : {}
-      );
+      if (analysis) {
+        // Link application reference back to analysis
+        await AtsAnalysis.findByIdAndUpdate(
+          analysis._id,
+          { applicationId: appDoc._id },
+          session ? { session } : {}
+        );
+      }
 
       return { appDoc, historyDoc };
     });

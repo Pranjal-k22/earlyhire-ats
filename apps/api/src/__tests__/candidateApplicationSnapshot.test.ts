@@ -383,4 +383,269 @@ Education: Computer Science`;
     expect(applyMissingRes.status).toBe(404);
     expect(applyMissingRes.body.error.code).toBe("JOB_NOT_FOUND");
   });
+
+  it("prevents candidate from applying with another candidate's resume (403 FORBIDDEN)", async () => {
+    const recruiter = await User.create({
+      name: "Recruiter Owner",
+      email: "recruiter_owner@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "hiring_team",
+    });
+
+    const job = await Job.create({
+      title: "DevOps Engineer",
+      department: "Infrastructure",
+      location: "Remote",
+      employmentType: "FullTime",
+      description: "Kubernetes and Terraform expert.",
+      requirements: ["Kubernetes", "Terraform"],
+      status: "Open",
+      ownerId: recruiter.id,
+      openedAt: new Date(),
+    });
+
+    const candidateOwner = await User.create({
+      name: "Resume Owner",
+      email: "owner@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "candidate",
+    });
+
+    const candidateAttacker = await User.create({
+      name: "Resume Attacker",
+      email: "attacker@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "candidate",
+    });
+
+    // Owner uploads resume
+    const uploadRes = await request(app)
+      .post("/api/v1/resumes/upload")
+      .set("Cookie", getSessionCookie(candidateOwner))
+      .attach("resume", Buffer.from("Owner Resume Content", "utf-8"), "owner_resume.txt");
+
+    const ownerResumeId = uploadRes.body.data.resume.id;
+
+    // Attacker tries to apply using owner's resumeId
+    const attackRes = await request(app)
+      .post("/api/v1/applications/apply")
+      .set("Cookie", getSessionCookie(candidateAttacker))
+      .send({
+        jobId: job.id,
+        resumeId: ownerResumeId,
+      });
+
+    expect(attackRes.status).toBe(403);
+    expect(attackRes.body.error.code).toBe("FORBIDDEN");
+  });
+
+  it("strictly enforces server-side authoritative score calculation and ignores client-supplied score tampering", async () => {
+    const recruiter = await User.create({
+      name: "Recruiter Tamper",
+      email: "recruiter_tamper@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "hiring_team",
+    });
+
+    const job = await Job.create({
+      title: "Rust Core Engineer",
+      department: "Systems",
+      location: "Remote",
+      employmentType: "FullTime",
+      description: "Rust systems programming.",
+      requirements: ["Rust", "Tokio"],
+      status: "Open",
+      ownerId: recruiter.id,
+      openedAt: new Date(),
+    });
+
+    const candidate = await User.create({
+      name: "Tamper Tester",
+      email: "tamper@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "candidate",
+    });
+
+    const uploadRes = await request(app)
+      .post("/api/v1/resumes/upload")
+      .set("Cookie", getSessionCookie(candidate))
+      .attach("resume", Buffer.from("Junior Developer with basic HTML and CSS.", "utf-8"), "basic.txt");
+
+    const resumeId = uploadRes.body.data.resume.id;
+
+    // Client maliciously attempts to send a fabricated overallScore of 100 in the body
+    const applyTamperRes = await request(app)
+      .post("/api/v1/applications/apply")
+      .set("Cookie", getSessionCookie(candidate))
+      .send({
+        jobId: job.id,
+        resumeId,
+        overallScore: 100,
+        atsSnapshot: {
+          overallScore: 100,
+          breakdown: { skillsScore: 100, experienceScore: 100, educationScore: 100, roleRelevanceScore: 100 },
+        },
+      });
+
+    expect(applyTamperRes.status).toBe(201);
+    const snapshot = applyTamperRes.body.data.application.atsSnapshot;
+    // Server must calculate authoritative score based on actual resume text, NOT client payload 100
+    expect(snapshot.overallScore).toBeLessThan(50);
+  });
+
+  it("permits candidate to reapply after their previous application is Withdrawn or Archived", async () => {
+    const recruiter = await User.create({
+      name: "Recruiter Reapply",
+      email: "recruiter_reapply@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "hiring_team",
+    });
+
+    const job = await Job.create({
+      title: "Python Data Engineer",
+      department: "Data",
+      location: "Remote",
+      employmentType: "FullTime",
+      description: "Python, Spark, and SQL pipeline builder.",
+      requirements: ["Python", "Spark", "SQL"],
+      status: "Open",
+      ownerId: recruiter.id,
+      openedAt: new Date(),
+    });
+
+    const candidate = await User.create({
+      name: "Reapplicant Bob",
+      email: "reapply_bob@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "candidate",
+    });
+
+    const uploadRes = await request(app)
+      .post("/api/v1/resumes/upload")
+      .set("Cookie", getSessionCookie(candidate))
+      .attach("resume", Buffer.from("Python, Spark, SQL Data Engineer", "utf-8"), "data.txt");
+
+    const resumeId = uploadRes.body.data.resume.id;
+
+    // Initial application
+    const firstApplyRes = await request(app)
+      .post("/api/v1/applications/apply")
+      .set("Cookie", getSessionCookie(candidate))
+      .send({ jobId: job.id, resumeId });
+
+    expect(firstApplyRes.status).toBe(201);
+    const firstAppId = firstApplyRes.body.data.application.id;
+
+    // Withdraw the first application
+    await Application.findByIdAndUpdate(firstAppId, { status: "Withdrawn" });
+
+    // Candidate should now be permitted to submit a new application
+    const secondApplyRes = await request(app)
+      .post("/api/v1/applications/apply")
+      .set("Cookie", getSessionCookie(candidate))
+      .send({ jobId: job.id, resumeId, notes: "Reapplying after withdrawing" });
+
+    expect(secondApplyRes.status).toBe(201);
+    expect(secondApplyRes.body.success).toBe(true);
+    expect(secondApplyRes.body.data.application.id).not.toBe(firstAppId);
+  });
+
+  it("never automatically rejects candidate with low ATS score (< 70) and keeps application in Applied stage", async () => {
+    const recruiter = await User.create({
+      name: "Recruiter Fairness",
+      email: "recruiter_fairness@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "hiring_team",
+    });
+
+    const job = await Job.create({
+      title: "Senior AI Researcher",
+      department: "AI",
+      location: "Remote",
+      employmentType: "FullTime",
+      description: "PyTorch, CUDA, and LLM fine-tuning.",
+      requirements: ["PyTorch", "CUDA", "LLM Fine-Tuning"],
+      status: "Open",
+      ownerId: recruiter.id,
+      openedAt: new Date(),
+    });
+
+    const candidate = await User.create({
+      name: "Junior Applicant",
+      email: "junior@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "candidate",
+    });
+
+    const uploadRes = await request(app)
+      .post("/api/v1/resumes/upload")
+      .set("Cookie", getSessionCookie(candidate))
+      .attach("resume", Buffer.from("Junior Developer with HTML/CSS. Interested in AI.", "utf-8"), "junior.txt");
+
+    const resumeId = uploadRes.body.data.resume.id;
+
+    const applyRes = await request(app)
+      .post("/api/v1/applications/apply")
+      .set("Cookie", getSessionCookie(candidate))
+      .send({ jobId: job.id, resumeId });
+
+    expect(applyRes.status).toBe(201);
+    const appDoc = applyRes.body.data.application;
+
+    // Score is low (< 70)
+    expect(appDoc.atsSnapshot.overallScore).toBeLessThan(70);
+    // Crucial requirement: never auto-rejected; stage must remain "Applied"
+    expect(appDoc.stage).toBe("Applied");
+    expect(appDoc.currentStage).toBe("Applied");
+    expect(appDoc.status).toBe("Active");
+  });
+
+  it("records pending ATS snapshot without blocking candidate when analysis fails or cannot be resolved", async () => {
+    const recruiter = await User.create({
+      name: "Recruiter Pending",
+      email: "recruiter_pending@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "hiring_team",
+    });
+
+    const job = await Job.create({
+      title: "Security Architect",
+      department: "Security",
+      location: "Remote",
+      employmentType: "FullTime",
+      description: "AppSec and Cloud Security.",
+      requirements: ["AppSec", "OAuth"],
+      status: "Open",
+      ownerId: recruiter.id,
+      openedAt: new Date(),
+    });
+
+    const candidate = await User.create({
+      name: "Pending Applicant",
+      email: "pending@example.com",
+      passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+      role: "candidate",
+    });
+
+    const uploadRes = await request(app)
+      .post("/api/v1/resumes/upload")
+      .set("Cookie", getSessionCookie(candidate))
+      .attach("resume", Buffer.from("Valid candidate resume", "utf-8"), "pending.txt");
+
+    const resumeId = uploadRes.body.data.resume.id;
+
+    // Invalidate parsed text and storage path to simulate provider extraction failure
+    await ResumeFile.findByIdAndUpdate(resumeId, { parsedText: "", storagePath: "/invalid/missing.txt" });
+
+    const applyRes = await request(app)
+      .post("/api/v1/applications/apply")
+      .set("Cookie", getSessionCookie(candidate))
+      .send({ jobId: job.id, resumeId });
+
+    expect(applyRes.status).toBe(201);
+    expect(applyRes.body.success).toBe(true);
+    const appDoc = applyRes.body.data.application;
+    expect(appDoc.atsSnapshot.status).toBe("pending");
+    expect(appDoc.currentStage).toBe("Applied");
+  });
 });

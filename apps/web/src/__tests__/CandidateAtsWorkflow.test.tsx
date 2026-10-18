@@ -244,7 +244,7 @@ describe("Candidate ATS Pre-Check, Coaching Panel, and Application Snapshot Work
 
     // Verify recruiter drawer header and score
     expect(screen.getByText(/Application ATS Assessment/i)).toBeInTheDocument();
-    expect(screen.getByText("84%")).toBeInTheDocument();
+    expect(screen.getByText("84/100")).toBeInTheDocument();
     expect(screen.getByText(/Immutable Submission Snapshot/i)).toBeInTheDocument();
 
     // Verify skills matched in snapshot
@@ -256,5 +256,91 @@ describe("Candidate ATS Pre-Check, Coaching Panel, and Application Snapshot Work
     expect(
       screen.getByText(/EarlyAI ATS scores provide evidence-grounded decision support/i)
     ).toBeInTheDocument();
+  });
+
+  it("renders ApplicationCard ATS badges accurately across completed, pending, partial, failed, and missing states without false badges", async () => {
+    const { ApplicationCard } = await import("../features/pipeline/ApplicationCard");
+
+    // 1. Completed snapshot: renders "ATS 84/100"
+    const { rerender } = render(
+      <ApplicationCard
+        application={mockApplicationWithSnapshot}
+        onAdvance={vi.fn()}
+        onReject={vi.fn()}
+        onViewHistory={vi.fn()}
+      />
+    );
+    expect(screen.getByText("ATS 84/100")).toBeInTheDocument();
+
+    // 2. Pending snapshot: renders "ATS pending"
+    const pendingApp = {
+      ...mockApplicationWithSnapshot,
+      atsSnapshot: {
+        ...mockApplicationWithSnapshot.atsSnapshot!,
+        status: "pending" as const,
+      },
+    };
+    rerender(
+      <ApplicationCard
+        application={pendingApp}
+        onAdvance={vi.fn()}
+        onReject={vi.fn()}
+        onViewHistory={vi.fn()}
+      />
+    );
+    expect(screen.getByText("ATS pending")).toBeInTheDocument();
+
+    // 3. Partial snapshot: renders "ATS 65/100" and "(partial)"
+    const partialApp = {
+      ...mockApplicationWithSnapshot,
+      atsSnapshot: {
+        ...mockApplicationWithSnapshot.atsSnapshot!,
+        overallScore: 65,
+        status: "partial_ollama" as const,
+      },
+    };
+    rerender(
+      <ApplicationCard
+        application={partialApp}
+        onAdvance={vi.fn()}
+        onReject={vi.fn()}
+        onViewHistory={vi.fn()}
+      />
+    );
+    expect(screen.getByText("ATS 65/100")).toBeInTheDocument();
+    expect(screen.getByText("(partial)")).toBeInTheDocument();
+
+    // 4. Failed snapshot: renders "ATS unavailable"
+    const failedApp = {
+      ...mockApplicationWithSnapshot,
+      atsSnapshot: {
+        ...mockApplicationWithSnapshot.atsSnapshot!,
+        status: "failed" as const,
+      },
+    };
+    rerender(
+      <ApplicationCard
+        application={failedApp}
+        onAdvance={vi.fn()}
+        onReject={vi.fn()}
+        onViewHistory={vi.fn()}
+      />
+    );
+    expect(screen.getByText("ATS unavailable")).toBeInTheDocument();
+
+    // 5. Missing snapshot: does not render false score badge
+    const missingApp = {
+      ...mockApplicationWithSnapshot,
+      atsSnapshot: null,
+    };
+    rerender(
+      <ApplicationCard
+        application={missingApp}
+        onAdvance={vi.fn()}
+        onReject={vi.fn()}
+        onViewHistory={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/ATS /i)).not.toBeInTheDocument();
   });
 });
