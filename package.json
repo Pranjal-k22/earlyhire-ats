@@ -16,7 +16,8 @@
     "build:api": "npm run build --workspace=apps/api",
     "typecheck": "npm run typecheck --workspaces",
     "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "ci": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "ats",

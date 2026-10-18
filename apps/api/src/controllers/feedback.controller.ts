@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { InterviewFeedback } from "../models/interviewFeedback.model.js";
 import { Interview } from "../models/interview.model.js";
 import { Application } from "../models/application.model.js";
+import { Candidate } from "../models/candidate.model.js";
 import { Notification } from "../models/notification.model.js";
 import { aiRouter } from "../services/ai/aiRouter.js";
 import { AppError } from "../middleware/errorHandler.js";
@@ -86,6 +87,17 @@ export const getFeedbackForApplication = async (req: Request, res: Response, nex
     const isCandidate = userRole === "candidate";
 
     if (isCandidate) {
+      // Must verify application belongs to candidate
+      const candidate = await Candidate.findById(application.candidateId);
+      const isOwner =
+        (req.user.candidateProfileId && req.user.candidateProfileId.toString() === application.candidateId.toString()) ||
+        (candidate && candidate.email.toLowerCase() === req.user.email.toLowerCase()) ||
+        (candidate && candidate.createdBy && candidate.createdBy.toString() === req.user.id);
+
+      if (!isOwner) {
+        return next(new AppError("You do not have permission to view feedback for this application", 403, "FORBIDDEN"));
+      }
+
       // Candidates ONLY receive feedback that has been explicitly approved and released
       const releasedFeedbacks = await InterviewFeedback.find({
         applicationId,

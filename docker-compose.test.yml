@@ -1,0 +1,19 @@
+# Docker Compose for isolated local MongoDB test container
+# Usage:
+#   Start: docker compose -f docker-compose.test.yml up -d
+#   Stop:  docker compose -f docker-compose.test.yml down
+
+services:
+  mongodb-test:
+    image: mongo:7.0
+    container_name: earlyai-ats-mongo-test
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: earlyai_ats_test
+    volumes:
+      - mongo-test-data:/data/db
+
+volumes:
+  mongo-test-data:

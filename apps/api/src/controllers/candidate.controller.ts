@@ -7,6 +7,7 @@ import {
   candidateQuerySchema,
 } from "../schemas/candidate.schema.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { normalizeRole } from "../models/user.model.js";
 
 /**
  * Escapes regex metacharacters to prevent ReDoS and query injection.
@@ -201,6 +202,18 @@ export const getCandidateById = async (
 
     if (!candidate) {
       return next(new AppError("Candidate not found", 404, "CANDIDATE_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user?.role || "candidate");
+    if (userRole === "candidate") {
+      const isOwner =
+        (req.user?.candidateProfileId && req.user.candidateProfileId.toString() === candidate.id.toString()) ||
+        (candidate.email && candidate.email.toLowerCase() === req.user?.email.toLowerCase()) ||
+        (candidate.createdBy && candidate.createdBy.toString() === req.user?.id);
+
+      if (!isOwner) {
+        return next(new AppError("You do not have permission to view this candidate profile", 403, "FORBIDDEN"));
+      }
     }
 
     res.status(200).json({

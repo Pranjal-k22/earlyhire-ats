@@ -5,7 +5,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import { createApp } from "../app.js";
-import { connectDB, disconnectDB, sanitizeMongoUri } from "../config/db.js";
+import { connectDB, disconnectDB, sanitizeMongoUri, isSafeTestUri, isSafeLocalTestDatabase } from "../config/db.js";
 import { User } from "../models/user.model.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { errorHandler } from "../middleware/errorHandler.js";
@@ -417,5 +417,57 @@ describe("Phase 2 — Auth & MongoDB Integration Test Suite", { timeout: 15000 }
     const notFoundRes = await request(app).get("/api/v1/non-existent-endpoint");
     expect(notFoundRes.status).toBe(404);
     expect(notFoundRes.body.error.code).toBe("NOT_FOUND");
+  });
+
+  // 19. Test isolation & credential sanitization regression
+  it("Scenario 19: enforces test isolation guards and sanitizes URIs with '@' in passwords", async () => {
+    // 19.1 sanitizeMongoUri correctly handles passwords containing '@'
+    const uriWithAtInPass = "mongodb://admin:p@ss@word@localhost:27017/test_db";
+    const sanitized = sanitizeMongoUri(uriWithAtInPass);
+    expect(sanitized).toBe("mongodb://***:***@localhost:27017/test_db");
+    expect(sanitized).not.toContain("p@ss@word");
+
+    // 19.2 isSafeTestUri validates host and database name
+    expect(isSafeTestUri("mongodb://localhost:27017/earlyai_ats_test")).toBe(true);
+    expect(isSafeTestUri("mongodb://127.0.0.1:27017/app_test")).toBe(true);
+    expect(isSafeTestUri("mongodb://localhost:27017/earlyai_ats_test?retryWrites=true")).toBe(true);
+
+    // Non-local hosts rejected
+    expect(isSafeTestUri("mongodb+srv://user:pass@cluster0.mongodb.net/earlyai_ats_test")).toBe(false);
+    expect(isSafeTestUri("mongodb://192.168.1.50:27017/earlyai_ats_test")).toBe(false);
+    expect(isSafeTestUri("mongodb://remote.database.com:27017/earlyai_ats_test")).toBe(false);
+
+    // Databases not ending in '_test' rejected
+    expect(isSafeTestUri("mongodb://localhost:27017/earlyai_ats_dev")).toBe(false);
+    expect(isSafeTestUri("mongodb://localhost:27017/production")).toBe(false);
+    expect(isSafeTestUri("mongodb://localhost:27017/test_earlyai_ats")).toBe(false);
+
+    // 19.3 connectDB in test mode refuses non-local and non-test URIs
+    await expect(connectDB("mongodb+srv://cluster0.mongodb.net/earlyai_ats_test")).rejects.toThrow(
+      /SECURITY GUARD: In test mode/
+    );
+    await expect(connectDB("mongodb://remote-host:27017/app_test")).rejects.toThrow(
+      /SECURITY GUARD: In test mode/
+    );
+    await expect(connectDB("mongodb://localhost:27017/earlyai_ats_prod")).rejects.toThrow(
+      /SECURITY GUARD: In test mode/
+    );
+
+    // 19.4 isSafeLocalTestDatabase validates active connection target
+    expect(isSafeLocalTestDatabase("localhost", "earlyai_ats_test")).toBe(true);
+    expect(isSafeLocalTestDatabase("127.0.0.1", "custom_test")).toBe(true);
+    expect(isSafeLocalTestDatabase("cluster0.mongodb.net", "earlyai_ats_test")).toBe(false);
+    expect(isSafeLocalTestDatabase("localhost", "earlyai_ats_production")).toBe(false);
+    expect(isSafeLocalTestDatabase(null, "earlyai_ats_test")).toBe(false);
+    expect(isSafeLocalTestDatabase("localhost", null)).toBe(false);
+
+    // 19.5 dropDatabase guard on mongoose.Connection prototype throws when invoked on non-local target
+    const fakeUnsafeConn = Object.create(mongoose.connection, {
+      host: { value: "cluster0.mongodb.net" },
+      name: { value: "earlyai_ats_test" },
+    });
+    await expect(fakeUnsafeConn.dropDatabase()).rejects.toThrow(
+      /CRITICAL SAFETY GUARD: Refusing to drop database/
+    );
   });
 });

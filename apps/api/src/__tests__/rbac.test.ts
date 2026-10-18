@@ -6,6 +6,13 @@ import cookieParser from "cookie-parser";
 import { createApp } from "../app.js";
 import { connectDB, disconnectDB } from "../config/db.js";
 import { User } from "../models/user.model.js";
+import { Candidate } from "../models/candidate.model.js";
+import { Job } from "../models/job.model.js";
+import { Application } from "../models/application.model.js";
+import { Note } from "../models/note.model.js";
+import { Interview } from "../models/interview.model.js";
+import { InterviewFeedback } from "../models/interviewFeedback.model.js";
+import { InterviewStageHistory } from "../models/stageHistory.model.js";
 import { requireAuth, requireRole, requireSelfOrRole } from "../middleware/auth.js";
 import { errorHandler } from "../middleware/errorHandler.js";
 import { signToken, AUTH_COOKIE_NAME } from "../utils/jwt.js";
@@ -284,6 +291,234 @@ describe("Phase B — Canonical RBAC & Candidate Profile Suite", { timeout: 1500
       const rerunSummary = await runRoleMigration(false);
       expect(rerunSummary.usersToMigrate).toBe(0);
       expect(rerunSummary.alreadyCanonical).toBe(3);
+    });
+  });
+
+  describe("5. Object-Level Access Control & Endpoint Protection (BUG-SEC-01 to BUG-SEC-08)", () => {
+    it("proves RBAC & BOLA guards prevent cross-candidate access and candidate privilege bypass", async () => {
+      // Setup Recruiter
+      const recruiter = await User.create({
+        name: "Recruiter One",
+        email: "recruiter1@example.com",
+        passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+        role: "recruiter",
+      });
+      const recruiterCookie = getSessionCookie(recruiter);
+
+      // Setup Candidate 1 User & Profile
+      const candUser1 = await User.create({
+        name: "Alice Candidate",
+        email: "alice@example.com",
+        passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+        role: "candidate",
+      });
+      const candProfile1 = await Candidate.create({
+        name: "Alice Candidate",
+        fullName: "Alice Candidate",
+        email: "alice@example.com",
+        experienceYears: 4,
+        skills: ["Node.js", "TypeScript"],
+        source: "JobBoard",
+        createdBy: recruiter._id,
+        updatedBy: recruiter._id,
+      });
+      candUser1.candidateProfileId = candProfile1._id;
+      await candUser1.save();
+      const candCookie1 = getSessionCookie(candUser1);
+
+      // Setup Candidate 2 User & Profile (Attacker / Different Candidate)
+      const candUser2 = await User.create({
+        name: "Bob Candidate",
+        email: "bob@example.com",
+        passwordHash: "$2a$10$fakehashfortestplaceholder1234567890",
+        role: "candidate",
+      });
+      const candProfile2 = await Candidate.create({
+        name: "Bob Candidate",
+        fullName: "Bob Candidate",
+        email: "bob@example.com",
+        experienceYears: 2,
+        skills: ["Python"],
+        source: "JobBoard",
+        createdBy: recruiter._id,
+        updatedBy: recruiter._id,
+      });
+      candUser2.candidateProfileId = candProfile2._id;
+      await candUser2.save();
+      const candCookie2 = getSessionCookie(candUser2);
+
+      // Setup Job Opening
+      const job = await Job.create({
+        title: "Staff Backend Engineer",
+        department: "Core Engineering",
+        location: "Remote",
+        employmentType: "FullTime",
+        status: "Open",
+        description: "Designing backend microservices",
+        requirements: ["Node.js", "MongoDB", "TypeScript"],
+        ownerId: recruiter._id,
+      });
+
+      // Setup Application for Alice (Candidate 1)
+      const appAlice = await Application.create({
+        candidateId: candProfile1._id,
+        jobId: job._id,
+        recruiterId: recruiter._id,
+        stage: "Screening",
+        currentStage: "Screening",
+        status: "Active",
+        appliedAt: new Date(),
+        lastStageChangedAt: new Date(),
+        createdBy: recruiter._id,
+        updatedBy: recruiter._id,
+        version: 0,
+      });
+
+      await InterviewStageHistory.create({
+        applicationId: appAlice._id,
+        fromStage: "Applied",
+        toStage: "Screening",
+        changedAt: new Date(),
+        actorId: recruiter._id,
+        reason: "Initial recruiter screen passed",
+      });
+
+      // Setup Recruiter Note for Alice
+      const note = await Note.create({
+        candidateId: candProfile1._id,
+        authorId: recruiter._id,
+        body: "Confidential recruiter note: strong candidate, salary expectation $160k.",
+      });
+
+      // Setup Interview for Alice
+      const interview = await Interview.create({
+        applicationId: appAlice.id,
+        jobId: job.id,
+        candidateUserId: candUser1.id,
+        candidateId: candProfile1.id,
+        organizerId: recruiter.id,
+        interviewers: [{ name: "Lead Tech", email: "lead@example.com" }],
+        title: "Technical Screen",
+        scheduledStartTime: new Date(Date.now() + 86400000),
+        scheduledEndTime: new Date(Date.now() + 90000000),
+        timezone: "UTC",
+        status: "scheduled",
+        notes: "Confidential interview prep notes",
+      });
+
+      // Setup Feedback for Alice
+      await InterviewFeedback.create({
+        interviewId: interview.id,
+        applicationId: appAlice.id,
+        interviewerId: recruiter.id,
+        interviewerName: recruiter.name,
+        ratings: {
+          technicalRating: 4,
+          communicationRating: 4,
+          problemSolvingRating: 4,
+          cultureAndValuesRating: 5,
+          overallRating: 4,
+        },
+        strengths: "Great architecture knowledge",
+        concerns: "None",
+        internalNotes: "Confidential hiring manager evaluation",
+        candidateReleasableFeedback: "Approved constructive candidate summary",
+        recommendation: "hire",
+        isReleasedToCandidate: true,
+      });
+
+      // BUG-SEC-01 Regression: Candidate cannot read or delete recruiter notes
+      const notesReadRes = await request(app)
+        .get(`/api/v1/candidates/${candProfile1.id}/notes`)
+        .set("Cookie", candCookie2);
+      expect(notesReadRes.status).toBe(403);
+      expect(notesReadRes.body.error.code).toBe("FORBIDDEN");
+
+      const notesDeleteRes = await request(app)
+        .delete(`/api/v1/notes/${note.id}`)
+        .set("Cookie", candCookie2);
+      expect(notesDeleteRes.status).toBe(403);
+
+      const recruiterNotesRes = await request(app)
+        .get(`/api/v1/candidates/${candProfile1.id}/notes`)
+        .set("Cookie", recruiterCookie);
+      expect(recruiterNotesRes.status).toBe(200);
+      expect(recruiterNotesRes.body.data.notes.length).toBe(1);
+
+      // BUG-SEC-02 Regression: Candidate 2 cannot read released feedback of Candidate 1
+      const feedbackCrossRes = await request(app)
+        .get(`/api/v1/feedback/application/${appAlice.id}`)
+        .set("Cookie", candCookie2);
+      expect(feedbackCrossRes.status).toBe(403);
+      expect(feedbackCrossRes.body.error.code).toBe("FORBIDDEN");
+
+      const feedbackOwnerRes = await request(app)
+        .get(`/api/v1/feedback/application/${appAlice.id}`)
+        .set("Cookie", candCookie1);
+      expect(feedbackOwnerRes.status).toBe(200);
+      expect(feedbackOwnerRes.body.data.feedbacks.length).toBe(1);
+      expect(feedbackOwnerRes.body.data.feedbacks[0].feedback).toBe("Approved constructive candidate summary");
+
+      // BUG-SEC-04 Regression: Candidate 2 cannot query Candidate 1's applications via candidateId param
+      const appCrossQueryRes = await request(app)
+        .get(`/api/v1/applications?candidateId=${candProfile1.id}`)
+        .set("Cookie", candCookie2);
+      expect(appCrossQueryRes.status).toBe(403);
+      expect(appCrossQueryRes.body.error.code).toBe("FORBIDDEN");
+
+      // BUG-SEC-05 Regression: Candidate 2 cannot read stage history of Candidate 1's application
+      const stageHistoryCrossRes = await request(app)
+        .get(`/api/v1/applications/${appAlice.id}/history`)
+        .set("Cookie", candCookie2);
+      expect(stageHistoryCrossRes.status).toBe(403);
+      expect(stageHistoryCrossRes.body.error.code).toBe("FORBIDDEN");
+
+      const stageHistoryOwnerRes = await request(app)
+        .get(`/api/v1/applications/${appAlice.id}/history`)
+        .set("Cookie", candCookie1);
+      expect(stageHistoryOwnerRes.status).toBe(200);
+      expect(stageHistoryOwnerRes.body.data.history.length).toBe(1);
+
+      // BUG-SEC-06 Regression: Candidate cannot list candidate directory or inspect other candidate profile
+      const listCandRes = await request(app)
+        .get("/api/v1/candidates")
+        .set("Cookie", candCookie2);
+      expect(listCandRes.status).toBe(403);
+
+      const otherCandRes = await request(app)
+        .get(`/api/v1/candidates/${candProfile1.id}`)
+        .set("Cookie", candCookie2);
+      expect(otherCandRes.status).toBe(403);
+
+      const selfCandRes = await request(app)
+        .get(`/api/v1/candidates/${candProfile2.id}`)
+        .set("Cookie", candCookie2);
+      expect(selfCandRes.status).toBe(200);
+
+      // BUG-SEC-07 Regression: Candidate 2 cannot inspect Candidate 1's scheduled interviews
+      const interviewCrossRes = await request(app)
+        .get(`/api/v1/interviews/application/${appAlice.id}`)
+        .set("Cookie", candCookie2);
+      expect(interviewCrossRes.status).toBe(403);
+      expect(interviewCrossRes.body.error.code).toBe("FORBIDDEN");
+
+      const interviewOwnerRes = await request(app)
+        .get(`/api/v1/interviews/application/${appAlice.id}`)
+        .set("Cookie", candCookie1);
+      expect(interviewOwnerRes.status).toBe(200);
+      expect(interviewOwnerRes.body.data.interviews.length).toBe(1);
+
+      // BUG-SEC-08 Regression: Candidate cannot access executive analytics overview
+      const analyticsRes = await request(app)
+        .get("/api/v1/analytics/overview")
+        .set("Cookie", candCookie2);
+      expect(analyticsRes.status).toBe(403);
+      expect(analyticsRes.body.error.code).toBe("FORBIDDEN");
+
+      const recruiterAnalyticsRes = await request(app)
+        .get("/api/v1/analytics/overview")
+        .set("Cookie", recruiterCookie);
+      expect(recruiterAnalyticsRes.status).toBe(200);
     });
   });
 });

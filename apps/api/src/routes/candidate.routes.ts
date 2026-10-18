@@ -17,8 +17,8 @@ router.use(requireAuth);
 // Notes subroute: /api/v1/candidates/:candidateId/notes
 router.use("/:candidateId/notes", noteRoutes);
 
-// Candidate Read Endpoints (All authenticated roles: admin, recruiter, hiring_manager)
-router.get("/", getCandidates);
+// Candidate Read Endpoints (Listing candidates restricted to hiring team and management)
+router.get("/", requireRole("admin", "recruiter", "hiring_manager"), getCandidates);
 router.get("/:id", getCandidateById);
 
 // Candidate Mutating Endpoints (Restricted to admin and recruiter roles)

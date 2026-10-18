@@ -529,7 +529,15 @@ export const getApplications = async (
         });
         return;
       }
+      if (query.candidateId && query.candidateId.toString() !== cand._id.toString()) {
+        return next(new AppError("You do not have permission to view applications for other candidates", 403, "FORBIDDEN"));
+      }
       filter.candidateId = cand._id;
+    } else if (query.candidateId) {
+      if (!mongoose.Types.ObjectId.isValid(query.candidateId)) {
+        return next(new AppError("Invalid candidate ID format", 400, "INVALID_ID"));
+      }
+      filter.candidateId = new mongoose.Types.ObjectId(query.candidateId);
     }
 
     if (query.jobId) {
@@ -537,13 +545,6 @@ export const getApplications = async (
         return next(new AppError("Invalid job ID format", 400, "INVALID_ID"));
       }
       filter.jobId = new mongoose.Types.ObjectId(query.jobId);
-    }
-
-    if (query.candidateId) {
-      if (!mongoose.Types.ObjectId.isValid(query.candidateId)) {
-        return next(new AppError("Invalid candidate ID format", 400, "INVALID_ID"));
-      }
-      filter.candidateId = new mongoose.Types.ObjectId(query.candidateId);
     }
 
     if (query.recruiterId) {
@@ -855,6 +856,19 @@ export const getApplicationHistory = async (
     const application = await Application.findById(id);
     if (!application) {
       return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user?.role || "candidate");
+    if (userRole === "candidate") {
+      const candidate = await Candidate.findById(application.candidateId);
+      const isOwner =
+        (req.user?.candidateProfileId && req.user.candidateProfileId.toString() === application.candidateId.toString()) ||
+        (candidate && candidate.email.toLowerCase() === req.user?.email.toLowerCase()) ||
+        (candidate && candidate.createdBy && candidate.createdBy.toString() === req.user?.id);
+
+      if (!isOwner) {
+        return next(new AppError("You do not have permission to view history for this application", 403, "FORBIDDEN"));
+      }
     }
 
     const sortOrder = req.query.order === "desc" ? -1 : 1;

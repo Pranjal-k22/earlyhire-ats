@@ -3,12 +3,13 @@ import {
   getDashboardOverview,
   getRecruitmentFunnel,
 } from "../controllers/analytics.controller.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
-// Analytics endpoints require authentication
+// Analytics endpoints require authentication and recruiter/management privileges
 router.use(requireAuth);
+router.use(requireRole("admin", "recruiter", "hiring_manager"));
 
 router.get("/overview", getDashboardOverview);
 router.get("/funnel", getRecruitmentFunnel);

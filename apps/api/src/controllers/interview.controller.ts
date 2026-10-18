@@ -147,6 +147,24 @@ export const getInterviewsForApplication = async (req: Request, res: Response, n
     }
 
     const { applicationId } = req.params;
+
+    const userRole = normalizeRole(req.user.role);
+    if (userRole === "candidate") {
+      const application = await Application.findById(applicationId);
+      if (!application) {
+        return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+      }
+      const candidate = await Candidate.findById(application.candidateId);
+      const isOwner =
+        (req.user.candidateProfileId && req.user.candidateProfileId.toString() === application.candidateId.toString()) ||
+        (candidate && candidate.email.toLowerCase() === req.user.email.toLowerCase()) ||
+        (candidate && candidate.createdBy && candidate.createdBy.toString() === req.user.id);
+
+      if (!isOwner) {
+        return next(new AppError("You do not have permission to view interviews for this application", 403, "FORBIDDEN"));
+      }
+    }
+
     const interviews = await Interview.find({ applicationId }).sort({ scheduledStartTime: 1 });
 
     res.status(200).json({

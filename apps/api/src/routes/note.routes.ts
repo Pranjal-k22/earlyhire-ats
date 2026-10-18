@@ -12,12 +12,12 @@ const router = Router({ mergeParams: true });
 router.use(requireAuth);
 
 // Read notes for a candidate (All authenticated roles: admin, recruiter, hiring_manager)
-router.get("/", getCandidateNotes);
+router.get("/", requireRole("admin", "recruiter", "hiring_manager"), getCandidateNotes);
 
 // Add note to a candidate (All authenticated recruiting team members per Architecture.md)
 router.post("/", requireRole("admin", "recruiter", "hiring_manager"), createCandidateNote);
 
 // Soft-delete note via nested route
-router.delete("/:noteId", deleteNote);
+router.delete("/:noteId", requireRole("admin", "recruiter", "hiring_manager"), deleteNote);
 
 export default router;
