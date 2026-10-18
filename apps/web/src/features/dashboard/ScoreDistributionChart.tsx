@@ -11,10 +11,10 @@ interface ScoreDistributionProps {
 }
 
 const defaultScoreData: ScoreBucket[] = [
-  { range: "0-40", count: 0 },
-  { range: "41-60", count: 0 },
-  { range: "61-80", count: 0 },
-  { range: "81-100", count: 2 },
+  { range: "0-40", count: 1 },
+  { range: "41-60", count: 3 },
+  { range: "61-80", count: 1 },
+  { range: "81-100", count: 3 },
 ];
 
 export const ScoreDistributionChart: React.FC<ScoreDistributionProps> = ({

@@ -207,4 +207,52 @@ describe("JobsView Component — Phase 3 UI Verification", () => {
 
     expect(screen.getByText("Screening")).toBeInTheDocument();
   });
+
+  it("enforces candidate view restrictions: hides modification buttons and provides only View JD and Apply", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: "success",
+          data: [mockJob],
+          pagination: { page: 1, limit: 12, total: 1, totalPages: 1 },
+        }),
+      })
+    );
+
+    render(<JobsView isCandidate={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Senior Full Stack Engineer")).toBeInTheDocument();
+    });
+
+    // 1. Candidate must NOT see the "+ Create Job" button
+    expect(screen.queryByRole("button", { name: /create job/i })).not.toBeInTheDocument();
+
+    // 2. Candidate card controls: must see "View JD" and "Apply" buttons
+    expect(screen.getByRole("button", { name: /view job description/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^apply$/i })).toBeInTheDocument();
+
+    // 3. Candidate card controls: must NOT see Edit or Archive buttons
+    expect(screen.queryByRole("button", { name: /edit job/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /archive job/i })).not.toBeInTheDocument();
+
+    // 4. Open Job Detail Modal via "View JD"
+    const viewJdBtn = screen.getByRole("button", { name: /view job description/i });
+    fireEvent.click(viewJdBtn);
+
+    // Modal opens with job specifications
+    expect(screen.getByText(/role description/i)).toBeInTheDocument();
+
+    // Inside JD modal: candidate must see Apply Now and Close buttons
+    expect(screen.getByTestId("job-apply-modal-button")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^close$/i })).toBeInTheDocument();
+
+    // Inside JD modal: candidate must NOT see recruiter management actions
+    expect(screen.queryByRole("button", { name: /edit details/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /archive job/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /pause role/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /close role/i })).not.toBeInTheDocument();
+  });
 });

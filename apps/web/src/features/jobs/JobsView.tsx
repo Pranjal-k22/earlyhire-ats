@@ -12,14 +12,25 @@ import {
   Eye,
   AlertCircle,
   FolderOpen,
+  Send,
+  CheckCircle2,
 } from "lucide-react";
 import { Job, JobFormData, JobStatus } from "../../types/job";
 import { fetchJobs, createJob, updateJob, archiveJob } from "../../api/jobApi";
+import { applyForJobApi } from "../../api/applicationApi";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { JobFormModal } from "./JobFormModal";
 import { JobDetailModal } from "./JobDetailModal";
 
-export const JobsView: React.FC = () => {
+interface JobsViewProps {
+  isCandidate?: boolean;
+  onApplyJob?: (job: Job) => void;
+}
+
+export const JobsView: React.FC<JobsViewProps> = ({
+  isCandidate = false,
+  onApplyJob,
+}) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +49,12 @@ export const JobsView: React.FC = () => {
 
   const [selectedJobForDetail, setSelectedJobForDetail] = useState<Job | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+
+  // Candidate quick apply state
+  const [applyingJob, setApplyingJob] = useState<Job | null>(null);
+  const [coverLetter, setCoverLetter] = useState<string>("");
+  const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
+  const [appFeedback, setAppFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Load jobs from API
   const loadJobs = useCallback(async () => {
@@ -68,12 +85,14 @@ export const JobsView: React.FC = () => {
 
   // Modal open handlers
   const handleOpenCreateModal = () => {
+    if (isCandidate) return;
     setEditingJob(null);
     setFormServerError(null);
     setIsFormModalOpen(true);
   };
 
   const handleOpenEditModal = (job: Job) => {
+    if (isCandidate) return;
     setEditingJob(job);
     setFormServerError(null);
     setIsDetailModalOpen(false);
@@ -83,6 +102,43 @@ export const JobsView: React.FC = () => {
   const handleOpenDetailModal = (job: Job) => {
     setSelectedJobForDetail(job);
     setIsDetailModalOpen(true);
+  };
+
+  const handleApplyClick = (job: Job) => {
+    if (onApplyJob) {
+      onApplyJob(job);
+      return;
+    }
+    setApplyingJob(job);
+    setCoverLetter("");
+    setAppFeedback(null);
+  };
+
+  const handleConfirmApply = async () => {
+    if (!applyingJob) return;
+    setIsSubmittingApp(true);
+    setAppFeedback(null);
+    try {
+      await applyForJobApi({
+        jobId: applyingJob.id,
+        notes: coverLetter.trim() || undefined,
+      });
+      setAppFeedback({
+        type: "success",
+        message: `Application submitted successfully for ${applyingJob.title}!`,
+      });
+      setTimeout(() => {
+        setApplyingJob(null);
+        setAppFeedback(null);
+      }, 2000);
+    } catch (err: unknown) {
+      setAppFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to submit application",
+      });
+    } finally {
+      setIsSubmittingApp(false);
+    }
   };
 
   // Submit create or edit
@@ -148,18 +204,22 @@ export const JobsView: React.FC = () => {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Create, manage, and monitor job requisitions across all departments.
+            {isCandidate
+              ? "Browse open roles, review job descriptions, and apply directly."
+              : "Create, manage, and monitor job requisitions across all departments."}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Job</span>
-        </button>
+        {!isCandidate && (
+          <button
+            type="button"
+            onClick={handleOpenCreateModal}
+            className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Job</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -286,7 +346,7 @@ export const JobsView: React.FC = () => {
               <RefreshCw className="w-4 h-4" />
               <span>Clear All Filters</span>
             </button>
-          ) : (
+          ) : !isCandidate ? (
             <button
               type="button"
               onClick={handleOpenCreateModal}
@@ -295,7 +355,7 @@ export const JobsView: React.FC = () => {
               <Plus className="w-4 h-4" />
               <span>Create First Job</span>
             </button>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -368,37 +428,68 @@ export const JobsView: React.FC = () => {
                   <span>{new Date(job.openedAt).toLocaleDateString()}</span>
                 </span>
 
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenDetailModal(job)}
-                    className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
-                    title="View Details"
-                    aria-label="View Details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditModal(job)}
-                    className="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all"
-                    title="Edit Job"
-                    aria-label="Edit Job"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  {job.status !== "Archived" && (
+                {isCandidate ? (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleArchiveJob(job)}
-                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                      title="Archive Job"
-                      aria-label="Archive Job"
+                      data-testid={`view-jd-btn-${job.id}`}
+                      onClick={() => handleOpenDetailModal(job)}
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="View Job Description"
+                      aria-label="View Job Description"
                     >
-                      <Archive className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5 text-slate-500" />
+                      <span>View JD</span>
                     </button>
-                  )}
-                </div>
+                    {job.status === "Open" ? (
+                      <button
+                        type="button"
+                        data-testid={`apply-job-btn-${job.id}`}
+                        onClick={() => handleApplyClick(job)}
+                        className="px-3.5 py-1.5 text-xs font-bold text-white gradient-btn-primary rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Apply</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-medium text-slate-400 px-2 py-1 bg-slate-50 rounded-md">
+                        Closed
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDetailModal(job)}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
+                      title="View Details"
+                      aria-label="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(job)}
+                      className="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all"
+                      title="Edit Job"
+                      aria-label="Edit Job"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    {job.status !== "Archived" && (
+                      <button
+                        type="button"
+                        onClick={() => handleArchiveJob(job)}
+                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        title="Archive Job"
+                        aria-label="Archive Job"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -451,7 +542,109 @@ export const JobsView: React.FC = () => {
         onEdit={handleOpenEditModal}
         onArchive={handleArchiveJob}
         onStatusChange={handleStatusChange}
+        isCandidate={isCandidate}
+        onApply={handleApplyClick}
       />
+
+      {/* Candidate Apply Modal */}
+      {applyingJob && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="apply-dialog-title"
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => !isSubmittingApp && setApplyingJob(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 cursor-default animate-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-brand-50 text-brand-700">
+                  {applyingJob.department}
+                </span>
+                <h3 id="apply-dialog-title" className="text-lg font-bold text-slate-900 mt-1">
+                  Apply for {applyingJob.title}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {applyingJob.location} • {applyingJob.employmentType}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isSubmittingApp}
+                onClick={() => setApplyingJob(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Close dialog"
+              >
+                ✕
+              </button>
+            </div>
+
+            {appFeedback && (
+              <div
+                className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                  appFeedback.type === "success"
+                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                    : "bg-rose-50 text-rose-800 border border-rose-200"
+                }`}
+              >
+                {appFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                )}
+                <span>{appFeedback.message}</span>
+              </div>
+            )}
+
+            <div>
+              <label
+                htmlFor="apply-cover-letter"
+                className="block text-xs font-semibold text-slate-700 mb-1"
+              >
+                Cover Note / Message to Recruiter (Optional)
+              </label>
+              <textarea
+                id="apply-cover-letter"
+                rows={4}
+                value={coverLetter}
+                onChange={(e) => setCoverLetter(e.target.value)}
+                placeholder="Briefly describe why your skills align with this opening..."
+                className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isSubmittingApp}
+                onClick={() => setApplyingJob(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="confirm-apply-btn"
+                disabled={isSubmittingApp}
+                onClick={handleConfirmApply}
+                className="px-5 py-2 text-xs font-bold text-white gradient-btn-primary rounded-xl shadow-md transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmittingApp ? (
+                  <span>Submitting...</span>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Confirm & Apply</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

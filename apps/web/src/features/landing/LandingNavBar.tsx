@@ -64,8 +64,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
     }
   };
 
-  const userRole = currentUser?.canonicalRole || currentUser?.role;
-  const isCandidate = userRole === "candidate";
+
 
   return (
     <header
@@ -120,7 +119,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                 <div className="hidden md:flex flex-col items-end text-right">
                   <span className="text-xs font-semibold text-white">{currentUser.name}</span>
                   <span className="text-[10px] text-cyan-300 uppercase font-medium">
-                    {isCandidate ? "Candidate Portal" : "Hiring Workspace"}
+                    {currentUser.role.replace("_", " ")}
                   </span>
                 </div>
                 <button
@@ -136,6 +135,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
               <>
                 <button
                   type="button"
+                  data-testid="header-sign-in-button"
                   onClick={() => onOpenAuth("login")}
                   className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors focus:outline-hidden focus:ring-2 focus:ring-cyan-400 rounded-full"
                 >
@@ -143,6 +143,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                 </button>
                 <button
                   type="button"
+                  data-testid="header-register-button"
                   onClick={() => onOpenAuth("signup")}
                   className="relative group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-950 bg-white hover:bg-slate-100 rounded-full shadow-xl transition-all duration-200 hover:scale-102 focus:outline-hidden focus:ring-2 focus:ring-cyan-400"
                 >

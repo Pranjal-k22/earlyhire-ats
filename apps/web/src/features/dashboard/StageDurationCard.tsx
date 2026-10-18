@@ -29,7 +29,7 @@ function formatDuration(ms: number | null): string {
 }
 
 export const StageDurationCard: React.FC<StageDurationCardProps> = ({
-  durations,
+  durations = {},
 }) => {
   const stageEntries = [
     { stage: "Applied", label: "Applied to Screening" },
@@ -38,7 +38,7 @@ export const StageDurationCard: React.FC<StageDurationCardProps> = ({
     { stage: "Offer", label: "Offer to Final Outcome" },
   ];
 
-  const hasData = Object.values(durations).some((v) => v !== null);
+  const hasData = Object.values(durations || {}).some((v) => v !== null);
 
   return (
     <div

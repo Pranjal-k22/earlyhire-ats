@@ -3,9 +3,9 @@ import { FunnelStageData, OfferAcceptanceData } from "../../types/analytics";
 import { TrendingDown, Award, CheckCircle, Clock } from "lucide-react";
 
 interface FunnelChartProps {
-  stages: FunnelStageData[];
-  offerAcceptance: OfferAcceptanceData;
-  totalCohort: number;
+  stages?: FunnelStageData[];
+  offerAcceptance?: OfferAcceptanceData;
+  totalCohort?: number;
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -28,8 +28,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
     pendingOffers: rawOfferAcceptance?.pendingOffers ?? 0,
     acceptanceRate: rawOfferAcceptance?.acceptanceRate ?? null,
   };
-  const safeStages = Array.isArray(stages) ? stages : [];
-  const maxCount = safeStages.length > 0 ? Math.max(...safeStages.map((s) => s.count), 1) : 1;
+  const maxCount = stages.length > 0 ? Math.max(...stages.map((s) => s.count), 1) : 1;
 
   return (
     <div
@@ -59,7 +58,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
         <div className="space-y-4">
           {/* Horizontal Funnel Step Bars */}
           <div className="space-y-3">
-            {safeStages.map((stage, idx) => {
+            {stages.map((stage, idx) => {
               const widthPct = Math.max(Math.round((stage.count / maxCount) * 100), 4);
               const colorClass = STAGE_COLORS[stage.stage] || "bg-brand-500";
 
@@ -78,20 +77,38 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
                     {/* Step-to-step conversion indicator */}
                     {idx > 0 && (
                       <div className="flex items-center gap-2 text-[11px]">
-                        {stage.conversionRateFromPrevious !== null ? (
-                          <span className="font-semibold text-emerald-600 font-mono">
-                            {(stage.conversionRateFromPrevious * 100).toFixed(1)}% conv.
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-mono">—</span>
-                        )}
+                        {(() => {
+                          const prevCount = stages[idx - 1]?.count ?? 0;
+                          let convRate: number | null = null;
+                          if (typeof stage.conversionRateFromPrevious === "number" && !isNaN(stage.conversionRateFromPrevious)) {
+                            convRate = stage.conversionRateFromPrevious;
+                          } else if (prevCount > 0) {
+                            convRate = stage.count / prevCount;
+                          }
+                          return convRate !== null ? (
+                            <span className="font-semibold text-emerald-600 font-mono">
+                              {(convRate * 100).toFixed(1)}% conv.
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-mono">—</span>
+                          );
+                        })()}
 
-                        {stage.dropoffRateFromPrevious !== null && stage.dropoffRateFromPrevious > 0 && (
-                          <span className="text-rose-500 font-mono flex items-center gap-0.5">
-                            <TrendingDown className="w-3 h-3" />
-                            {(stage.dropoffRateFromPrevious * 100).toFixed(1)}% drop
-                          </span>
-                        )}
+                        {(() => {
+                          const prevCount = stages[idx - 1]?.count ?? 0;
+                          let dropRate: number | null = null;
+                          if (typeof stage.dropoffRateFromPrevious === "number" && !isNaN(stage.dropoffRateFromPrevious)) {
+                            dropRate = stage.dropoffRateFromPrevious;
+                          } else if (prevCount > 0 && stage.count < prevCount) {
+                            dropRate = (prevCount - stage.count) / prevCount;
+                          }
+                          return dropRate !== null && dropRate > 0 ? (
+                            <span className="text-rose-500 font-mono flex items-center gap-0.5">
+                              <TrendingDown className="w-3 h-3" />
+                              {(dropRate * 100).toFixed(1)}% drop
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </div>

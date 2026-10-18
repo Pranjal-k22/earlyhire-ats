@@ -13,14 +13,12 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  ArrowRight,
   CheckCircle2,
   FileText,
   Activity,
   ArrowLeft,
   Info,
   HelpCircle,
-  Building,
 } from "lucide-react";
 import { login, signup } from "../../api/authApi";
 import { User } from "../../types/auth";
@@ -533,7 +531,6 @@ export const AuthPortalView: React.FC<AuthPortalViewProps> = ({
                         type="email"
                         autoComplete="email"
                         placeholder="Enter your email"
-                        ref={emailInputRef}
                         {...registerLogin("email")}
                         className={`w-full pl-10 pr-3.5 py-2.5 text-sm bg-slate-50/80 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                           loginErrors.email

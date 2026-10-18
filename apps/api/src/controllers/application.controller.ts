@@ -513,8 +513,24 @@ export const getApplications = async (
 
     const userRole = normalizeRole(req.user?.role || "candidate");
     if (userRole === "candidate") {
-      const cand = await Candidate.findOne({ email: req.user?.email, archivedAt: null });
-      if (!cand) {
+      const candidateConditions: Array<Record<string, unknown>> = [];
+      if (req.user?.candidateProfileId) {
+        candidateConditions.push({ _id: req.user.candidateProfileId });
+      }
+      if (req.user?.email) {
+        candidateConditions.push({ email: req.user.email.toLowerCase() });
+      }
+      if (req.user?._id) {
+        candidateConditions.push({ createdBy: req.user._id });
+      }
+
+      const matchingCandidates = candidateConditions.length > 0
+        ? await Candidate.find({ $or: candidateConditions, archivedAt: null }).select("_id")
+        : [];
+
+      const candIds = matchingCandidates.map((c) => c._id);
+
+      if (candIds.length === 0) {
         res.status(200).json({
           success: true,
           data: {
@@ -529,10 +545,19 @@ export const getApplications = async (
         });
         return;
       }
-      if (query.candidateId && query.candidateId.toString() !== cand._id.toString()) {
-        return next(new AppError("You do not have permission to view applications for other candidates", 403, "FORBIDDEN"));
+
+      if (query.candidateId) {
+        const requestedId = query.candidateId.toString();
+        const ownsCandidate = candIds.some((id) => id.toString() === requestedId);
+        if (!ownsCandidate) {
+          return next(
+            new AppError("You do not have permission to view applications for other candidates", 403, "FORBIDDEN")
+          );
+        }
+        filter.candidateId = new mongoose.Types.ObjectId(query.candidateId);
+      } else {
+        filter.candidateId = { $in: candIds };
       }
-      filter.candidateId = cand._id;
     } else if (query.candidateId) {
       if (!mongoose.Types.ObjectId.isValid(query.candidateId)) {
         return next(new AppError("Invalid candidate ID format", 400, "INVALID_ID"));

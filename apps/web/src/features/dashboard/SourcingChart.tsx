@@ -18,9 +18,10 @@ const SOURCE_COLORS = [
 ];
 
 export const SourcingChart: React.FC<SourcingChartProps> = ({
-  sourcing,
-  totalApplications,
+  sourcing = [],
+  totalApplications = 0,
 }) => {
+  const hasData = sourcing.length > 0 && totalApplications > 0;
   return (
     <div
       data-testid="sourcing-distribution-card"
@@ -41,7 +42,7 @@ export const SourcingChart: React.FC<SourcingChartProps> = ({
         </span>
       </div>
 
-      {sourcing.length === 0 || totalApplications === 0 ? (
+      {!hasData ? (
         <div className="h-48 flex flex-col items-center justify-center text-slate-400 text-sm">
           <span>No sourcing data available for this date range.</span>
         </div>

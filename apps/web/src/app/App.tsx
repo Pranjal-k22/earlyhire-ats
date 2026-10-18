@@ -5,9 +5,7 @@ import {
   Layers,
   LayoutDashboard,
   Search,
-  Bell,
   ChevronDown,
-  ChevronRight,
   CheckCircle2,
   FileText,
   AlertTriangle,
@@ -16,13 +14,9 @@ import {
   LogIn,
   LogOut,
   UserPlus,
-  Shield,
   Sparkles,
   Cpu,
   ShieldAlert,
-  ArrowRight,
-  ArrowLeft,
-  Lock,
 } from "lucide-react";
 
 import { JobsView } from "../features/jobs/JobsView";
@@ -39,7 +33,7 @@ import { fetchMe, logout } from "../api/authApi";
 import { API_BASE } from "../api/baseUrl";
 import { parseApiResponse } from "../api/clientHelper";
 import { User } from "../types/auth";
-import { normalizeRole, CanonicalRole } from "../types/role";
+import { normalizeRole } from "../types/role";
 
 interface HealthStatus {
   status: string;
@@ -260,18 +254,6 @@ export const App: React.FC<AppProps> = ({
     setIsMobileNavOpen(false);
   };
 
-  const handleNavigateToAuthPortal = (portal: AuthPortalRole, mode: AuthPortalMode = "login") => {
-    setAuthPortalRole(portal);
-    setAuthPortalMode(mode);
-    setActiveTab("auth");
-    setIsUserMenuOpen(false);
-    setIsMobileNavOpen(false);
-    if (typeof window !== "undefined") {
-      const targetHash = mode === "signup" ? `#register-${portal}` : `#login-${portal}`;
-      window.location.hash = targetHash;
-    }
-  };
-
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user);
     const canonical = user.canonicalRole || normalizeRole(user.role);
@@ -297,8 +279,12 @@ export const App: React.FC<AppProps> = ({
     }
     setCurrentUser(null);
     setIsUserMenuOpen(false);
-    setActiveTab("landing");
-    if (typeof window !== "undefined") window.location.hash = "#landing";
+    if (activeTab === "candidate" || activeTab === "platform") {
+      setActiveTab("landing");
+    }
+    if (typeof window !== "undefined") {
+      window.location.hash = "";
+    }
     setAuthNotice("Successfully signed out");
     setTimeout(() => setAuthNotice(null), 4000);
   };
@@ -377,7 +363,6 @@ export const App: React.FC<AppProps> = ({
         { id: "candidates" as AppTab, label: "Candidates", icon: Users },
         { id: "jobs" as AppTab, label: "Jobs", icon: Briefcase },
         { id: "pipeline" as AppTab, label: "Pipeline", icon: Layers },
-        { id: "candidate" as AppTab, label: "Candidate View", icon: Sparkles },
         ...(isPlatformManager
           ? [{ id: "platform" as AppTab, label: "Platform Ops", icon: Cpu }]
           : []),
@@ -398,6 +383,13 @@ export const App: React.FC<AppProps> = ({
       return {
         allowed: false,
         reason: "Access Restricted: Candidate accounts can only access the candidate portal and job listings.",
+      };
+    }
+
+    if (!isCandidate && tab === "candidate") {
+      return {
+        allowed: false,
+        reason: "Access Restricted: The candidate portal is reserved exclusively for candidates. Recruiters can view candidate applications in Candidates and Pipeline.",
       };
     }
 
@@ -434,8 +426,12 @@ export const App: React.FC<AppProps> = ({
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200/60">
           <div
             className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => setActiveTab("landing")}
-            title="Return to Public Landing Page"
+            onClick={() => {
+              if (isCandidate) setActiveTab("candidate");
+              else if (isPlatformManager) setActiveTab("platform");
+              else setActiveTab("overview");
+            }}
+            title={isCandidate ? "Candidate Portal" : "Recruiting Workspace"}
           >
             <div className="w-11 h-11 rounded-2xl gradient-badge-brand flex items-center justify-center text-white font-bold shadow-md shadow-purple-500/20 shrink-0">
               <Sparkles className="w-6 h-6" />
@@ -502,49 +498,6 @@ export const App: React.FC<AppProps> = ({
             <span className="sr-only">Reports</span>
           </a>
 
-          <div className="pt-4 border-t border-slate-200/60 space-y-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("landing")}
-              className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-purple-700 hover:bg-white/80 rounded-xl transition-all"
-            >
-              <span className="flex items-center gap-2.5">
-                <Sparkles className="w-4 h-4 text-[#315CFF]" />
-                <span>Public Landing Page</span>
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-
-            {/* Portal Switcher Shortcuts */}
-            <div className="px-3 pt-3">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Switch Portal Entry
-              </p>
-              <div className="flex flex-col gap-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleNavigateToAuthPortal("candidate")}
-                  className="text-left py-1 text-slate-600 hover:text-[#315CFF] font-medium"
-                >
-                  • Candidate Portal Login
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNavigateToAuthPortal("recruiter")}
-                  className="text-left py-1 text-slate-600 hover:text-[#315CFF] font-medium"
-                >
-                  • Recruiter Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleNavigateToAuthPortal("admin")}
-                  className="text-left py-1 text-slate-600 hover:text-[#315CFF] font-medium"
-                >
-                  • Platform Manager Sign In
-                </button>
-              </div>
-            </div>
-          </div>
         </nav>
 
         {/* Footer / System Status & Demo Mode Indicator */}
@@ -638,17 +591,19 @@ export const App: React.FC<AppProps> = ({
                     </div>
 
                     <div className="py-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsUserMenuOpen(false);
-                          setActiveTab("candidate");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-[#315CFF]" />
-                        <span>Candidate ATS Portal</span>
-                      </button>
+                      {isCandidate && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsUserMenuOpen(false);
+                            setActiveTab("candidate");
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-[#315CFF]" />
+                          <span>Candidate ATS Portal</span>
+                        </button>
+                      )}
 
                       {isHiringTeam && (
                         <button
@@ -769,7 +724,7 @@ export const App: React.FC<AppProps> = ({
               </div>
             </div>
           ) : activeTab === "jobs" ? (
-            <JobsView />
+            <JobsView isCandidate={isCandidate} />
           ) : activeTab === "candidates" ? (
             <CandidatesView />
           ) : activeTab === "pipeline" ? (

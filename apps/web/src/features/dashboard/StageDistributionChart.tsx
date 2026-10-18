@@ -39,10 +39,18 @@ const STAGE_KEYS: PipelineStage[] = [
 export const StageDistributionChart: React.FC<StageDistributionChartProps> = ({
   stageCounts,
 }) => {
-  const total = Object.values(stageCounts).reduce((acc, c) => acc + c, 0);
+  const counts = stageCounts || {
+    Applied: 0,
+    Screening: 0,
+    Interview: 0,
+    Offer: 0,
+    Hired: 0,
+    Rejected: 0,
+  };
+  const total = Object.values(counts).reduce((acc, c) => acc + c, 0);
 
   const chartData = STAGE_KEYS.map((stage) => {
-    const count = stageCounts[stage] || 0;
+    const count = counts[stage] || 0;
     const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
     return {
       stage,
