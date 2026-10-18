@@ -79,8 +79,8 @@ export class AIRouter {
     ) {
       providersToTry.push(this.fallbackProvider);
     }
-    // Only fall back to heuristic provider if explicitly configured
-    if (env.AI_FALLBACK_PROVIDER === "mock" && !providersToTry.includes(this.heuristicProvider)) {
+    // Always guarantee heuristic fallback provider is present so recruitment operations never fail when local/cloud AI is offline
+    if (!providersToTry.includes(this.heuristicProvider)) {
       providersToTry.push(this.heuristicProvider);
     }
 

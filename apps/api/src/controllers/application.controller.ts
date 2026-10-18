@@ -212,7 +212,7 @@ export const createApplication = async (
 
     // Populate references for client convenience
     await createdApplication.populate([
-      { path: "candidateId", select: "name fullName email currentTitle skills source experienceYears" },
+      { path: "candidateId", select: "name fullName email currentTitle skills source experienceYears resumeUrl" },
       { path: "jobId", select: "title department location employmentType status" },
       { path: "recruiterId", select: "name email role" },
     ]);
@@ -328,6 +328,12 @@ export const applyForJob = async (
     // Ownership check
     if (resume.candidateUserId.toString() !== req.user.id) {
       return next(new AppError("You do not own this resume file", 403, "FORBIDDEN"));
+    }
+
+    // Ensure candidate profile has resumeUrl set for recruiter viewing
+    if (!candidate.resumeUrl) {
+      candidate.resumeUrl = `/api/v1/resumes/${resume._id}/download?inline=true`;
+      await candidate.save().catch(() => {});
     }
 
     // 5. Retrieve or generate ATS assessment
@@ -465,7 +471,7 @@ export const applyForJob = async (
     initialHistory = result.historyDoc;
 
     await createdApplication.populate([
-      { path: "candidateId", select: "name fullName email currentTitle skills source experienceYears" },
+      { path: "candidateId", select: "name fullName email currentTitle skills source experienceYears resumeUrl" },
       { path: "jobId", select: "title department location employmentType status" },
       { path: "recruiterId", select: "name email role" },
       { path: "resumeId", select: "originalFilename fileSizeBytes createdAt version" },
@@ -650,7 +656,7 @@ export const getApplications = async (
         .sort({ [sortField]: sortOrder })
         .skip(skip)
         .limit(query.limit)
-        .populate("candidateId", "name fullName email currentTitle skills source experienceYears")
+        .populate("candidateId", "name fullName email currentTitle skills source experienceYears resumeUrl")
         .populate("jobId", "title department location employmentType status")
         .populate("recruiterId", "name email role")
         .populate("resumeId", "originalFilename fileSizeBytes createdAt version")

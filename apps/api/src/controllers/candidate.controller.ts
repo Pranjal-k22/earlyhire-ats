@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import { Candidate } from "../models/candidate.model.js";
+import { ResumeFile } from "../models/resume.model.js";
 import {
   createCandidateSchema,
   updateCandidateSchema,
@@ -166,6 +167,26 @@ export const getCandidates = async (
 
     const totalPages = Math.ceil(total / limit) || 1;
 
+    // Ensure candidate documents have resumeUrl populated for recruiter view
+    await Promise.all(
+      candidates.map(async (c) => {
+        if (!c.resumeUrl) {
+          const rf = await ResumeFile.findOne({
+            $or: [
+              { candidateId: c._id },
+              ...(c.createdBy ? [{ candidateUserId: c.createdBy }] : []),
+            ],
+            isDeleted: false,
+          }).sort({ createdAt: -1 });
+
+          if (rf) {
+            c.resumeUrl = `/api/v1/resumes/${rf._id}/download?inline=true`;
+            c.save().catch(() => {});
+          }
+        }
+      })
+    );
+
     res.status(200).json({
       success: true,
       data: candidates,
@@ -202,6 +223,21 @@ export const getCandidateById = async (
 
     if (!candidate) {
       return next(new AppError("Candidate not found", 404, "CANDIDATE_NOT_FOUND"));
+    }
+
+    if (!candidate.resumeUrl) {
+      const rf = await ResumeFile.findOne({
+        $or: [
+          { candidateId: candidate._id },
+          ...(candidate.createdBy ? [{ candidateUserId: candidate.createdBy }] : []),
+        ],
+        isDeleted: false,
+      }).sort({ createdAt: -1 });
+
+      if (rf) {
+        candidate.resumeUrl = `/api/v1/resumes/${rf._id}/download?inline=true`;
+        candidate.save().catch(() => {});
+      }
     }
 
     const userRole = normalizeRole(req.user?.role || "candidate");

@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Calendar,
   MessageSquare,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import {
   fetchOrGenerateStageReview,
@@ -71,6 +73,16 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
 
   if (!isOpen || !application) return null;
 
+  const resumeId =
+    typeof application.resumeId === "object" && application.resumeId
+      ? (application.resumeId.id || (application.resumeId as { _id?: string })._id)
+      : typeof application.resumeId === "string"
+      ? application.resumeId
+      : null;
+  const resumeUrl = resumeId
+    ? `/api/v1/resumes/${resumeId}/download?inline=true`
+    : application.candidateId?.resumeUrl || null;
+
   const handleDecision = async (decision: "advance" | "hold" | "reject") => {
     if (!review) return;
     try {
@@ -114,13 +126,28 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors"
-            aria-label="Close drawer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {resumeUrl && (
+              <a
+                href={resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"
+                title="Open candidate's submitted PDF resume in a new tab"
+              >
+                <FileText className="w-3.5 h-3.5 text-brand-400" />
+                <span>Resume (PDF)</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              aria-label="Close drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
@@ -154,6 +181,19 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-3">
+                {resumeUrl && (
+                  <a
+                    href={resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-all"
+                    title="Open candidate's submitted PDF resume in browser viewer"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>View Resume (PDF)</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={() => onScheduleInterview(application)}

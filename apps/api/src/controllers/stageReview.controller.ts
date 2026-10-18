@@ -60,10 +60,19 @@ export const getOrGenerateStageReview = async (req: Request, res: Response, next
     }
 
     // Attempt to locate candidate resume text
-    const resume = await ResumeFile.findOne({
-      $or: [{ candidateId: candidate.id }, { candidateUserId: req.user.id }],
-      isDeleted: false,
-    }).sort({ createdAt: -1 });
+    let resume = null;
+    if (application.resumeId) {
+      resume = await ResumeFile.findById(application.resumeId);
+    }
+    if (!resume) {
+      resume = await ResumeFile.findOne({
+        $or: [
+          { candidateId: candidate._id },
+          ...(candidate.createdBy ? [{ candidateUserId: candidate.createdBy }] : []),
+        ],
+        isDeleted: false,
+      }).sort({ createdAt: -1 });
+    }
 
     const resumeText = resume?.parsedText || candidate.summary || "Candidate applied for role.";
 

@@ -10,6 +10,7 @@ import {
   Sparkles,
   Video,
   MessageSquare,
+  FileText,
 } from "lucide-react";
 import { Application, HiringStage } from "../../types/application";
 import { StageBadge } from "./StageBadge";
@@ -68,6 +69,16 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         day: "numeric",
       })
     : "Recently";
+
+  const resumeId =
+    typeof application.resumeId === "object" && application.resumeId
+      ? (application.resumeId.id || (application.resumeId as { _id?: string })._id)
+      : typeof application.resumeId === "string"
+      ? application.resumeId
+      : null;
+  const resumeUrl = resumeId
+    ? `/api/v1/resumes/${resumeId}/download?inline=true`
+    : candidate?.resumeUrl || null;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all p-4 space-y-3 flex flex-col justify-between group">
@@ -169,6 +180,20 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
               <Sparkles className="w-3 h-3 text-emerald-600" />
               <span>ATS</span>
             </button>
+          )}
+
+          {resumeUrl && (
+            <a
+              href={resumeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 rounded-md font-medium transition-colors"
+              title="Open candidate PDF resume in a new tab"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <FileText className="w-3 h-3 text-slate-600" />
+              <span>Resume</span>
+            </a>
           )}
         </div>
 

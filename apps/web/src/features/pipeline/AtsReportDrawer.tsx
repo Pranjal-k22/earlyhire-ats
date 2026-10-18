@@ -8,6 +8,7 @@ import {
   Clock,
   ShieldCheck,
   RefreshCw,
+  ExternalLink,
 } from "lucide-react";
 import { fetchApplicationAtsReport, AtsReport } from "../../api/atsApi";
 import { Application, IAtsSnapshot } from "../../types/application";
@@ -75,6 +76,14 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
     (typeof application.resumeId === "object" && application.resumeId?.originalFilename) ||
     "Submitted Resume";
 
+  const resumeId =
+    (typeof report?.resumeId === "object" && (report.resumeId?.id || (report.resumeId as { _id?: string })?._id)) ||
+    (typeof application.resumeId === "object" && (application.resumeId?.id || (application.resumeId as { _id?: string })?._id)) ||
+    (typeof application.resumeId === "string" ? application.resumeId : null);
+  const resumeUrl = resumeId
+    ? `/api/v1/resumes/${resumeId}/download?inline=true`
+    : application.candidateId?.resumeUrl || null;
+
   return (
     <div
       role="dialog"
@@ -102,13 +111,28 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-            aria-label="Close drawer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {resumeUrl && (
+              <a
+                href={resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"
+                title="Open candidate's submitted PDF resume in a new tab"
+              >
+                <FileText className="w-3.5 h-3.5 text-brand-400" />
+                <span>Resume (PDF)</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              aria-label="Close drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
@@ -211,10 +235,24 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-600">
                 <div>
                   <span className="text-slate-400 block font-medium">Submitted Resume</span>
-                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5 truncate" title={resumeFilename}>
-                    <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span className="truncate">{resumeFilename}</span>
-                  </span>
+                  {resumeUrl ? (
+                    <a
+                      href={resumeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 mt-0.5 truncate group/link hover:underline"
+                      title={`Open ${resumeFilename} (PDF)`}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+                      <span className="truncate">{resumeFilename}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0 text-brand-500 opacity-70 group-hover/link:opacity-100" />
+                    </a>
+                  ) : (
+                    <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5 truncate" title={resumeFilename}>
+                      <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">{resumeFilename}</span>
+                    </span>
+                  )}
                   <span className="text-[10px] text-slate-400">Version {snapshot.resumeVersion || 1}</span>
                 </div>
                 <div>

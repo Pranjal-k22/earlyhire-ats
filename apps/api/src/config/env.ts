@@ -20,7 +20,7 @@ const envSchema = z
     COOKIE_SAME_SITE: z.enum(["lax", "none", "strict"]).optional(),
     RESUME_STORAGE_DIR: z.string().default("uploads/resumes"),
     AI_PROVIDER: z.enum(["ollama", "gemini", "groq", "mock"]).default("ollama"),
-    AI_FALLBACK_PROVIDER: z.enum(["ollama", "gemini", "groq", "mock", "none"]).default("none"),
+    AI_FALLBACK_PROVIDER: z.enum(["ollama", "gemini", "groq", "mock", "none"]).default("mock"),
     OLLAMA_BASE_URL: z.string().default("http://127.0.0.1:11434"),
     OLLAMA_MODEL: z.string().default("qwen2.5:7b"),
     OLLAMA_TIMEOUT_MS: z

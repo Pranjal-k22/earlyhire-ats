@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { ResumeFile } from "../models/resume.model.js";
 import { User } from "../models/user.model.js";
+import { Candidate } from "../models/candidate.model.js";
 import { resumeStorage } from "../services/storage/resumeStorage.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
@@ -85,6 +86,19 @@ export const uploadResume = async (req: Request, res: Response, next: NextFuncti
     // 5. Update user's active resumeId
     await User.findByIdAndUpdate(req.user.id, { resumeId: resumeDoc.id });
 
+    // 6. Update candidate profile resumeUrl so recruiters can immediately view and download it
+    const resumeDownloadUrl = `/api/v1/resumes/${resumeDoc.id}/download?inline=true`;
+    await Candidate.updateMany(
+      {
+        $or: [
+          ...(req.user.candidateProfileId ? [{ _id: req.user.candidateProfileId }] : []),
+          ...(req.user.email ? [{ email: req.user.email.toLowerCase() }] : []),
+          ...(req.user._id ? [{ createdBy: req.user._id }] : []),
+        ],
+      },
+      { $set: { resumeUrl: resumeDownloadUrl } }
+    );
+
     res.status(201).json({
       success: true,
       data: {
@@ -148,8 +162,11 @@ export const downloadResume = async (req: Request, res: Response, next: NextFunc
 
     const stream = resumeStorage.getReadStream(resume.storagePath);
 
-    res.setHeader("Content-Type", resume.mimeType);
-    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(resume.originalFilename)}"`);
+    const isInline = req.query.inline === "true" || req.query.view === "true";
+    const dispositionType = isInline ? "inline" : "attachment";
+
+    res.setHeader("Content-Type", resume.mimeType || "application/pdf");
+    res.setHeader("Content-Disposition", `${dispositionType}; filename="${encodeURIComponent(resume.originalFilename)}"`);
     res.setHeader("Content-Length", resume.fileSizeBytes);
 
     stream.pipe(res);
