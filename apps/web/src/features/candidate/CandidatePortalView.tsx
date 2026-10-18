@@ -21,7 +21,6 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   Filter,
   Bookmark,
   Inbox,
@@ -562,7 +561,7 @@ export const CandidatePortalView: React.FC = () => {
                 <div className="space-y-3">
                   {interviews.length > 0 ? (
                     interviews.slice(0, 3).map((evt, idx) => {
-                      const d = new Date(evt.scheduledAt);
+                      const d = new Date(evt.scheduledStartTime);
                       const dateNum = isNaN(d.getTime()) ? "—" : String(d.getDate());
                       const dayName = isNaN(d.getTime()) ? "TBD" : d.toLocaleDateString(undefined, { weekday: "short" });
                       const timeStr = isNaN(d.getTime()) ? "Scheduled" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -581,10 +580,10 @@ export const CandidatePortalView: React.FC = () => {
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-slate-800 truncate">
-                                {evt.jobTitle || "Interview Session"}
+                                {evt.jobId?.title || evt.title || "Interview Session"}
                               </p>
                               <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                                {evt.stage || "Google Meet"} • {timeStr}
+                                {evt.meetingType === "google_meet" ? "Google Meet" : "Interview"} • {timeStr}
                               </p>
                             </div>
                           </div>
@@ -655,14 +654,27 @@ export const CandidatePortalView: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Improve Resume Action Button */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("ats")}
-                  className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                >
-                  Improve Resume
-                </button>
+                {/* Actions: Download Resume & Improve */}
+                <div className="space-y-2 pt-1">
+                  {resumes.length > 0 && (
+                    <a
+                      href={`/api/v1/resumes/${resumes[0].id}/download`}
+                      download={resumes[0].originalFilename}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-200"
+                      title="Download your active resume PDF file"
+                    >
+                      <Download className="w-4 h-4 text-purple-600" />
+                      <span>Download Resume (PDF)</span>
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("ats")}
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Improve Resume
+                  </button>
+                </div>
               </div>
 
               {/* Latest Application Status Table (Image 1 Right) */}
@@ -757,13 +769,31 @@ export const CandidatePortalView: React.FC = () => {
                               </td>
                               <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{appliedDate}</td>
                               <td className="py-3 px-3 text-right">
-                                {atsScore !== undefined ? (
-                                  <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                                    ATS {atsScore}/100
-                                  </span>
-                                ) : (
-                                  <span className="text-[11px] text-slate-400">—</span>
-                                )}
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {atsScore !== undefined && (
+                                    <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                                      ATS {atsScore}/100
+                                    </span>
+                                  )}
+                                  {(() => {
+                                    const resId =
+                                      typeof app.resumeId === "object" && app.resumeId
+                                        ? (app.resumeId.id || (app.resumeId as { _id?: string })._id)
+                                        : typeof app.resumeId === "string"
+                                        ? app.resumeId
+                                        : null;
+                                    return resId ? (
+                                      <a
+                                        href={`/api/v1/resumes/${resId}/download`}
+                                        download
+                                        className="p-1 text-slate-500 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-colors"
+                                        title="Download submitted resume PDF"
+                                      >
+                                        <Download className="w-3.5 h-3.5" />
+                                      </a>
+                                    ) : null;
+                                  })()}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1120,21 +1150,31 @@ export const CandidatePortalView: React.FC = () => {
 
                     <div className="flex items-center gap-2 self-end sm:self-center">
                       <a
-                        href={`/api/v1/resumes/${resume.id}/download`}
+                        href={`/api/v1/resumes/${resume.id}/download?inline=true`}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        className="px-3 py-1.5 text-brand-600 hover:text-brand-800 hover:bg-brand-50 rounded-lg text-xs font-semibold flex items-center gap-1.5 border border-brand-200 transition-all"
+                        title="View resume PDF directly in browser"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>View PDF</span>
+                      </a>
+                      <a
+                        href={`/api/v1/resumes/${resume.id}/download`}
+                        download={resume.originalFilename}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-purple-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs"
+                        title="Download resume in PDF format"
                       >
                         <Download className="w-4 h-4" />
-                        <span>Download</span>
+                        <span>Download PDF</span>
                       </a>
                       <button
                         type="button"
                         onClick={() => handleDeleteResume(resume.id)}
-                        className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
+                        title="Delete resume"
                       >
                         <Trash2 className="w-4 h-4" />
-                        <span>Delete</span>
                       </button>
                     </div>
                   </div>

@@ -11,6 +11,7 @@ import {
   MessageSquare,
   FileText,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import {
   fetchOrGenerateStageReview,
@@ -82,6 +83,9 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
   const resumeUrl = resumeId
     ? `/api/v1/resumes/${resumeId}/download?inline=true`
     : application.candidateId?.resumeUrl || null;
+  const resumeDownloadUrl = resumeId
+    ? `/api/v1/resumes/${resumeId}/download`
+    : (application.candidateId?.resumeUrl ? application.candidateId.resumeUrl.replace(/[?&]inline=true/g, "") : null);
 
   const handleDecision = async (decision: "advance" | "hold" | "reject") => {
     if (!review) return;
@@ -133,11 +137,22 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"
-                title="Open candidate's submitted PDF resume in a new tab"
+                title="View candidate's submitted PDF resume in a new tab"
               >
                 <FileText className="w-3.5 h-3.5 text-brand-400" />
-                <span>Resume (PDF)</span>
+                <span>View PDF</span>
                 <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+            )}
+            {resumeDownloadUrl && (
+              <a
+                href={resumeDownloadUrl}
+                download
+                className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
+                title="Download candidate's resume in PDF format"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
               </a>
             )}
             <button
@@ -192,6 +207,17 @@ export const StageReviewDrawer: React.FC<StageReviewDrawerProps> = ({
                     <FileText className="w-4 h-4" />
                     <span>View Resume (PDF)</span>
                     <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                  </a>
+                )}
+                {resumeDownloadUrl && (
+                  <a
+                    href={resumeDownloadUrl}
+                    download
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-all"
+                    title="Download candidate's submitted resume in PDF format"
+                  >
+                    <Download className="w-4 h-4 text-emerald-400" />
+                    <span>Download PDF</span>
                   </a>
                 )}
                 <button
