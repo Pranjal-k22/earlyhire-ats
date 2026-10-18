@@ -12,12 +12,18 @@ import {
   Trash2,
   Download,
   RefreshCw,
+  ArrowRight,
+  ShieldCheck,
+  TrendingUp,
+  Send,
+  X,
 } from "lucide-react";
 import { fetchProfile, updateProfile, CandidateProfile } from "../../api/profileApi";
 import { uploadResume, fetchMyResumes, deleteResume, ResumeItem } from "../../api/resumeApi";
 import { analyzeResume, fetchMyAnalyses, AtsReport } from "../../api/atsApi";
 import { fetchMyInterviews, InterviewItem } from "../../api/interviewApi";
 import { fetchJobs } from "../../api/jobApi";
+import { applyForJobApi } from "../../api/applicationApi";
 import { Job } from "../../types/job";
 
 export const CandidatePortalView: React.FC = () => {
@@ -42,6 +48,11 @@ export const CandidatePortalView: React.FC = () => {
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
   const [currentAnalysis, setCurrentAnalysis] = useState<AtsReport | null>(null);
+
+  // Application Submission State
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState<boolean>(false);
+  const [applicationNotes, setApplicationNotes] = useState<string>("");
+  const [applyLoading, setApplyLoading] = useState<boolean>(false);
 
   // Load candidate data
   const loadData = async () => {
@@ -184,6 +195,34 @@ export const CandidatePortalView: React.FC = () => {
       }
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleSubmitApplication = async () => {
+    if (!selectedJobId) {
+      showNotification("Please select a target job opening first.", "error");
+      return;
+    }
+    if (!selectedResumeId) {
+      showNotification("Please select a resume version first.", "error");
+      return;
+    }
+
+    try {
+      setApplyLoading(true);
+      await applyForJobApi({
+        jobId: selectedJobId,
+        resumeId: selectedResumeId,
+        notes: applicationNotes.trim() || undefined,
+      });
+
+      showNotification("Application submitted successfully! Your immutable ATS snapshot has been recorded.");
+      setIsApplyModalOpen(false);
+      setApplicationNotes("");
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : "Failed to submit application", "error");
+    } finally {
+      setApplyLoading(false);
     }
   };
 
@@ -731,6 +770,145 @@ export const CandidatePortalView: React.FC = () => {
                   ))}
                 </ul>
               </div>
+
+              {/* Resume Version Comparison (if multiple analyses exist for this job) */}
+              {(() => {
+                const jobAnalyses = analyses.filter((a) => {
+                  const jId = typeof a.jobId === "string" ? a.jobId : a.jobId?.id;
+                  return jId === selectedJobId;
+                });
+                const previousAnalysis = jobAnalyses.find((a) => a.id !== currentAnalysis.id);
+                if (!previousAnalysis) return null;
+                const delta = currentAnalysis.overallScore - previousAnalysis.overallScore;
+
+                return (
+                  <div className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-indigo-600" />
+                        <h4 className="font-bold text-slate-900 text-sm">Resume Version Comparison</h4>
+                      </div>
+                      <p className="text-xs text-slate-600">
+                        Comparing current assessment with previously generated report for this opening.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 bg-white px-4 py-2.5 rounded-xl border border-indigo-200/60 shadow-2xs">
+                      <div className="text-center">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Prior Check</span>
+                        <span className="text-sm font-bold text-slate-600">{previousAnalysis.overallScore}%</span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400" />
+                      <div className="text-center">
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Current Check</span>
+                        <span className="text-sm font-bold text-brand-600">{currentAnalysis.overallScore}%</span>
+                      </div>
+                      <div className="pl-2 border-l border-slate-200 text-center">
+                        <span className="text-[10px] uppercase font-semibold block text-slate-400">Delta</span>
+                        <span
+                          className={`text-xs font-extrabold px-2 py-0.5 rounded-full ${
+                            delta >= 0
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {delta >= 0 ? `+${delta}%` : `${delta}%`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Low-Score Coaching Panel (< 70% Advisory Target) */}
+              {currentAnalysis.overallScore < 70 && (
+                <div className="p-6 rounded-2xl border-2 border-amber-300 bg-amber-50/70 space-y-4 shadow-xs">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-200 text-amber-900 text-xs font-bold">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
+                        Resume Optimization Coaching Panel (Score &lt; 70%)
+                      </div>
+                      <h4 className="text-base font-bold text-amber-950 pt-1">
+                        How to Strengthen Your Match Before Submitting
+                      </h4>
+                      <p className="text-xs text-amber-900/80 leading-relaxed max-w-3xl">
+                        This score is an advisory estimate intended to help you present your best qualifications. In EarlyAI ATS, you are <strong>never blocked or auto-rejected</strong> from applying with any score. However, addressing the missing evidence below will ensure recruiters see your full potential.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <div className="bg-white/80 p-3.5 rounded-xl border border-amber-200/80 text-xs space-y-1">
+                      <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        1. Quantify Impact with Numbers
+                      </div>
+                      <p className="text-slate-600">
+                        Add metrics (e.g., latency reduction, users handled, team size, % speedup) to projects.
+                      </p>
+                    </div>
+                    <div className="bg-white/80 p-3.5 rounded-xl border border-amber-200/80 text-xs space-y-1">
+                      <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        2. Clarify Missing Skills Truthfully
+                      </div>
+                      <p className="text-slate-600">
+                        If you have experience with required skills ({currentAnalysis.missingCriteria.slice(0, 3).join(", ") || "technologies"}), explicitly mention them. Never invent qualifications.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("resumes")}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Improved Resume Version</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRunAnalysis}
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${actionLoading ? "animate-spin" : ""}`} />
+                      <span>Recheck Compatibility Score</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsApplyModalOpen(true)}
+                      className="px-4 py-2 text-amber-900 hover:text-amber-950 font-semibold text-xs ml-auto cursor-pointer underline"
+                    >
+                      Continue to Application Anyway →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Ready to Apply Submission Banner */}
+              <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-slate-800">
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 text-xs font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Immutable ATS Snapshot Included
+                  </div>
+                  <h4 className="text-lg font-bold text-white">Apply for this Job Opening</h4>
+                  <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                    Submitting your application binds an immutable ATS snapshot ({currentAnalysis.overallScore}%) from resume{" "}
+                    <strong>{selectedResume?.originalFilename}</strong>. Recruiters use this assessment as decision support alongside their human review.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsApplyModalOpen(true)}
+                  className="px-6 py-3 bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-white font-bold rounded-xl shadow-lg transition-all text-sm flex items-center gap-2 shrink-0 cursor-pointer"
+                >
+                  <span>Submit Application</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center py-12 border rounded-2xl border-slate-200 text-slate-400">
@@ -815,6 +993,129 @@ export const CandidatePortalView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Pre-Application Confirmation Modal with Immutable ATS Snapshot */}
+      {isApplyModalOpen && (() => {
+        const targetJob = jobs.find((j) => j.id === selectedJobId);
+        const targetResume = resumes.find((r) => r.id === selectedResumeId);
+
+        return (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="apply-modal-title"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+          >
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-in zoom-in-95 duration-150">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Application Snapshot Confirmation
+                  </div>
+                  <h3 id="apply-modal-title" className="text-xl font-bold text-slate-900">
+                    Apply for {targetJob?.title || "Role"}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {targetJob?.department} • {targetJob?.location || "Remote"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsApplyModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Assessment Snapshot Preview */}
+              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">Selected Resume</span>
+                  <span className="text-xs font-bold text-slate-800">
+                    {targetResume?.originalFilename || "Selected Resume"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-500">ATS Snapshot Score</span>
+                  <span className="text-base font-black text-brand-600">
+                    {currentAnalysis?.overallScore !== undefined
+                      ? `${currentAnalysis.overallScore}%`
+                      : "Pending Analysis"}
+                  </span>
+                </div>
+                {currentAnalysis && (
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-[11px] text-slate-600">
+                    <div>Skills Match: <strong>{currentAnalysis.breakdown.skillsScore}%</strong></div>
+                    <div>Experience: <strong>{currentAnalysis.breakdown.experienceScore}%</strong></div>
+                    <div>Education: <strong>{currentAnalysis.breakdown.educationScore}%</strong></div>
+                    <div>Role Relevance: <strong>{currentAnalysis.breakdown.roleRelevanceScore}%</strong></div>
+                  </div>
+                )}
+                <div className="text-[11px] text-slate-400 pt-1">
+                  Rubric: {currentAnalysis?.rubricVersion || "v2.0-deterministic-hybrid"} • Provider: {currentAnalysis?.provider || "Ollama / Deterministic"}
+                </div>
+              </div>
+
+              {/* Immutable Snapshot Notice */}
+              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  Immutable Snapshot Guarantee
+                </div>
+                <p className="text-[11px] leading-relaxed text-amber-800">
+                  This ATS score and resume version will be permanently captured for your application. If you update your profile resume later, this application snapshot will remain unchanged.
+                </p>
+              </div>
+
+              {/* Optional Cover Note */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase text-slate-600">
+                  Notes for the Hiring Team (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={applicationNotes}
+                  onChange={(e) => setApplicationNotes(e.target.value)}
+                  placeholder="Share any additional context or highlights for this application..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsApplyModalOpen(false)}
+                  disabled={applyLoading}
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitApplication}
+                  disabled={applyLoading}
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:bg-brand-800 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {applyLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Submitting Application...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Confirm & Apply</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

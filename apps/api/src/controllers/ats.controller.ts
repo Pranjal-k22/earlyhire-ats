@@ -3,6 +3,7 @@ import { z } from "zod";
 import { atsReviewService } from "../services/ai/atsReviewService.js";
 import { AtsAnalysis } from "../models/atsAnalysis.model.js";
 import { ResumeFile } from "../models/resume.model.js";
+import { Application } from "../models/application.model.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
 
@@ -160,6 +161,59 @@ export const getAnalysesForJob = async (req: Request, res: Response, next: NextF
       success: true,
       data: {
         analyses: analyses.map((a) => a.toJSON()),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Retrieves the ATS assessment snapshot and report linked to a specific application.
+ * Accessible to authorized hiring team members or the candidate who owns the application.
+ */
+export const getApplicationAtsReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError("Authentication required", 401, "UNAUTHENTICATED"));
+    }
+
+    const { applicationId } = req.params;
+    const application = await Application.findById(applicationId)
+      .populate("candidateId")
+      .populate("jobId", "title department")
+      .populate("resumeId", "originalFilename fileSizeBytes version createdAt");
+
+    if (!application) {
+      return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user.role);
+    const candidateDoc = application.candidateId as unknown as { email?: string; userId?: { toString(): string } };
+    const isOwner =
+      candidateDoc?.userId?.toString() === req.user.id ||
+      (req.user.email && candidateDoc?.email === req.user.email);
+    const isHiringTeam = userRole === "hiring_team" || userRole === "platform_manager";
+
+    if (!isOwner && !isHiringTeam) {
+      return next(new AppError("You do not have permission to view this application assessment", 403, "FORBIDDEN"));
+    }
+
+    let report = null;
+    if (application.atsAnalysisId) {
+      report = await AtsAnalysis.findById(application.atsAnalysisId)
+        .populate("jobId", "title department location status")
+        .populate("resumeId", "originalFilename createdAt version");
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        applicationId: application.id,
+        snapshot: application.atsSnapshot,
+        atsSnapshot: application.atsSnapshot,
+        report: report ? report.toJSON() : null,
+        atsReport: report ? report.toJSON() : null,
       },
     });
   } catch (error) {

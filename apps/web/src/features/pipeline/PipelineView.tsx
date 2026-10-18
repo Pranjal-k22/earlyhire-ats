@@ -20,6 +20,7 @@ import { ApplicationHistoryModal } from "./ApplicationHistoryModal";
 import { StageReviewDrawer } from "./StageReviewDrawer";
 import { ScheduleInterviewModal } from "./ScheduleInterviewModal";
 import { InterviewFeedbackModal } from "./InterviewFeedbackModal";
+import { AtsReportDrawer } from "./AtsReportDrawer";
 
 const STAGE_COLUMNS: { stage: HiringStage; label: string; dot: string; bg: string }[] = [
   { stage: "Applied", label: "Applied", dot: "bg-slate-400", bg: "border-t-slate-400" },
@@ -50,6 +51,7 @@ export const PipelineView: React.FC = () => {
   const [reviewTarget, setReviewTarget] = useState<Application | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<Application | null>(null);
   const [feedbackTarget, setFeedbackTarget] = useState<Application | null>(null);
+  const [atsReportTarget, setAtsReportTarget] = useState<Application | null>(null);
 
   const loadData = React.useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -324,6 +326,7 @@ export const PipelineView: React.FC = () => {
                         onOpenReview={(target) => setReviewTarget(target)}
                         onSchedule={(target) => setScheduleTarget(target)}
                         onFeedback={(target) => setFeedbackTarget(target)}
+                        onOpenAtsReport={(target) => setAtsReportTarget(target)}
                       />
                     ))
                   )}
@@ -400,6 +403,12 @@ export const PipelineView: React.FC = () => {
           });
           loadData(true);
         }}
+      />
+
+      <AtsReportDrawer
+        isOpen={Boolean(atsReportTarget)}
+        application={atsReportTarget}
+        onClose={() => setAtsReportTarget(null)}
       />
     </div>
   );

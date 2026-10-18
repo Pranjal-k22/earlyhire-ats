@@ -1,5 +1,6 @@
 import { API_BASE } from "./baseUrl";
 import { parseApiResponse } from "./clientHelper";
+import { IAtsSnapshot } from "../types/application";
 
 export interface AtsReport {
   id: string;
@@ -19,11 +20,28 @@ export interface AtsReport {
   summary: string;
   provider: string;
   model: string;
-  status: "pending" | "in_progress" | "completed" | "failed";
+  status:
+    | "pending"
+    | "in_progress"
+    | "completed"
+    | "dual_complete"
+    | "partial_ollama"
+    | "partial_gemini"
+    | "failed";
+  promptVersion?: string;
+  rubricVersion?: string;
+  recommendationsWithEvidence?: Array<{
+    issue: string;
+    whyItMatters: string;
+    existingEvidence: string;
+    suggestedAction: string;
+    source: string;
+  }>;
   createdAt: string;
   resumeId?: string | {
     id: string;
     originalFilename?: string;
+    version?: number;
     createdAt?: string;
   };
   jobId?: string | {
@@ -72,4 +90,31 @@ export const fetchAnalysesForJob = async (
   });
 
   return parseApiResponse<{ success: boolean; data: { analyses: AtsReport[] } }>(res, "Failed to fetch job analyses");
+};
+
+export const fetchApplicationAtsReport = async (
+  applicationId: string
+): Promise<{
+  success: boolean;
+  data: {
+    applicationId: string;
+    snapshot: IAtsSnapshot | null;
+    report: AtsReport | null;
+  };
+}> => {
+  const res = await fetch(`${API_BASE}/api/v1/ats/application/${applicationId}`, {
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  return parseApiResponse<{
+    success: boolean;
+    data: {
+      applicationId: string;
+      snapshot: IAtsSnapshot | null;
+      report: AtsReport | null;
+    };
+  }>(res, "Failed to fetch application ATS assessment");
 };

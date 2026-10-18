@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createApplication,
+  applyForJob,
   getApplications,
   getApplicationById,
   transitionStage,
@@ -14,7 +15,10 @@ const router = Router();
 // Protect all application endpoints with authentication
 router.use(requireAuth);
 
-// Application Read Endpoints (All authenticated roles: admin, recruiter, hiring_manager)
+// Candidate Self-Application with ATS Snapshot
+router.post("/apply", applyForJob);
+
+// Application Read Endpoints (All authenticated roles)
 router.get("/", getApplications);
 router.get("/:id", getApplicationById);
 router.get("/:id/history", getApplicationHistory);

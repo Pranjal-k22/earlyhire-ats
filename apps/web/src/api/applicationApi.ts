@@ -3,6 +3,7 @@ import {
   SingleApplicationResponse,
   ApplicationHistoryResponse,
   HiringStage,
+  IAtsSnapshot,
 } from "../types/application";
 import { API_BASE } from "./baseUrl";
 import { parseApiResponse } from "./clientHelper";
@@ -113,4 +114,26 @@ export const fetchApplicationHistory = async (
   });
 
   return parseApiResponse<ApplicationHistoryResponse>(res, "Failed to fetch stage history");
+};
+
+export const applyForJobApi = async (data: {
+  jobId: string;
+  resumeId?: string;
+  notes?: string;
+  source?: string;
+}): Promise<SingleApplicationResponse & { data: { atsSnapshot: IAtsSnapshot | null } }> => {
+  const res = await fetch(`${API_BASE}/api/v1/applications/apply`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  return parseApiResponse<SingleApplicationResponse & { data: { atsSnapshot: IAtsSnapshot | null } }>(
+    res,
+    "Failed to submit application"
+  );
 };

@@ -4,10 +4,44 @@ import { HIRING_STAGES, HiringStage } from "./stageHistory.model.js";
 export const APPLICATION_STATUSES = ["Active", "Withdrawn", "Archived"] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
+export interface IAtsSnapshot {
+  overallScore: number;
+  breakdown: {
+    skillsScore: number;
+    experienceScore: number;
+    educationScore: number;
+    roleRelevanceScore: number;
+  };
+  status:
+    | "dual_complete"
+    | "partial_ollama"
+    | "partial_gemini"
+    | "completed"
+    | "in_progress"
+    | "pending"
+    | "failed";
+  provider: string;
+  model: string;
+  resumeVersion: number;
+  resumeContentHash?: string | null;
+  jobContentHash?: string | null;
+  promptVersion: string;
+  rubricVersion: string;
+  assessedAt: Date;
+  snapshotTimestamp?: Date;
+  reportRef?: mongoose.Types.ObjectId | null;
+  matchedSkills?: string[];
+  requiredSkillsFound?: string[];
+  missingCriteria?: string[];
+}
+
 export interface IApplication {
   candidateId: mongoose.Types.ObjectId;
   jobId: mongoose.Types.ObjectId;
   recruiterId: mongoose.Types.ObjectId;
+  resumeId?: mongoose.Types.ObjectId | null;
+  atsAnalysisId?: mongoose.Types.ObjectId | null;
+  atsSnapshot?: IAtsSnapshot | null;
   stage: HiringStage;
   currentStage: HiringStage;
   status: ApplicationStatus;
@@ -55,6 +89,44 @@ const applicationSchema = new Schema<IApplicationDocument, IApplicationModel>(
       ref: "User",
       required: [true, "Recruiter reference is required"],
       index: true,
+    },
+    resumeId: {
+      type: Schema.Types.ObjectId,
+      ref: "ResumeFile",
+      default: null,
+      index: true,
+    },
+    atsAnalysisId: {
+      type: Schema.Types.ObjectId,
+      ref: "AtsAnalysis",
+      default: null,
+      index: true,
+    },
+    atsSnapshot: {
+      type: {
+        overallScore: { type: Number, min: 0, max: 100 },
+        breakdown: {
+          skillsScore: { type: Number, default: 0 },
+          experienceScore: { type: Number, default: 0 },
+          educationScore: { type: Number, default: 0 },
+          roleRelevanceScore: { type: Number, default: 0 },
+        },
+        status: { type: String, default: "completed" },
+        provider: { type: String, default: "unknown" },
+        model: { type: String, default: "unknown" },
+        resumeVersion: { type: Number, default: 1 },
+        resumeContentHash: { type: String, default: null },
+        jobContentHash: { type: String, default: null },
+        promptVersion: { type: String, default: "v1.0" },
+        rubricVersion: { type: String, default: "v2.0-deterministic-hybrid" },
+        assessedAt: { type: Date, default: Date.now },
+        snapshotTimestamp: { type: Date, default: Date.now },
+        reportRef: { type: Schema.Types.ObjectId, ref: "AtsAnalysis", default: null },
+        matchedSkills: { type: [String], default: [] },
+        requiredSkillsFound: { type: [String], default: [] },
+        missingCriteria: { type: [String], default: [] },
+      },
+      default: null,
     },
     stage: {
       type: String,

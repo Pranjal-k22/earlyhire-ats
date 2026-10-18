@@ -14,6 +14,7 @@ export interface IResumeFile {
   parsedText: string;
   parsingStatus: ResumeParsingStatus;
   parsingError?: string | null;
+  version?: number;
   isDeleted: boolean;
   deletedAt?: Date | null;
   createdAt: Date;
@@ -89,6 +90,10 @@ const resumeFileSchema = new Schema<IResumeFileDocument, IResumeFileModel>(
     parsingError: {
       type: String,
       default: null,
+    },
+    version: {
+      type: Number,
+      default: 1,
     },
     isDeleted: {
       type: Boolean,

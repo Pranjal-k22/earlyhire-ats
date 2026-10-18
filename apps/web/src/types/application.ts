@@ -21,11 +21,57 @@ export interface ApplicationUserRef {
   role: string;
 }
 
+export interface IAtsSnapshot {
+  overallScore: number;
+  breakdown: {
+    skillsScore: number;
+    experienceScore: number;
+    educationScore: number;
+    roleRelevanceScore: number;
+  };
+  status:
+    | "dual_complete"
+    | "partial_ollama"
+    | "partial_gemini"
+    | "completed"
+    | "in_progress"
+    | "pending"
+    | "failed";
+  provider: string;
+  model: string;
+  resumeVersion: number;
+  resumeContentHash?: string | null;
+  jobContentHash?: string | null;
+  promptVersion: string;
+  rubricVersion: string;
+  assessedAt: string;
+  reportRef?: string | null;
+  matchedSkills?: string[];
+  missingCriteria?: string[];
+}
+
 export interface Application {
   id: string;
   candidateId: Candidate;
   jobId: Job;
   recruiterId?: ApplicationUserRef;
+  resumeId?: {
+    id: string;
+    originalFilename?: string;
+    fileSizeBytes?: number;
+    version?: number;
+    createdAt?: string;
+  } | null;
+  atsAnalysisId?: {
+    id: string;
+    overallScore: number;
+    breakdown: Record<string, number>;
+    summary?: string;
+    provider?: string;
+    model?: string;
+    status?: string;
+  } | null;
+  atsSnapshot?: IAtsSnapshot | null;
   stage: HiringStage;
   currentStage: HiringStage;
   status: ApplicationStatus;

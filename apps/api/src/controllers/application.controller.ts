@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
+import { z } from "zod";
 import { Application, IApplicationDocument } from "../models/application.model.js";
 import {
   InterviewStageHistory,
@@ -8,6 +9,10 @@ import {
 } from "../models/stageHistory.model.js";
 import { Candidate } from "../models/candidate.model.js";
 import { Job } from "../models/job.model.js";
+import { ResumeFile } from "../models/resume.model.js";
+import { AtsAnalysis, IAtsAnalysisDocument } from "../models/atsAnalysis.model.js";
+import { atsReviewService } from "../services/ai/atsReviewService.js";
+import { normalizeRole } from "../models/user.model.js";
 import {
   createApplicationSchema,
   stageTransitionSchema,
@@ -15,6 +20,13 @@ import {
   applicationQuerySchema,
 } from "../schemas/application.schema.js";
 import { AppError } from "../middleware/errorHandler.js";
+
+const applyForJobSchema = z.object({
+  jobId: z.string().min(1, "Job ID is required"),
+  resumeId: z.string().optional(),
+  source: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 /**
  * Valid stage transitions state machine per PRD §4 & Architecture.md §4.4
@@ -218,6 +230,247 @@ export const createApplication = async (
 };
 
 /**
+ * Candidate Self-Application with Immutable ATS Snapshot.
+ * Allows candidates to apply to a job with their selected resume version.
+ * Automatically computes or reuses valid ATS assessment and persists an immutable snapshot.
+ */
+export const applyForJob = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError("Authentication required", 401, "UNAUTHENTICATED"));
+    }
+
+    const validated = applyForJobSchema.parse(req.body);
+
+    if (!mongoose.Types.ObjectId.isValid(validated.jobId)) {
+      return next(new AppError("Invalid job ID format", 400, "INVALID_ID"));
+    }
+
+    // 1. Verify Job exists, is Open, and not archived
+    const job = await Job.findById(validated.jobId);
+    if (!job) {
+      return next(new AppError("Job opening not found", 404, "JOB_NOT_FOUND"));
+    }
+    if (job.status !== "Open" || job.archivedAt) {
+      return next(
+        new AppError(
+          `Applications can only be submitted for open jobs (current status: ${job.status})`,
+          422,
+          "JOB_NOT_OPEN"
+        )
+      );
+    }
+
+    // 2. Resolve Candidate profile
+    let candidate = await Candidate.findOne({ email: req.user.email, archivedAt: null });
+    if (!candidate) {
+      candidate = await Candidate.create({
+        name: req.user.name || "Candidate",
+        fullName: req.user.name || "Candidate",
+        email: req.user.email,
+        phone: req.user.phone || "",
+        location: "Remote",
+        currentTitle: req.user.headline || "Applicant",
+        experienceYears: 1,
+        skills: req.user.skills || [],
+        source: "CompanyWebsite",
+        createdBy: req.user._id,
+        updatedBy: req.user._id,
+      });
+    }
+
+    // 3. Prevent duplicate active application
+    const existingApp = await Application.findOne({
+      candidateId: candidate._id,
+      jobId: job._id,
+      status: "Active",
+    });
+
+    if (existingApp) {
+      return next(
+        new AppError(
+          "You already have an active application submitted for this job opening",
+          409,
+          "DUPLICATE_APPLICATION"
+        )
+      );
+    }
+
+    // 4. Resolve Resume
+    let targetResumeId = validated.resumeId;
+    if (!targetResumeId) {
+      if (req.user.resumeId) {
+        targetResumeId = req.user.resumeId.toString();
+      } else {
+        const latestResume = await ResumeFile.findOne({
+          candidateUserId: req.user.id,
+          isDeleted: false,
+        }).sort({ createdAt: -1 });
+
+        if (!latestResume) {
+          return next(
+            new AppError("Please upload a resume before applying for this job", 400, "RESUME_REQUIRED")
+          );
+        }
+        targetResumeId = latestResume.id;
+      }
+    }
+
+    const resume = await ResumeFile.findById(targetResumeId);
+    if (!resume || resume.isDeleted) {
+      return next(new AppError("Resume file not found or has been removed", 404, "RESUME_NOT_FOUND"));
+    }
+
+    // Ownership check
+    if (resume.candidateUserId.toString() !== req.user.id) {
+      return next(new AppError("You do not own this resume file", 403, "FORBIDDEN"));
+    }
+
+    // 5. Retrieve or generate ATS assessment
+    let analysis: IAtsAnalysisDocument | null = await AtsAnalysis.findOne({
+      resumeId: resume._id,
+      jobId: job._id,
+      status: { $in: ["completed", "dual_complete", "partial_ollama", "partial_gemini"] },
+    });
+
+    if (!analysis) {
+      analysis = await atsReviewService.analyzeResumeAgainstJob({
+        resumeId: resume.id,
+        jobId: job.id,
+        candidateUserId: req.user.id,
+      });
+    }
+
+    if (!analysis) {
+      return next(new AppError("Failed to generate or retrieve ATS analysis", 500, "ATS_ANALYSIS_FAILED"));
+    }
+
+    // 6. Build Immutable ATS Snapshot
+    const atsSnapshot = {
+      overallScore: analysis.overallScore,
+      breakdown: analysis.breakdown,
+      status: analysis.status as
+        | "dual_complete"
+        | "partial_ollama"
+        | "partial_gemini"
+        | "completed"
+        | "in_progress"
+        | "pending"
+        | "failed",
+      provider: analysis.provider,
+      model: analysis.model,
+      resumeVersion: analysis.resumeVersion || resume.version || 1,
+      resumeContentHash: analysis.resumeContentHash || resume.contentSha256 || null,
+      jobContentHash: analysis.jobContentHash || null,
+      promptVersion: analysis.promptVersion || "v1.0",
+      rubricVersion: analysis.rubricVersion || "v2.0-deterministic-hybrid",
+      assessedAt: new Date(),
+      snapshotTimestamp: new Date(),
+      reportRef: analysis._id,
+      matchedSkills: analysis.requiredSkillsFound || [],
+      requiredSkillsFound: analysis.requiredSkillsFound || [],
+      missingCriteria: analysis.missingCriteria || [],
+    };
+
+    // 7. Create Application & Initial Stage History
+    let createdApplication: IApplicationDocument;
+    let initialHistory: IInterviewStageHistoryDocument;
+
+    const recruiterId = job.ownerId || req.user._id;
+
+    const result = await runWithTransaction(async (session) => {
+      const appDocs = await Application.create(
+        [
+          {
+            candidateId: candidate._id,
+            jobId: job._id,
+            recruiterId,
+            resumeId: resume._id,
+            atsAnalysisId: analysis!._id,
+            atsSnapshot,
+            stage: "Applied",
+            currentStage: "Applied",
+            status: "Active",
+            appliedAt: new Date(),
+            lastStageChangedAt: new Date(),
+            source: validated.source || "Candidate Portal",
+            createdBy: req.user!._id,
+            updatedBy: req.user!._id,
+            version: 0,
+          },
+        ],
+        session ? { session } : {}
+      );
+      const appDoc = appDocs[0];
+
+      const historyDocs = await InterviewStageHistory.create(
+        [
+          {
+            applicationId: appDoc._id,
+            fromStage: null,
+            toStage: "Applied",
+            actorId: req.user!._id,
+            changedAt: new Date(),
+            reason: validated.notes || "Candidate submitted application with ATS assessment snapshot",
+            durationMsFromPreviousStage: null,
+          },
+        ],
+        session ? { session } : {}
+      );
+      const historyDoc = historyDocs[0];
+
+      // Link application reference back to analysis
+      await AtsAnalysis.findByIdAndUpdate(
+        analysis!._id,
+        { applicationId: appDoc._id },
+        session ? { session } : {}
+      );
+
+      return { appDoc, historyDoc };
+    });
+
+    createdApplication = result.appDoc;
+    initialHistory = result.historyDoc;
+
+    await createdApplication.populate([
+      { path: "candidateId", select: "name fullName email currentTitle skills source experienceYears" },
+      { path: "jobId", select: "title department location employmentType status" },
+      { path: "recruiterId", select: "name email role" },
+      { path: "resumeId", select: "originalFilename fileSizeBytes createdAt version" },
+    ]);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        application: createdApplication,
+        historyEvent: initialHistory,
+        atsSnapshot,
+      },
+    });
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code: unknown }).code === 11000
+    ) {
+      return next(
+        new AppError(
+          "An active application already exists for this candidate and job",
+          409,
+          "DUPLICATE_APPLICATION"
+        )
+      );
+    }
+    next(error);
+  }
+};
+
+/**
  * Lists applications with bounded pagination and filter support.
  */
 export const getApplications = async (
@@ -229,6 +482,27 @@ export const getApplications = async (
     const query = applicationQuerySchema.parse(req.query);
 
     const filter: Record<string, unknown> = {};
+
+    const userRole = normalizeRole(req.user?.role || "candidate");
+    if (userRole === "candidate") {
+      const cand = await Candidate.findOne({ email: req.user?.email, archivedAt: null });
+      if (!cand) {
+        res.status(200).json({
+          success: true,
+          data: {
+            applications: [],
+            pagination: {
+              total: 0,
+              page: 1,
+              limit: query.limit,
+              totalPages: 1,
+            },
+          },
+        });
+        return;
+      }
+      filter.candidateId = cand._id;
+    }
 
     if (query.jobId) {
       if (!mongoose.Types.ObjectId.isValid(query.jobId)) {
@@ -325,6 +599,8 @@ export const getApplications = async (
         .populate("candidateId", "name fullName email currentTitle skills source experienceYears")
         .populate("jobId", "title department location employmentType status")
         .populate("recruiterId", "name email role")
+        .populate("resumeId", "originalFilename fileSizeBytes createdAt version")
+        .populate("atsAnalysisId", "overallScore breakdown confidence summary provider model rubricVersion status createdAt")
         .populate("createdBy", "name email role")
         .populate("updatedBy", "name email role"),
       Application.countDocuments(filter),
@@ -366,11 +642,22 @@ export const getApplicationById = async (
       .populate("candidateId", "name fullName email phone location currentTitle skills source experienceYears resumeUrl summary")
       .populate("jobId", "title department location employmentType status description requirements")
       .populate("recruiterId", "name email role")
+      .populate("resumeId", "originalFilename fileSizeBytes createdAt version")
+      .populate("atsAnalysisId", "overallScore breakdown confidence summary provider model rubricVersion status createdAt")
       .populate("createdBy", "name email role")
       .populate("updatedBy", "name email role");
 
     if (!application) {
       return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user?.role || "candidate");
+    if (userRole === "candidate") {
+      const cand = application.candidateId as unknown as { email?: string; userId?: { toString(): string } };
+      const isOwner = (cand?.email && cand.email === req.user?.email) || cand?.userId?.toString() === req.user?.id;
+      if (!isOwner) {
+        return next(new AppError("You do not have permission to view this application", 403, "FORBIDDEN"));
+      }
     }
 
     res.status(200).json({

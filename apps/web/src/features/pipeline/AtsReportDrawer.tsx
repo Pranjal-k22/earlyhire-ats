@@ -1,0 +1,271 @@
+import React, { useState, useEffect } from "react";
+import {
+  X,
+  Sparkles,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  Clock,
+  ShieldCheck,
+  RefreshCw,
+} from "lucide-react";
+import { fetchApplicationAtsReport, AtsReport } from "../../api/atsApi";
+import { Application, IAtsSnapshot } from "../../types/application";
+
+interface AtsReportDrawerProps {
+  application: Application | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
+  application,
+  isOpen,
+  onClose,
+}) => {
+  const [report, setReport] = useState<AtsReport | null>(null);
+  const [snapshot, setSnapshot] = useState<IAtsSnapshot | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && application) {
+      setLoading(true);
+      setErrorMessage(null);
+      setSnapshot(application.atsSnapshot || null);
+
+      fetchApplicationAtsReport(application.id)
+        .then((res) => {
+          if (res.data.snapshot) {
+            setSnapshot(res.data.snapshot);
+          }
+          if (res.data.report) {
+            setReport(res.data.report);
+          }
+        })
+        .catch((err) => {
+          setErrorMessage(err instanceof Error ? err.message : "Failed to load application ATS report");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [isOpen, application]);
+
+  if (!isOpen || !application) return null;
+
+  const candidateName = application.candidateId?.fullName || application.candidateId?.name || "Candidate";
+  const jobTitle = application.jobId?.title || "Job Opening";
+  const overallScore = snapshot?.overallScore ?? 0;
+  const isHighMatch = overallScore >= 70;
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs transition-opacity">
+      <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-300 flex items-center justify-center font-bold">
+              <Sparkles className="w-5 h-5 text-brand-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">
+                {candidateName} — Application ATS Assessment
+              </h3>
+              <p className="text-xs text-slate-300">
+                {jobTitle} • Submitted Resume Compatibility Snapshot
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+            aria-label="Close drawer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {errorMessage && (
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {loading && !snapshot ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+              <RefreshCw className="w-8 h-8 animate-spin text-brand-600" />
+              <p className="text-sm font-medium">Loading Immutable ATS Assessment Snapshot...</p>
+            </div>
+          ) : snapshot ? (
+            <div className="space-y-6">
+              {/* Overall Score Card */}
+              <div className="p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Immutable Submission Snapshot
+                  </div>
+                  <h3 className="text-xl font-bold text-white">ATS Compatibility Score</h3>
+                  <p className="text-slate-300 text-xs max-w-md">
+                    Captured at application time. This snapshot remains immutable to protect candidate submission history.
+                  </p>
+                  <div className="text-xs text-slate-400 pt-1 flex flex-wrap gap-2">
+                    <span>Provider: {snapshot.provider} ({snapshot.model})</span>
+                    <span>•</span>
+                    <span>Rubric: {snapshot.rubricVersion}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shrink-0 min-w-[140px]">
+                  <div
+                    className={`text-4xl sm:text-5xl font-black ${
+                      isHighMatch ? "text-emerald-400" : "text-amber-400"
+                    }`}
+                  >
+                    {overallScore}%
+                  </div>
+                  <div className="text-xs uppercase font-semibold text-slate-300 mt-1">
+                    {isHighMatch ? "Strong Alignment" : "Coaching Review"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Submission Provenance Metadata */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-slate-600">
+                <div>
+                  <span className="text-slate-400 block font-medium">Resume Version</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                    v{snapshot.resumeVersion || 1}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block font-medium">Assessment Status</span>
+                  <span className="font-semibold text-slate-800 uppercase mt-0.5">
+                    {snapshot.status}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block font-medium">Assessed At</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    {snapshot.assessedAt ? new Date(snapshot.assessedAt).toLocaleDateString() : "At Submission"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rubric Breakdown Grid */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Rubric Component Scores
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Skills (40%)", score: snapshot.breakdown?.skillsScore ?? 0 },
+                    { label: "Experience (25%)", score: snapshot.breakdown?.experienceScore ?? 0 },
+                    { label: "Education (15%)", score: snapshot.breakdown?.educationScore ?? 0 },
+                    { label: "Role Fit (20%)", score: snapshot.breakdown?.roleRelevanceScore ?? 0 },
+                  ].map((item) => (
+                    <div key={item.label} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="text-[11px] text-slate-500 font-medium">{item.label}</div>
+                      <div className="text-xl font-bold text-slate-800 mt-1">{item.score}%</div>
+                      <div className="w-full bg-slate-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="bg-brand-600 h-full rounded-full transition-all"
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Matched Criteria */}
+              {snapshot.matchedSkills && snapshot.matchedSkills.length > 0 && (
+                <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 space-y-3">
+                  <h4 className="font-bold text-emerald-900 text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    Evidenced Required Skills ({snapshot.matchedSkills.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {snapshot.matchedSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing or Unverified Criteria */}
+              {snapshot.missingCriteria && snapshot.missingCriteria.length > 0 && (
+                <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50/50 space-y-3">
+                  <h4 className="font-bold text-amber-900 text-sm flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    Criteria Not Evidenced in Submitted Resume ({snapshot.missingCriteria.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {snapshot.missingCriteria.map((gap) => (
+                      <span
+                        key={gap}
+                        className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200"
+                      >
+                        {gap}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Recommendations if available */}
+              {report?.concreteSuggestions && report.concreteSuggestions.length > 0 && (
+                <div className="p-5 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                  <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    AI-Assisted Candidate Coaching & Suggestions
+                  </h4>
+                  <ul className="space-y-2 text-xs text-slate-700">
+                    {report.concreteSuggestions.map((suggestion, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="w-4 h-4 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Human Decision Authority Notice */}
+              <div className="p-4 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
+                <span className="font-bold text-slate-800 block flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-brand-600" />
+                  Human Hiring Team Responsibility
+                </span>
+                <p>
+                  EarlyAI ATS scores provide evidence-grounded decision support. Candidate qualification, stage advancement, and hiring decisions remain the exclusive responsibility of authorized human reviewers.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16 border rounded-2xl border-slate-200 text-slate-400 space-y-2">
+              <AlertCircle className="w-10 h-10 mx-auto text-slate-300" />
+              <p className="text-sm font-medium">No ATS assessment snapshot recorded for this application.</p>
+              <p className="text-xs text-slate-400">
+                Applications submitted prior to snapshot integration can be evaluated on-demand by the hiring team.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

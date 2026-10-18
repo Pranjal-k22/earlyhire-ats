@@ -1,12 +1,30 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
-export type AnalysisStatus = "pending" | "in_progress" | "completed" | "failed";
+export type AnalysisStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "dual_complete"
+  | "partial_ollama"
+  | "partial_gemini"
+  | "failed";
 export type ConfidenceLevel = "low" | "medium" | "high";
+
+export interface IAtsRecommendation {
+  issue: string;
+  whyItMatters: string;
+  existingEvidence: string;
+  suggestedAction: string;
+  source: string;
+}
 
 export interface IAtsAnalysis {
   candidateUserId: mongoose.Types.ObjectId;
   resumeId: mongoose.Types.ObjectId;
+  resumeVersion?: number;
+  resumeContentHash?: string | null;
   jobId: mongoose.Types.ObjectId;
+  jobContentHash?: string | null;
   applicationId?: mongoose.Types.ObjectId | null;
   overallScore: number;
   breakdown: {
@@ -19,11 +37,13 @@ export interface IAtsAnalysis {
   missingCriteria: string[];
   experienceEvidence: string[];
   concreteSuggestions: string[];
+  recommendationsWithEvidence?: IAtsRecommendation[];
   suggestedInterviewTopics: string[];
   confidence: ConfidenceLevel;
   summary: string;
   provider: string;
   model: string;
+  providerStatuses?: Record<string, string>;
   promptVersion: string;
   rubricVersion: string;
   inputTokens?: number;
@@ -55,11 +75,23 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
       required: [true, "Resume ID is required"],
       index: true,
     },
+    resumeVersion: {
+      type: Number,
+      default: 1,
+    },
+    resumeContentHash: {
+      type: String,
+      default: null,
+    },
     jobId: {
       type: Schema.Types.ObjectId,
       ref: "Job",
       required: [true, "Job ID is required"],
       index: true,
+    },
+    jobContentHash: {
+      type: String,
+      default: null,
     },
     applicationId: {
       type: Schema.Types.ObjectId,
@@ -96,6 +128,18 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
       type: [String],
       default: [],
     },
+    recommendationsWithEvidence: {
+      type: [
+        {
+          issue: { type: String, default: "" },
+          whyItMatters: { type: String, default: "" },
+          existingEvidence: { type: String, default: "" },
+          suggestedAction: { type: String, default: "" },
+          source: { type: String, default: "rule" },
+        },
+      ],
+      default: [],
+    },
     suggestedInterviewTopics: {
       type: [String],
       default: [],
@@ -119,6 +163,11 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
       default: "unknown",
       trim: true,
     },
+    providerStatuses: {
+      type: Map,
+      of: String,
+      default: {},
+    },
     promptVersion: {
       type: String,
       default: "v1.0",
@@ -126,7 +175,7 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
     },
     rubricVersion: {
       type: String,
-      default: "v1.0",
+      default: "v2.0-deterministic-hybrid",
       trim: true,
     },
     inputTokens: {
@@ -144,7 +193,15 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
     status: {
       type: String,
       enum: {
-        values: ["pending", "in_progress", "completed", "failed"],
+        values: [
+          "pending",
+          "in_progress",
+          "completed",
+          "dual_complete",
+          "partial_ollama",
+          "partial_gemini",
+          "failed",
+        ],
         message: "{VALUE} is not a valid analysis status",
       },
       default: "pending",
