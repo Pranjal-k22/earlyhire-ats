@@ -129,7 +129,7 @@ export const AuthModal: React.FC<Props> = ({
       const canonical: CanonicalRole = user.canonicalRole || normalizeRole(user.role);
 
       // Verify portal match if specific portal was chosen
-      if (portal === "candidate" && canonical !== "candidate") {
+      if (portal && portal === "candidate" && canonical !== "candidate") {
         setPortalMismatchMessage({
           text: `This account is registered as ${canonical === "platform_manager" ? "Platform Administrator" : "Hiring Team"}. Please sign in to the authorized portal.`,
           targetPortal: canonical === "platform_manager" ? "admin" : "recruiter",
