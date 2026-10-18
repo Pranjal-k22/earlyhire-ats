@@ -5,7 +5,7 @@ import { ResumeFile } from "../../models/resume.model.js";
 import { Job } from "../../models/job.model.js";
 import { aiRouter } from "./aiRouter.js";
 import { resumeStorage } from "../storage/resumeStorage.js";
-import { computeDeterministicAtsScore } from "./atsScoringService.js";
+import { computeDeterministicAtsScore, calculateWeightedAtsScore } from "./atsScoringService.js";
 import { AppError } from "../../middleware/errorHandler.js";
 
 export class AtsReviewService {
@@ -111,15 +111,13 @@ export class AtsReviewService {
     }
 
     // Step 3: Reconcile Deterministic & AI Findings
-    let finalScore = deterministic.overallScore;
     let finalBreakdown = {
       skillsScore: deterministic.breakdown.skillsScore,
       experienceScore: deterministic.breakdown.experienceScore,
-      educationScore: deterministic.breakdown.sectionScore,
-      roleRelevanceScore: Math.round(
-        (deterministic.breakdown.skillsScore + deterministic.breakdown.experienceScore) / 2
-      ),
+      educationScore: deterministic.breakdown.educationScore,
+      roleRelevanceScore: deterministic.breakdown.roleRelevanceScore,
     };
+    let finalScore = deterministic.overallScore;
     let requiredSkillsFound = deterministic.matchedSkills;
     let missingCriteria = deterministic.missingCriteria;
     let experienceEvidence: string[] = [
@@ -143,16 +141,30 @@ export class AtsReviewService {
     if (aiResponse) {
       const data = aiResponse.data;
       // Weighted reconciliation: 70% deterministic grounding + 30% AI semantic nuance
-      finalScore = Math.round(deterministic.overallScore * 0.7 + data.overallScore * 0.3);
       finalBreakdown = {
-        skillsScore: Math.round(deterministic.breakdown.skillsScore * 0.7 + data.breakdown.skillsScore * 0.3),
-        experienceScore: Math.round(deterministic.breakdown.experienceScore * 0.7 + data.breakdown.experienceScore * 0.3),
-        educationScore: Math.round(deterministic.breakdown.sectionScore * 0.7 + data.breakdown.educationScore * 0.3),
-        roleRelevanceScore: Math.round(
-          ((deterministic.breakdown.skillsScore + deterministic.breakdown.experienceScore) / 2) * 0.7 +
-            data.breakdown.roleRelevanceScore * 0.3
+        skillsScore: Math.min(
+          100,
+          Math.max(0, Math.round(deterministic.breakdown.skillsScore * 0.7 + data.breakdown.skillsScore * 0.3))
+        ),
+        experienceScore: Math.min(
+          100,
+          Math.max(0, Math.round(deterministic.breakdown.experienceScore * 0.7 + data.breakdown.experienceScore * 0.3))
+        ),
+        educationScore: Math.min(
+          100,
+          Math.max(0, Math.round(deterministic.breakdown.educationScore * 0.7 + data.breakdown.educationScore * 0.3))
+        ),
+        roleRelevanceScore: Math.min(
+          100,
+          Math.max(
+            0,
+            Math.round(deterministic.breakdown.roleRelevanceScore * 0.7 + data.breakdown.roleRelevanceScore * 0.3)
+          )
         ),
       };
+
+      // Server-side authoritative score strictly calculated from canonical 4-part weights (40/30/15/15)
+      finalScore = calculateWeightedAtsScore(finalBreakdown);
 
       requiredSkillsFound = Array.from(new Set([...deterministic.matchedSkills, ...data.requiredSkillsFound]));
       missingCriteria = deterministic.missingCriteria.length > 0 ? deterministic.missingCriteria : data.missingCriteria;

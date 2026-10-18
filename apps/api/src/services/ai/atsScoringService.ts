@@ -27,15 +27,55 @@ export interface AchievementAnalysisResult {
   achievementScore: number;
 }
 
+export interface EducationAnalysisResult {
+  hasEducationSection: boolean;
+  detectedDegrees: string[];
+  educationScore: number;
+}
+
+/**
+ * Authoritative Canonical ATS Rubric Weights (Total: 100%):
+ * - Skills coverage: 40% (0.40)
+ * - Experience depth & quantitative impact: 30% (0.30)
+ * - Education & academic foundations: 15% (0.15)
+ * - Role relevance, domain fit & structural clarity: 15% (0.15)
+ */
+export const CANONICAL_RUBRIC_WEIGHTS = {
+  skills: 0.40,
+  experience: 0.30,
+  education: 0.15,
+  roleRelevance: 0.15,
+} as const;
+
+/**
+ * Calculates authoritative overall ATS score (0-100) strictly from the 4 canonical components.
+ */
+export function calculateWeightedAtsScore(breakdown: {
+  skillsScore: number;
+  experienceScore: number;
+  educationScore: number;
+  roleRelevanceScore: number;
+}): number {
+  const raw =
+    breakdown.skillsScore * CANONICAL_RUBRIC_WEIGHTS.skills +
+    breakdown.experienceScore * CANONICAL_RUBRIC_WEIGHTS.experience +
+    breakdown.educationScore * CANONICAL_RUBRIC_WEIGHTS.education +
+    breakdown.roleRelevanceScore * CANONICAL_RUBRIC_WEIGHTS.roleRelevance;
+  return Math.min(100, Math.max(0, Math.round(raw)));
+}
+
 export interface DeterministicAtsScoreResult {
   overallScore: number;
   rubricVersion: string;
   breakdown: {
     skillsScore: number; // 40%
-    experienceScore: number; // 25%
-    sectionScore: number; // 15%
-    achievementScore: number; // 10%
-    clarityScore: number; // 10%
+    experienceScore: number; // 30%
+    educationScore: number; // 15%
+    roleRelevanceScore: number; // 15%
+    // Diagnostic / backward-compatibility fields:
+    sectionScore: number;
+    achievementScore: number;
+    clarityScore: number;
   };
   matchedSkills: string[];
   missingCriteria: string[];
@@ -277,14 +317,56 @@ export function evaluateAchievements(resumeText: string): AchievementAnalysisRes
 }
 
 /**
- * Computes the authoritative deterministic ATS score using rubric v2.0.
+ * Evaluates education, academic credentials, and certifications.
+ */
+export function evaluateEducation(resumeText: string): EducationAnalysisResult {
+  const text = resumeText.toLowerCase();
+
+  const degreePatterns: Record<string, RegExp> = {
+    Doctorate: /\b(ph\.?d|doctorate|doctor of philosophy)\b/i,
+    Master: /\b(master'?s?|m\.?s\.?|m\.?tech|m\.?sc|mca|mba)\b/i,
+    Bachelor: /\b(bachelor'?s?|b\.?s\.?|b\.?tech|b\.?e\.?|b\.?sc|bca|undergraduate)\b/i,
+    BootcampOrCert: /\b(bootcamp|certified|certification|nanodegree|diploma|associate)\b/i,
+    University: /\b(university|college|institute|polytechnic|academy)\b/i,
+  };
+
+  const detectedDegrees: string[] = [];
+  for (const [level, pattern] of Object.entries(degreePatterns)) {
+    if (pattern.test(text)) {
+      detectedDegrees.push(level);
+    }
+  }
+
+  const hasEducationSection = /\b(education|academic background|academics|qualifications)\b/i.test(text);
+
+  let educationScore = 60; // baseline for readable technical resume
+  if (detectedDegrees.includes("Doctorate")) {
+    educationScore = 100;
+  } else if (detectedDegrees.includes("Master")) {
+    educationScore = 95;
+  } else if (detectedDegrees.includes("Bachelor")) {
+    educationScore = 90;
+  } else if (detectedDegrees.includes("BootcampOrCert") || detectedDegrees.includes("University")) {
+    educationScore = 80;
+  } else if (hasEducationSection) {
+    educationScore = 75;
+  }
+
+  return {
+    hasEducationSection,
+    detectedDegrees,
+    educationScore: Math.min(100, Math.max(20, educationScore)),
+  };
+}
+
+/**
+ * Computes the authoritative deterministic ATS score using canonical rubric v2.0.
  *
- * Rubric Weights:
- * - Skills coverage: 40%
- * - Experience & project evidence: 25%
- * - Section completeness & parseability: 15%
- * - Achievement specificity & metrics: 10%
- * - Clarity & contact quality: 10%
+ * Canonical Weights (100% total):
+ * - Skills coverage: 40% (0.40)
+ * - Experience depth & quantitative impact: 30% (0.30)
+ * - Education & academic foundations: 15% (0.15)
+ * - Role relevance, domain fit & structural clarity: 15% (0.15)
  */
 export function computeDeterministicAtsScore(params: {
   resumeText: string;
@@ -298,27 +380,35 @@ export function computeDeterministicAtsScore(params: {
   const parseabilityWarnings: string[] = [];
   const recommendations: DeterministicAtsScoreResult["recommendations"] = [];
 
-  // 1. Evaluate Skills (40% weight)
+  // 1. Evaluate Skills (40% canonical weight)
   const skillEval = evaluateSkills(resumeText, requiredSkills, preferredSkills);
 
-  // 2. Evaluate Resume Structure (15% weight)
+  // 2. Evaluate Resume Structure & Sections
   const structureEval = evaluateResumeStructure(resumeText);
 
-  // 3. Evaluate Achievements & Metrics (10% weight)
+  // 3. Evaluate Achievements & Metrics (Quantitative impact)
   const achievementEval = evaluateAchievements(resumeText);
 
-  // 4. Evaluate Experience Depth (25% weight)
-  let experienceScore = 60;
+  // 4. Evaluate Education & Academic Foundations (15% canonical weight)
+  const educationEval = evaluateEducation(resumeText);
+
+  // 5. Synthesize Experience Depth (30% canonical weight)
+  // Blends work history presence and word count depth (70%) with quantitative achievement impact (30%)
+  let experienceDepth = 60;
   if (structureEval.wordCount >= 100 && structureEval.detectedSections.includes("Experience")) {
-    experienceScore = structureEval.wordCount >= 250 ? 90 : 80;
+    experienceDepth = structureEval.wordCount >= 250 ? 90 : 80;
   } else if (structureEval.detectedSections.includes("Experience")) {
-    experienceScore = 70;
+    experienceDepth = 70;
   } else {
-    experienceScore = 40;
+    experienceDepth = 40;
     parseabilityWarnings.push("Resume content is brief; work experience section not detected.");
   }
+  const experienceScore = Math.min(
+    100,
+    Math.max(20, Math.round(experienceDepth * 0.7 + achievementEval.achievementScore * 0.3))
+  );
 
-  // 5. Evaluate Clarity & Contact Quality (10% weight)
+  // 6. Synthesize Clarity & Contact Quality
   let clarityScore = 80;
   if (structureEval.contactIssues.length > 0) {
     clarityScore -= structureEval.contactIssues.length * 15;
@@ -329,6 +419,18 @@ export function computeDeterministicAtsScore(params: {
     parseabilityWarnings.push("Extracted resume text is under 100 words. If scanned, OCR may be required.");
   }
   clarityScore = Math.max(20, Math.min(100, clarityScore));
+
+  // 7. Synthesize Role Relevance (15% canonical weight)
+  // Blends technical skill/experience fit (60%) with layout & clarity (40%)
+  const technicalFit = (skillEval.skillScore + experienceScore) / 2;
+  const roleRelevanceScore = Math.min(
+    100,
+    Math.max(20, Math.round(technicalFit * 0.6 + clarityScore * 0.4))
+  );
+
+  // Canonical components:
+  const skillsScore = skillEval.skillScore;
+  const educationScore = educationEval.educationScore;
 
   // Synthesize Recommendations
   if (skillEval.missingSkills.length > 0) {
@@ -362,22 +464,23 @@ export function computeDeterministicAtsScore(params: {
     });
   }
 
-  // Calculate Weighted Overall Score
-  // Skills: 40%, Experience: 25%, Sections: 15%, Achievements: 10%, Clarity: 10%
-  const overallScore = Math.round(
-    skillEval.skillScore * 0.4 +
-      experienceScore * 0.25 +
-      structureEval.sectionScore * 0.15 +
-      achievementEval.achievementScore * 0.1 +
-      clarityScore * 0.1
-  );
+  // Calculate Weighted Overall Score strictly matching the canonical 4-part formula
+  const overallScore = calculateWeightedAtsScore({
+    skillsScore,
+    experienceScore,
+    educationScore,
+    roleRelevanceScore,
+  });
 
   return {
-    overallScore: Math.min(100, Math.max(0, overallScore)),
+    overallScore,
     rubricVersion: "v2.0-deterministic-hybrid",
     breakdown: {
-      skillsScore: skillEval.skillScore,
+      skillsScore,
       experienceScore,
+      educationScore,
+      roleRelevanceScore,
+      // Retain diagnostic sub-scores for detailed inspection and tests:
       sectionScore: structureEval.sectionScore,
       achievementScore: achievementEval.achievementScore,
       clarityScore,

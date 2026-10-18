@@ -235,9 +235,9 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
                     { label: "Skills (40%)", score: snapshot.breakdown?.skillsScore ?? 0 },
-                    { label: "Experience (25%)", score: snapshot.breakdown?.experienceScore ?? 0 },
+                    { label: "Experience (30%)", score: snapshot.breakdown?.experienceScore ?? 0 },
                     { label: "Education (15%)", score: snapshot.breakdown?.educationScore ?? 0 },
-                    { label: "Role Fit (20%)", score: snapshot.breakdown?.roleRelevanceScore ?? 0 },
+                    { label: "Role Relevance (15%)", score: snapshot.breakdown?.roleRelevanceScore ?? 0 },
                   ].map((item) => (
                     <div key={item.label} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <div className="text-[11px] text-slate-500 font-medium">{item.label}</div>
