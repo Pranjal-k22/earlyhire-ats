@@ -7,10 +7,10 @@ import {
   Briefcase,
   FileText,
   Calendar,
-  Edit,
   Archive,
   ExternalLink,
   Award,
+  Download,
 } from "lucide-react";
 import { Candidate } from "../../types/candidate";
 import { CandidateSourceBadge } from "./CandidateSourceBadge";
@@ -20,7 +20,7 @@ interface Props {
   candidate: Candidate | null;
   isOpen: boolean;
   onClose: () => void;
-  onEdit: (candidate: Candidate) => void;
+  onEdit?: (candidate: Candidate) => void;
   onArchive: (candidate: Candidate) => Promise<void>;
 }
 
@@ -28,7 +28,6 @@ export const CandidateDetailModal: React.FC<Props> = ({
   candidate,
   isOpen,
   onClose,
-  onEdit,
   onArchive,
 }) => {
   React.useEffect(() => {
@@ -152,20 +151,33 @@ export const CandidateDetailModal: React.FC<Props> = ({
 
           {/* Resume Link CTA */}
           {candidate.resumeUrl ? (
-            <div className="p-3.5 rounded-xl bg-brand-50/50 border border-brand-100 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl bg-brand-50/50 border border-brand-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 text-xs text-brand-900">
-                <FileText className="w-4 h-4 text-brand-600" />
-                <span className="font-semibold">Candidate Resume Document</span>
+                <FileText className="w-4 h-4 text-brand-600 shrink-0" />
+                <span className="font-semibold">Candidate Resume Document (PDF)</span>
               </div>
-              <a
-                href={candidate.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
-              >
-                <span>Open Resume</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              <div className="flex items-center gap-2">
+                <a
+                  href={candidate.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+                  title="View PDF resume in a new tab"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Open Resume</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+                <a
+                  href={candidate.resumeUrl.replace(/[?&]inline=true/g, "")}
+                  download
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
+                  title="Download candidate resume in PDF format"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </a>
+              </div>
             </div>
           ) : (
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-400 flex items-center gap-2">
@@ -244,17 +256,9 @@ export const CandidateDetailModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg transition-all"
+              className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 rounded-lg transition-all"
             >
               Close
-            </button>
-            <button
-              type="button"
-              onClick={() => onEdit(candidate)}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <Edit className="w-3.5 h-3.5" />
-              <span>Edit Profile</span>
             </button>
           </div>
         </div>

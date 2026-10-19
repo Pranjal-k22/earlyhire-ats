@@ -699,7 +699,7 @@ export const getApplicationById = async (
     }
 
     const application = await Application.findById(id)
-      .populate("candidateId", "name fullName email phone location currentTitle skills source experienceYears resumeUrl summary")
+      .populate("candidateId", "name fullName email phone location currentTitle skills source experienceYears resumeUrl summary createdBy")
       .populate("jobId", "title department location employmentType status description requirements")
       .populate("recruiterId", "name email role")
       .populate("resumeId", "originalFilename fileSizeBytes createdAt version")
@@ -713,8 +713,16 @@ export const getApplicationById = async (
 
     const userRole = normalizeRole(req.user?.role || "candidate");
     if (userRole === "candidate") {
-      const cand = application.candidateId as unknown as { email?: string; userId?: { toString(): string } };
-      const isOwner = (cand?.email && cand.email === req.user?.email) || cand?.userId?.toString() === req.user?.id;
+      const cand = application.candidateId as unknown as {
+        email?: string;
+        userId?: { toString(): string };
+        createdBy?: { toString(): string };
+      };
+      const isOwner =
+        (cand?.email && cand.email.toLowerCase() === req.user?.email.toLowerCase()) ||
+        cand?.userId?.toString() === req.user?.id ||
+        cand?.createdBy?.toString() === req.user?.id ||
+        application.createdBy?.toString() === req.user?.id;
       if (!isOwner) {
         return next(new AppError("You do not have permission to view this application", 403, "FORBIDDEN"));
       }

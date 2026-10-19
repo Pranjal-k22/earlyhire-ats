@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Users,
   Search,
+  Sparkles,
 } from "lucide-react";
 import { Application, HiringStage } from "../../types/application";
 import { Job } from "../../types/job";
@@ -22,6 +23,15 @@ import { ScheduleInterviewModal } from "./ScheduleInterviewModal";
 import { InterviewFeedbackModal } from "./InterviewFeedbackModal";
 import { AtsReportDrawer } from "./AtsReportDrawer";
 
+export type PipelineTab = "active" | "completed" | "all";
+
+export const ACTIVE_STAGES: HiringStage[] = ["Applied", "Screening", "Interview", "Offer"];
+export const COMPLETED_STAGES: HiringStage[] = ["Hired", "Rejected"];
+
+export interface PipelineViewProps {
+  initialTab?: PipelineTab;
+}
+
 const STAGE_COLUMNS: { stage: HiringStage; label: string; dot: string; bg: string }[] = [
   { stage: "Applied", label: "Applied", dot: "bg-slate-400", bg: "border-t-slate-400" },
   { stage: "Screening", label: "Screening", dot: "bg-sky-500", bg: "border-t-sky-500" },
@@ -31,7 +41,8 @@ const STAGE_COLUMNS: { stage: HiringStage; label: string; dot: string; bg: strin
   { stage: "Rejected", label: "Rejected", dot: "bg-rose-500", bg: "border-t-rose-500" },
 ];
 
-export const PipelineView: React.FC = () => {
+export const PipelineView: React.FC<PipelineViewProps> = ({ initialTab = "active" }) => {
+  const [pipelineTab, setPipelineTab] = useState<PipelineTab>(initialTab);
   const [applications, setApplications] = useState<Application[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>("all");
@@ -116,6 +127,36 @@ export const PipelineView: React.FC = () => {
 
     return map;
   }, [filteredApplications]);
+
+  // Stage tab metrics & column subsets
+  const activeCount = useMemo(() => {
+    return (
+      (stageMap.Applied?.length || 0) +
+      (stageMap.Screening?.length || 0) +
+      (stageMap.Interview?.length || 0) +
+      (stageMap.Offer?.length || 0)
+    );
+  }, [stageMap]);
+
+  const completedCount = useMemo(() => {
+    return (stageMap.Hired?.length || 0) + (stageMap.Rejected?.length || 0);
+  }, [stageMap]);
+
+  const displayedColumns = useMemo(() => {
+    if (pipelineTab === "active") {
+      return STAGE_COLUMNS.filter((col) => ACTIVE_STAGES.includes(col.stage));
+    }
+    if (pipelineTab === "completed") {
+      return STAGE_COLUMNS.filter((col) => COMPLETED_STAGES.includes(col.stage));
+    }
+    return STAGE_COLUMNS;
+  }, [pipelineTab]);
+
+  const containerMinWidth = useMemo(() => {
+    if (pipelineTab === "completed") return "min-w-full sm:min-w-[620px]";
+    if (pipelineTab === "active") return "min-w-[1020px]";
+    return "min-w-[1520px]";
+  }, [pipelineTab]);
 
   // Handlers
   const handleAdvance = async (app: Application, nextStage: HiringStage) => {
@@ -274,10 +315,109 @@ export const PipelineView: React.FC = () => {
         </div>
       )}
 
+      {/* Pipeline Stage Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div
+          className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl"
+          role="tablist"
+          aria-label="Pipeline stage views"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pipelineTab === "active"}
+            onClick={() => setPipelineTab("active")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              pipelineTab === "active"
+                ? "bg-white text-brand-700 shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+            <span>Active Pipeline</span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                pipelineTab === "active"
+                  ? "bg-brand-50 text-brand-700"
+                  : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {activeCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pipelineTab === "completed"}
+            onClick={() => setPipelineTab("completed")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              pipelineTab === "completed"
+                ? "bg-white text-emerald-700 shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Hired & Rejected</span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                pipelineTab === "completed"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {completedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pipelineTab === "all"}
+            onClick={() => setPipelineTab("all")}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+              pipelineTab === "all"
+                ? "bg-white text-slate-900 shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-slate-500" />
+            <span>All Stages (6)</span>
+            <span
+              className={`px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
+                pipelineTab === "all"
+                  ? "bg-slate-100 text-slate-800"
+                  : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {filteredApplications.length}
+            </span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 px-3 text-xs text-slate-500">
+          {pipelineTab === "active" && (
+            <span>
+              In-progress stages: <strong>Applied</strong>, <strong>Screening</strong>,{" "}
+              <strong>Interview</strong>, <strong>Offer</strong>
+            </span>
+          )}
+          {pipelineTab === "completed" && (
+            <span>
+              Terminal outcomes: <strong>Hired ({stageMap.Hired?.length || 0})</strong> and{" "}
+              <strong>Rejected ({stageMap.Rejected?.length || 0})</strong>
+            </span>
+          )}
+          {pipelineTab === "all" && (
+            <span>Complete end-to-end recruitment board (all 6 stages)</span>
+          )}
+        </div>
+      </div>
+
       {/* Kanban Pipeline Columns */}
       <div className="overflow-x-auto pb-6 scrollbar-thin">
-        <div className="flex gap-4 min-w-[1520px] items-start">
-          {STAGE_COLUMNS.map((col) => {
+        <div className={`flex gap-4 ${containerMinWidth} items-start`}>
+          {displayedColumns.map((col) => {
             const stageApps = stageMap[col.stage] || [];
             return (
               <div

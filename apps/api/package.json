@@ -9,9 +9,12 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vitest run --fileParallelism=false"
+    "test": "vitest run --fileParallelism=false",
+    "test:r2-smoke": "tsx src/scripts/liveR2SmokeTest.ts",
+    "bootstrap:platform-manager": "tsx src/scripts/bootstrapPlatformManager.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

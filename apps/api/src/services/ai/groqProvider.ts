@@ -83,9 +83,15 @@ export class GroqProvider implements IAIProvider {
           };
         };
 
-        const rawText = json.choices?.[0]?.message?.content;
+        let rawText = json.choices?.[0]?.message?.content;
         if (!rawText) {
           throw new AppError("Empty response returned from Groq API", 502, "AI_EMPTY_RESPONSE");
+        }
+
+        // Clean any markdown code blocks if model wrapped JSON
+        const codeBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+          rawText = codeBlockMatch[1].trim();
         }
 
         const parsedData = JSON.parse(rawText) as T;

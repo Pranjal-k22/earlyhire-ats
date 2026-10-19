@@ -24,7 +24,7 @@ export class GeminiProvider implements IAIProvider {
     }
 
     const startTime = Date.now();
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.defaultModel}:generateContent?key=${this.apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.defaultModel}:generateContent`;
 
     const requestBody = {
       systemInstruction: options.systemInstruction
@@ -52,6 +52,7 @@ export class GeminiProvider implements IAIProvider {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-goog-api-key": this.apiKey!,
           },
           body: JSON.stringify(requestBody),
         });
@@ -85,9 +86,17 @@ export class GeminiProvider implements IAIProvider {
           };
         };
 
-        const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parts = json.candidates?.[0]?.content?.parts || [];
+        const textPart = parts.find((p) => p.text && p.text.trim().length > 0) || parts[0];
+        let rawText = textPart?.text;
         if (!rawText) {
           throw new AppError("Empty response returned from Gemini API", 502, "AI_EMPTY_RESPONSE");
+        }
+
+        // Clean any markdown code blocks if model wrapped JSON
+        const codeBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) {
+          rawText = codeBlockMatch[1].trim();
         }
 
         const parsedData = JSON.parse(rawText) as T;

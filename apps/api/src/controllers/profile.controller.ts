@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { User, normalizeRole } from "../models/user.model.js";
+import { Candidate } from "../models/candidate.model.js";
 import { AppError } from "../middleware/errorHandler.js";
 
 const updateProfileSchema = z.object({
@@ -76,6 +77,32 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 
     if (!updatedUser) {
       return next(new AppError("User profile not found", 404, "NOT_FOUND"));
+    }
+
+    // Synchronize updates to candidate document if one exists for this candidate
+    try {
+      const candidateUpdate: Record<string, unknown> = {};
+      if (validated.name !== undefined) {
+        candidateUpdate.name = validated.name;
+        candidateUpdate.fullName = validated.name;
+      }
+      if (validated.headline !== undefined) candidateUpdate.currentTitle = validated.headline;
+      if (validated.phone !== undefined) candidateUpdate.phone = validated.phone;
+      if (validated.bio !== undefined) candidateUpdate.summary = validated.bio;
+      if (validated.skills !== undefined) candidateUpdate.skills = validated.skills;
+
+      if (Object.keys(candidateUpdate).length > 0) {
+        if (updatedUser.candidateProfileId) {
+          await Candidate.findByIdAndUpdate(updatedUser.candidateProfileId, candidateUpdate);
+        } else if (updatedUser.email) {
+          await Candidate.findOneAndUpdate(
+            { email: updatedUser.email.toLowerCase(), archivedAt: null },
+            candidateUpdate
+          );
+        }
+      }
+    } catch {
+      // Non-blocking sync error
     }
 
     res.status(200).json({

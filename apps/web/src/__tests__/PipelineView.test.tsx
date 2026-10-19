@@ -138,11 +138,14 @@ describe("PipelineView Component — Phase 5 UI Verification", () => {
     expect(screen.getAllByText("Frontend Architect").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Senior Frontend Engineer • 5y exp")).toBeInTheDocument();
 
-    // Verify all 6 stage columns are rendered
+    // Verify active pipeline stage columns are rendered
     expect(screen.getByTestId("stage-column-applied")).toBeInTheDocument();
     expect(screen.getByTestId("stage-column-screening")).toBeInTheDocument();
     expect(screen.getByTestId("stage-column-interview")).toBeInTheDocument();
     expect(screen.getByTestId("stage-column-offer")).toBeInTheDocument();
+
+    // Verify switching to Hired & Rejected tab displays terminal stages
+    fireEvent.click(screen.getByRole("tab", { name: /hired & rejected/i }));
     expect(screen.getByTestId("stage-column-hired")).toBeInTheDocument();
     expect(screen.getByTestId("stage-column-rejected")).toBeInTheDocument();
   });
@@ -153,8 +156,12 @@ describe("PipelineView Component — Phase 5 UI Verification", () => {
     render(<PipelineView />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("No applications").length).toBe(6);
+      expect(screen.getAllByText("No applications").length).toBe(4);
     });
+
+    // Check completed tab empty state
+    fireEvent.click(screen.getByRole("tab", { name: /hired & rejected/i }));
+    expect(screen.getAllByText("No applications").length).toBe(2);
   });
 
   it("3. Successfully advances stage after API confirmation", async () => {

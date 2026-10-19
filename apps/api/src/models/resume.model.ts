@@ -14,6 +14,9 @@ export interface IResumeFile {
   parsedText: string;
   parsingStatus: ResumeParsingStatus;
   parsingError?: string | null;
+  storageDriver?: "local" | "r2";
+  storageKey?: string | null;
+  storageBucket?: string | null;
   version?: number;
   isDeleted: boolean;
   deletedAt?: Date | null;
@@ -91,6 +94,19 @@ const resumeFileSchema = new Schema<IResumeFileDocument, IResumeFileModel>(
       type: String,
       default: null,
     },
+    storageDriver: {
+      type: String,
+      enum: ["local", "r2"],
+      default: "local",
+    },
+    storageKey: {
+      type: String,
+      default: null,
+    },
+    storageBucket: {
+      type: String,
+      default: null,
+    },
     version: {
       type: Number,
       default: 1,
@@ -112,9 +128,11 @@ const resumeFileSchema = new Schema<IResumeFileDocument, IResumeFileModel>(
         ret.id = (ret._id as { toString(): string })?.toString();
         delete ret._id;
         delete ret.__v;
-        // Never expose internal filesystem storage paths to client
+        // Never expose internal filesystem storage paths, object keys, or bucket details to client
         delete ret.storagePath;
         delete ret.storedFilename;
+        delete ret.storageKey;
+        delete ret.storageBucket;
         return ret;
       },
     },

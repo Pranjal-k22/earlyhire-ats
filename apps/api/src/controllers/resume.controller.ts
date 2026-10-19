@@ -65,23 +65,36 @@ export const uploadResume = async (req: Request, res: Response, next: NextFuncti
       );
     }
 
-    // 3. Save to private storage
-    const storageResult = await resumeStorage.saveResumeFile(fileBuffer, originalFilename);
+    // 3. Save to private storage (Cloudflare R2 or Local adapter)
+    const storageResult = await resumeStorage.saveResumeFile(fileBuffer, originalFilename, validation.mimeType);
 
-    // 4. Create database record
-    const resumeDoc = await ResumeFile.create({
-      candidateUserId: req.user.id,
-      candidateId: req.user.candidateProfileId || null,
-      originalFilename,
-      storedFilename: storageResult.storedFilename,
-      storagePath: storageResult.storagePath,
-      mimeType: validation.mimeType,
-      fileSizeBytes: fileBuffer.length,
-      contentSha256: storageResult.contentSha256,
-      parsedText,
-      parsingStatus: "completed",
-      parsingError: null,
-    });
+    // 4. Create database record with compensation rollback if persistence fails
+    let resumeDoc;
+    try {
+      resumeDoc = await ResumeFile.create({
+        candidateUserId: req.user.id,
+        candidateId: req.user.candidateProfileId || null,
+        originalFilename,
+        storedFilename: storageResult.storedFilename,
+        storagePath: storageResult.storagePath,
+        storageDriver: storageResult.driver,
+        storageKey: storageResult.storageKey || storageResult.storagePath,
+        storageBucket: storageResult.bucket || null,
+        mimeType: validation.mimeType,
+        fileSizeBytes: fileBuffer.length,
+        contentSha256: storageResult.contentSha256,
+        parsedText,
+        parsingStatus: "completed",
+        parsingError: null,
+      });
+    } catch (dbError) {
+      // Best-effort compensation: remove orphaned uploaded file from storage
+      console.error("[ResumeUpload] MongoDB persistence failed; rolling back uploaded storage file:", dbError instanceof Error ? dbError.message : "DB error");
+      await resumeStorage.deleteFile(storageResult.storageKey || storageResult.storagePath).catch((cleanupErr) => {
+        console.warn("[ResumeUpload] Compensation cleanup failed:", cleanupErr instanceof Error ? cleanupErr.message : "Cleanup error");
+      });
+      throw dbError;
+    }
 
     // 5. Update user's active resumeId
     await User.findByIdAndUpdate(req.user.id, { resumeId: resumeDoc.id });
@@ -160,14 +173,23 @@ export const downloadResume = async (req: Request, res: Response, next: NextFunc
       return next(new AppError("You do not have permission to download this resume", 403, "FORBIDDEN"));
     }
 
-    const stream = resumeStorage.getReadStream(resume.storagePath);
+    const stream = await resumeStorage.getReadStream(resume.storageKey || resume.storagePath);
 
     const isInline = req.query.inline === "true" || req.query.view === "true";
     const dispositionType = isInline ? "inline" : "attachment";
 
     res.setHeader("Content-Type", resume.mimeType || "application/pdf");
     res.setHeader("Content-Disposition", `${dispositionType}; filename="${encodeURIComponent(resume.originalFilename)}"`);
-    res.setHeader("Content-Length", resume.fileSizeBytes);
+    if (resume.fileSizeBytes) {
+      res.setHeader("Content-Length", resume.fileSizeBytes);
+    }
+
+    stream.on("error", (streamErr) => {
+      console.error("[ResumeDownload] Stream error during transmission:", streamErr instanceof Error ? streamErr.message : "Stream error");
+      if (!res.headersSent) {
+        res.status(502).json({ success: false, error: { code: "STORAGE_STREAM_ERROR", message: "Failed to stream resume file" } });
+      }
+    });
 
     stream.pipe(res);
   } catch (error) {
@@ -195,13 +217,26 @@ export const deleteResume = async (req: Request, res: Response, next: NextFuncti
       return next(new AppError("You can only delete your own resumes", 403, "FORBIDDEN"));
     }
 
+    // 1. Delete object from storage (R2 or local) first; fail safely if storage delete fails
+    try {
+      await resumeStorage.deleteFile(resume.storageKey || resume.storagePath);
+    } catch (storageErr) {
+      console.error("[ResumeDelete] Storage object deletion failed:", storageErr instanceof Error ? storageErr.message : "Delete error");
+      return next(
+        new AppError(
+          "Failed to delete resume file from storage. Database record was preserved.",
+          502,
+          "STORAGE_DELETE_FAILED"
+        )
+      );
+    }
+
+    // 2. Mark deleted in MongoDB only after storage deletion succeeds
     resume.isDeleted = true;
     resume.deletedAt = new Date();
     await resume.save();
 
-    await resumeStorage.deleteFile(resume.storagePath);
-
-    // Unset user active resumeId if it was pointing to this resume
+    // 3. Unset user active resumeId if it was pointing to this resume
     await User.updateOne({ _id: req.user.id, resumeId: resume.id }, { $set: { resumeId: null } });
 
     res.status(200).json({

@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   RefreshCw,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { fetchApplicationAtsReport, AtsReport } from "../../api/atsApi";
 import { Application, IAtsSnapshot } from "../../types/application";
@@ -83,6 +84,9 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
   const resumeUrl = resumeId
     ? `/api/v1/resumes/${resumeId}/download?inline=true`
     : application.candidateId?.resumeUrl || null;
+  const resumeDownloadUrl = resumeId
+    ? `/api/v1/resumes/${resumeId}/download`
+    : (application.candidateId?.resumeUrl ? application.candidateId.resumeUrl.replace(/[?&]inline=true/g, "") : null);
 
   return (
     <div
@@ -118,11 +122,22 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition-colors"
-                title="Open candidate's submitted PDF resume in a new tab"
+                title="View candidate's submitted PDF resume in a new tab"
               >
                 <FileText className="w-3.5 h-3.5 text-brand-400" />
-                <span>Resume (PDF)</span>
+                <span>View PDF</span>
                 <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+            )}
+            {resumeDownloadUrl && (
+              <a
+                href={resumeDownloadUrl}
+                download
+                className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"
+                title="Download candidate's submitted resume in PDF format"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
               </a>
             )}
             <button
@@ -236,17 +251,29 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                 <div>
                   <span className="text-slate-400 block font-medium">Submitted Resume</span>
                   {resumeUrl ? (
-                    <a
-                      href={resumeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 mt-0.5 truncate group/link hover:underline"
-                      title={`Open ${resumeFilename} (PDF)`}
-                    >
-                      <FileText className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-                      <span className="truncate">{resumeFilename}</span>
-                      <ExternalLink className="w-3 h-3 shrink-0 text-brand-500 opacity-70 group-hover/link:opacity-100" />
-                    </a>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <a
+                        href={resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 truncate group/link hover:underline"
+                        title={`Open ${resumeFilename} (PDF)`}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+                        <span className="truncate">{resumeFilename}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0 text-brand-500 opacity-70 group-hover/link:opacity-100" />
+                      </a>
+                      {resumeDownloadUrl && (
+                        <a
+                          href={resumeDownloadUrl}
+                          download
+                          className="p-0.5 text-slate-500 hover:text-brand-600 transition-colors"
+                          title="Download resume PDF"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
                   ) : (
                     <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5 truncate" title={resumeFilename}>
                       <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />

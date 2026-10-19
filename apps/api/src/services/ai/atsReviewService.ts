@@ -25,13 +25,14 @@ export class AtsReviewService {
   }): Promise<IAtsAnalysisDocument> {
     const { resumeId, jobId, candidateUserId, applicationId, forceRefresh } = params;
 
-    // Check for cached completed analysis unless forceRefresh requested
+    // Check for cached completed analysis unless forceRefresh requested (never return deterministic cache)
     if (!forceRefresh) {
       const existing = await AtsAnalysis.findOne({
         resumeId,
         jobId,
         promptVersion: this.promptVersion,
         rubricVersion: this.rubricVersion,
+        provider: { $ne: "deterministic_engine" },
         status: { $in: ["completed", "dual_complete", "partial_ollama", "partial_gemini"] },
       });
 
@@ -84,7 +85,7 @@ export class AtsReviewService {
         ? (job as unknown as { skills: string[] }).skills
         : job.requirements || [];
 
-    // Step 1: Run Deterministic ATS Scoring Engine
+    // Step 1: Run Deterministic ATS Baseline as fallback/reference
     const deterministic = computeDeterministicAtsScore({
       resumeText: resume.parsedText,
       requiredSkills,
@@ -93,7 +94,7 @@ export class AtsReviewService {
       jobDescription: job.description,
     });
 
-    // Step 2: Call AI Provider for Semantic Analysis & Reasoning
+    // Step 2: Call AI Provider for Genuine Semantic Analysis & Reasoning
     let aiResponse;
     try {
       aiResponse = await aiRouter.analyzeResumeForJob({
@@ -110,82 +111,90 @@ export class AtsReviewService {
       aiResponse = null;
     }
 
-    // Step 3: Reconcile Deterministic & AI Findings
-    let finalBreakdown = {
-      skillsScore: deterministic.breakdown.skillsScore,
-      experienceScore: deterministic.breakdown.experienceScore,
-      educationScore: deterministic.breakdown.educationScore,
-      roleRelevanceScore: deterministic.breakdown.roleRelevanceScore,
-    };
-    let finalScore = deterministic.overallScore;
-    let requiredSkillsFound = deterministic.matchedSkills;
-    let missingCriteria = deterministic.missingCriteria;
-    let experienceEvidence: string[] = [
-      `Evidenced ${deterministic.detectedSections.join(", ")} sections.`,
-      `Quantitative metrics density: ${deterministic.breakdown.achievementScore}% score.`,
-    ];
-    let concreteSuggestions = deterministic.recommendations.map((r) => r.suggestedAction);
-    let suggestedInterviewTopics: string[] = [
-      "Technical architecture and system design trade-offs",
-      "Hands-on experience with core job criteria",
-    ];
-    let confidence: "low" | "medium" | "high" = "medium";
-    let summary = `Deterministic compatibility assessment: ${finalScore}% match grounded in resume evidence.`;
-    let provider = "deterministic_engine";
-    let model = "rubric-v2.0";
+    // Step 3: Extract AI Findings directly or use fallback if offline
+    let finalBreakdown;
+    let finalScore;
+    let requiredSkillsFound: string[];
+    let missingCriteria: string[];
+    let experienceEvidence: string[];
+    let concreteSuggestions: string[];
+    let suggestedInterviewTopics: string[];
+    let confidence: "low" | "medium" | "high";
+    let summary: string;
+    let provider: string;
+    let model: string;
     let inputTokens = 0;
     let outputTokens = 0;
     let latencyMs = 0;
     let status: AnalysisStatus = "completed";
 
-    if (aiResponse) {
+    if (aiResponse && aiResponse.provider !== "heuristic_fallback") {
       const data = aiResponse.data;
-      // Weighted reconciliation: 70% deterministic grounding + 30% AI semantic nuance
+      // Direct authentic AI evaluation of candidate resume against job description
       finalBreakdown = {
-        skillsScore: Math.min(
-          100,
-          Math.max(0, Math.round(deterministic.breakdown.skillsScore * 0.7 + data.breakdown.skillsScore * 0.3))
-        ),
-        experienceScore: Math.min(
-          100,
-          Math.max(0, Math.round(deterministic.breakdown.experienceScore * 0.7 + data.breakdown.experienceScore * 0.3))
-        ),
-        educationScore: Math.min(
-          100,
-          Math.max(0, Math.round(deterministic.breakdown.educationScore * 0.7 + data.breakdown.educationScore * 0.3))
-        ),
-        roleRelevanceScore: Math.min(
-          100,
-          Math.max(
-            0,
-            Math.round(deterministic.breakdown.roleRelevanceScore * 0.7 + data.breakdown.roleRelevanceScore * 0.3)
-          )
-        ),
+        skillsScore: Math.min(100, Math.max(0, Math.round(data.breakdown.skillsScore))),
+        experienceScore: Math.min(100, Math.max(0, Math.round(data.breakdown.experienceScore))),
+        educationScore: Math.min(100, Math.max(0, Math.round(data.breakdown.educationScore))),
+        roleRelevanceScore: Math.min(100, Math.max(0, Math.round(data.breakdown.roleRelevanceScore))),
       };
 
       // Server-side authoritative score strictly calculated from canonical 4-part weights (40/30/15/15)
       finalScore = calculateWeightedAtsScore(finalBreakdown);
 
-      requiredSkillsFound = Array.from(new Set([...deterministic.matchedSkills, ...data.requiredSkillsFound]));
-      missingCriteria = deterministic.missingCriteria.length > 0 ? deterministic.missingCriteria : data.missingCriteria;
-      experienceEvidence = data.experienceEvidence || experienceEvidence;
-      concreteSuggestions = Array.from(new Set([...deterministic.recommendations.map((r) => r.suggestedAction), ...data.concreteSuggestions]));
-      suggestedInterviewTopics = data.suggestedInterviewTopics || suggestedInterviewTopics;
-      confidence = data.confidence || "medium";
-      summary = data.summary || summary;
+      requiredSkillsFound = data.requiredSkillsFound && data.requiredSkillsFound.length > 0
+        ? data.requiredSkillsFound
+        : deterministic.matchedSkills;
+      missingCriteria = data.missingCriteria && data.missingCriteria.length > 0
+        ? data.missingCriteria
+        : deterministic.missingCriteria;
+      experienceEvidence = data.experienceEvidence && data.experienceEvidence.length > 0
+        ? data.experienceEvidence
+        : [
+            `Evidenced ${deterministic.detectedSections.join(", ")} sections.`,
+            `Quantitative metrics density: ${deterministic.breakdown.achievementScore}% score.`,
+          ];
+      concreteSuggestions = data.concreteSuggestions && data.concreteSuggestions.length > 0
+        ? data.concreteSuggestions
+        : deterministic.recommendations.map((r) => r.suggestedAction);
+      suggestedInterviewTopics = data.suggestedInterviewTopics && data.suggestedInterviewTopics.length > 0
+        ? data.suggestedInterviewTopics
+        : [
+            "Technical architecture and system design trade-offs",
+            "Hands-on experience with core job criteria",
+          ];
+      confidence = data.confidence || "high";
+      summary = data.summary;
       provider = aiResponse.provider;
       model = aiResponse.model;
       inputTokens = aiResponse.inputTokens || 0;
       outputTokens = aiResponse.outputTokens || 0;
       latencyMs = aiResponse.latencyMs || 0;
-
-      if (aiResponse.provider === "ollama") {
-        status = "partial_ollama";
-      } else if (aiResponse.provider === "gemini") {
-        status = "partial_gemini";
-      } else {
-        status = "completed";
-      }
+      status = "completed";
+    } else {
+      // Deterministic fallback path when AI providers are unavailable
+      finalBreakdown = {
+        skillsScore: deterministic.breakdown.skillsScore,
+        experienceScore: deterministic.breakdown.experienceScore,
+        educationScore: deterministic.breakdown.educationScore,
+        roleRelevanceScore: deterministic.breakdown.roleRelevanceScore,
+      };
+      finalScore = deterministic.overallScore;
+      requiredSkillsFound = deterministic.matchedSkills;
+      missingCriteria = deterministic.missingCriteria;
+      experienceEvidence = [
+        `Evidenced ${deterministic.detectedSections.join(", ")} sections.`,
+        `Quantitative metrics density: ${deterministic.breakdown.achievementScore}% score.`,
+      ];
+      concreteSuggestions = deterministic.recommendations.map((r) => r.suggestedAction);
+      suggestedInterviewTopics = [
+        "Technical architecture and system design trade-offs",
+        "Hands-on experience with core job criteria",
+      ];
+      confidence = "medium";
+      summary = `Deterministic compatibility assessment: ${finalScore}% match grounded in resume evidence.`;
+      provider = "deterministic_engine";
+      model = "rubric-v2.0";
+      status = "completed";
     }
 
     const recommendationsWithEvidence = deterministic.recommendations.map((r) => ({

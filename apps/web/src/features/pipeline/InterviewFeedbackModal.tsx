@@ -57,6 +57,17 @@ export const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
     }
   }, [isOpen, application]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !application) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,17 +122,6 @@ export const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
       setActionLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
 
   return (
     <div

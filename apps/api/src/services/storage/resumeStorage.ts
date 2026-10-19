@@ -1,10 +1,9 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
 import { PDFParse } from "pdf-parse";
 import { AppError } from "../../middleware/errorHandler.js";
 import { env } from "../../config/env.js";
+import { IResumeStorageAdapter, StoredResumeResult, ResumeStorageDriver } from "./types.js";
+import { LocalStorageAdapter } from "./localStorageAdapter.js";
+import { CloudflareR2StorageAdapter } from "./cloudflareR2Adapter.js";
 
 export interface FileValidationResult {
   isValid: boolean;
@@ -19,17 +18,37 @@ export interface ExtractedResumeText {
 }
 
 export class ResumeStorageService {
-  private baseDir: string;
+  private adapter: IResumeStorageAdapter;
 
-  constructor() {
-    this.baseDir = path.resolve(process.cwd(), env.RESUME_STORAGE_DIR);
-    this.ensureDirectoryExists();
+  constructor(customAdapter?: IResumeStorageAdapter) {
+    if (customAdapter) {
+      this.adapter = customAdapter;
+    } else if (env.RESUME_STORAGE_DRIVER === "r2") {
+      this.adapter = new CloudflareR2StorageAdapter();
+    } else {
+      this.adapter = new LocalStorageAdapter();
+    }
   }
 
-  private ensureDirectoryExists(): void {
-    if (!fsSync.existsSync(this.baseDir)) {
-      fsSync.mkdirSync(this.baseDir, { recursive: true });
-    }
+  /**
+   * Allows injecting or swapping the storage adapter for testing or environment transitions.
+   */
+  public setAdapter(adapter: IResumeStorageAdapter): void {
+    this.adapter = adapter;
+  }
+
+  /**
+   * Returns the currently active storage adapter.
+   */
+  public getAdapter(): IResumeStorageAdapter {
+    return this.adapter;
+  }
+
+  /**
+   * Returns the active storage driver name ('local' | 'r2').
+   */
+  public get driver(): ResumeStorageDriver {
+    return this.adapter.driver;
   }
 
   /**
@@ -219,49 +238,35 @@ export class ResumeStorageService {
   }
 
   /**
-   * Securely saves the uploaded file to the private storage directory.
+   * Securely saves the uploaded file using the active storage adapter (Cloudflare R2 or Local).
    */
   public async saveResumeFile(
     buffer: Buffer,
-    originalFilename: string
-  ): Promise<{ storedFilename: string; storagePath: string; contentSha256: string }> {
-    this.ensureDirectoryExists();
-
-    const contentSha256 = crypto.createHash("sha256").update(buffer).digest("hex");
-    const sanitizedExt = path.extname(originalFilename).toLowerCase().replace(/[^a-z0-9.]/g, "");
-    const storedFilename = `${crypto.randomUUID()}${sanitizedExt || ".bin"}`;
-    const storagePath = path.join(this.baseDir, storedFilename);
-
-    await fs.writeFile(storagePath, buffer);
-
-    return {
-      storedFilename,
-      storagePath,
-      contentSha256,
-    };
+    originalFilename: string,
+    mimeType?: string
+  ): Promise<StoredResumeResult> {
+    return this.adapter.saveFile(buffer, originalFilename, mimeType);
   }
 
   /**
-   * Retrieves read stream for authorized download.
+   * Retrieves read stream for authorized download from the active storage adapter.
    */
-  public getReadStream(storagePath: string): fsSync.ReadStream {
-    if (!fsSync.existsSync(storagePath)) {
-      throw new AppError("Resume file not found on storage", 404, "FILE_NOT_FOUND");
-    }
-    return fsSync.createReadStream(storagePath);
+  public async getReadStream(storagePath: string): Promise<NodeJS.ReadableStream> {
+    return this.adapter.getReadStream(storagePath);
   }
 
   /**
-   * Safely deletes file from storage.
+   * Safely deletes file from the active storage adapter.
    */
   public async deleteFile(storagePath: string): Promise<void> {
-    try {
-      if (fsSync.existsSync(storagePath)) {
-        await fs.unlink(storagePath);
-      }
-    } catch (err) {
-      console.warn(`[ResumeStorage] Could not delete file at ${storagePath}:`, err);
-    }
+    await this.adapter.deleteFile(storagePath);
+  }
+
+  /**
+   * Checks whether a file exists in the active storage adapter.
+   */
+  public async fileExists(storagePath: string): Promise<boolean> {
+    return this.adapter.fileExists(storagePath);
   }
 }
 

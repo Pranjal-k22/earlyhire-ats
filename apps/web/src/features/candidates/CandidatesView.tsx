@@ -593,15 +593,6 @@ export const CandidatesView: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleOpenEditModal(cand)}
-                          className="p-1 text-slate-400 hover:text-purple-600 rounded-md transition-colors"
-                          title="Edit Profile"
-                          aria-label="Edit Profile"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => handleArchiveCandidate(cand)}
                           className="p-1 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
                           title="Archive Candidate"
@@ -655,15 +646,6 @@ export const CandidatesView: React.FC = () => {
                     aria-label="Candidate Information"
                   >
                     <Info className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditModal(activeCandidate)}
-                    className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200/80"
-                    title="Edit Candidate"
-                    aria-label="Edit Candidate"
-                  >
-                    <Edit className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -792,14 +774,6 @@ export const CandidatesView: React.FC = () => {
                       View ATS Scorecard
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditModal(activeCandidate)}
-                    className="text-xs font-bold text-purple-600 hover:text-purple-800 underline cursor-pointer"
-                  >
-                    Edit Profile Details →
-                  </button>
                 </div>
               </div>
             </div>
