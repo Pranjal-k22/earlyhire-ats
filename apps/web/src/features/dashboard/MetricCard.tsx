@@ -10,7 +10,8 @@ interface MetricCardProps {
   iconBg?: string;
   gradientBg?: string;
   trend?: string;
-  trendDirection?: "up" | "down";
+  trendDirection?: "up" | "down" | "neutral";
+  trendNode?: React.ReactNode;
   badge?: string;
   badgeBg?: string;
   badgeText?: string;
@@ -27,6 +28,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   gradientBg,
   trend,
   trendDirection = "up",
+  trendNode,
   badge,
   badgeBg = "bg-slate-100",
   badgeText = "text-slate-600",
@@ -46,11 +48,15 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <Icon className="w-5 h-5" />
         </div>
 
-        {trend ? (
+        {trendNode ? (
+          <div>{trendNode}</div>
+        ) : trend ? (
           <div
             className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
               trendDirection === "up"
                 ? "text-emerald-700 bg-emerald-50/80 border border-emerald-200/60"
+                : trendDirection === "neutral"
+                ? "text-slate-600 bg-slate-50/80 border border-slate-200/60"
                 : "text-rose-700 bg-rose-50/80 border border-rose-200/60"
             }`}
           >

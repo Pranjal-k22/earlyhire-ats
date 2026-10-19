@@ -6,6 +6,7 @@ import { ResumeFile } from "../models/resume.model.js";
 import { Application } from "../models/application.model.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
+import { sseEventHub } from "../services/sse/sseEventHub.js";
 
 const analyzeRequestSchema = z.object({
   jobId: z.string().min(1, "Job ID is required"),
@@ -65,6 +66,15 @@ export const runAtsAnalysis = async (req: Request, res: Response, next: NextFunc
       jobId: validated.jobId,
       candidateUserId: resume.candidateUserId.toString(),
       forceRefresh: validated.forceRefresh,
+    });
+
+    sseEventHub.broadcast({
+      type: "ats:completed",
+      entity: "ats_analysis",
+      entityId: report.id,
+      candidateUserId: resume.candidateUserId.toString(),
+      jobId: validated.jobId,
+      timestamp: new Date().toISOString(),
     });
 
     res.status(200).json({

@@ -34,6 +34,7 @@ import { fetchJobs } from "../../api/jobApi";
 import { applyForJobApi, fetchApplications } from "../../api/applicationApi";
 import { Job } from "../../types/job";
 import { Application } from "../../types/application";
+import { useRealtimeAnalytics } from "../dashboard/useRealtimeAnalytics";
 
 // Segmented Circular Radial Gauge matching Jobflow reference
 const RadialSegmentedGauge: React.FC<{ score: number }> = ({ score }) => {
@@ -162,6 +163,14 @@ export const CandidatePortalView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Real-time updates via SSE subscription
+  useRealtimeAnalytics({
+    enabled: true,
+    onInvalidate: () => {
+      loadData();
+    },
+  });
 
   const showNotification = (text: string, type: "success" | "error" = "success") => {
     setMessage({ text, type });

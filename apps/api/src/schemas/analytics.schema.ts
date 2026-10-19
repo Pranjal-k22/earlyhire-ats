@@ -19,6 +19,7 @@ export const analyticsQuerySchema = z
       )
       .optional(),
     period: z.enum(["7d", "30d", "90d", "all"]).optional(),
+    jobId: z.string().trim().optional(),
   })
   .refine(
     (data) => {
@@ -37,33 +38,63 @@ export const analyticsQuerySchema = z
 
 export type AnalyticsQuery = z.infer<typeof analyticsQuerySchema>;
 
-/**
- * Resolves date boundaries from query parameters into inclusive UTC Date objects.
- */
-export function resolveDateRange(query: AnalyticsQuery): {
+export interface ResolvedDateRange {
   fromDate?: Date;
   toDate?: Date;
   periodLabel: string;
-} {
+  previousPeriod?: {
+    fromDate: Date;
+    toDate: Date;
+  } | null;
+}
+
+/**
+ * Resolves date boundaries from query parameters into inclusive UTC Date objects
+ * and computes equivalent prior period boundaries for period-over-period comparisons.
+ */
+export function resolveDateRange(query: AnalyticsQuery): ResolvedDateRange {
   const now = new Date();
 
   if (query.period === "7d") {
     const fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return { fromDate, toDate: now, periodLabel: "Last 7 Days" };
+    const prevFromDate = new Date(fromDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return {
+      fromDate,
+      toDate: now,
+      periodLabel: "Last 7 Days",
+      previousPeriod: { fromDate: prevFromDate, toDate: fromDate },
+    };
   }
 
   if (query.period === "30d") {
     const fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    return { fromDate, toDate: now, periodLabel: "Last 30 Days" };
+    const prevFromDate = new Date(fromDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return {
+      fromDate,
+      toDate: now,
+      periodLabel: "Last 30 Days",
+      previousPeriod: { fromDate: prevFromDate, toDate: fromDate },
+    };
   }
 
   if (query.period === "90d") {
     const fromDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    return { fromDate, toDate: now, periodLabel: "Last 90 Days" };
+    const prevFromDate = new Date(fromDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+    return {
+      fromDate,
+      toDate: now,
+      periodLabel: "Last 90 Days",
+      previousPeriod: { fromDate: prevFromDate, toDate: fromDate },
+    };
   }
 
   if (query.period === "all") {
-    return { fromDate: undefined, toDate: undefined, periodLabel: "All Time" };
+    return {
+      fromDate: undefined,
+      toDate: undefined,
+      periodLabel: "All Time",
+      previousPeriod: null,
+    };
   }
 
   if (query.from || query.to) {
@@ -76,9 +107,19 @@ export function resolveDateRange(query: AnalyticsQuery): {
 
     if (query.to) {
       toDate = new Date(query.to);
-      // If date was specified as YYYY-MM-DD, make 'to' inclusive to the end of that day (23:59:59.999Z)
       if (/^\d{4}-\d{2}-\d{2}$/.test(query.to)) {
         toDate.setUTCHours(23, 59, 59, 999);
+      }
+    }
+
+    let previousPeriod: { fromDate: Date; toDate: Date } | null = null;
+    if (fromDate && toDate) {
+      const duration = toDate.getTime() - fromDate.getTime();
+      if (duration > 0) {
+        previousPeriod = {
+          fromDate: new Date(fromDate.getTime() - duration),
+          toDate: fromDate,
+        };
       }
     }
 
@@ -86,8 +127,14 @@ export function resolveDateRange(query: AnalyticsQuery): {
       fromDate,
       toDate,
       periodLabel: `${query.from || "Start"} to ${query.to || "Now"}`,
+      previousPeriod,
     };
   }
 
-  return { fromDate: undefined, toDate: undefined, periodLabel: "All Time" };
+  return {
+    fromDate: undefined,
+    toDate: undefined,
+    periodLabel: "All Time",
+    previousPeriod: null,
+  };
 }

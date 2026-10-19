@@ -10,6 +10,7 @@ import { Notification } from "../models/notification.model.js";
 import { googleCalendarService } from "../services/calendar/googleCalendarService.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
+import { sseEventHub } from "../services/sse/sseEventHub.js";
 
 const scheduleInterviewSchema = z.object({
   applicationId: z.string().min(1, "Application ID is required"),
@@ -126,6 +127,15 @@ export const scheduleInterview = async (req: Request, res: Response, next: NextF
       });
     }
 
+    sseEventHub.broadcast({
+      type: "interview:scheduled",
+      entity: "interview",
+      entityId: interviewDoc.id,
+      candidateUserId: candidateUserId.toString(),
+      jobId: job.id,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(201).json({
       success: true,
       data: {
@@ -234,6 +244,14 @@ export const cancelInterview = async (req: Request, res: Response, next: NextFun
       message: `Your interview scheduled for ${interview.scheduledStartTime.toUTCString()} has been cancelled.`,
       type: "interview_scheduled",
       link: `/candidate/interviews`,
+    });
+
+    sseEventHub.broadcast({
+      type: "interview:updated",
+      entity: "interview",
+      entityId: interview.id,
+      candidateUserId: interview.candidateUserId.toString(),
+      timestamp: new Date().toISOString(),
     });
 
     res.status(200).json({

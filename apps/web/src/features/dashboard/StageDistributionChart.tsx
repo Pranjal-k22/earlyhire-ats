@@ -13,6 +13,7 @@ import { Layers } from "lucide-react";
 
 interface StageDistributionChartProps {
   stageCounts: Record<PipelineStage, number>;
+  onSelectStage?: (stage: PipelineStage) => void;
 }
 
 const STAGE_CONFIG: Record<
@@ -38,6 +39,7 @@ const STAGE_KEYS: PipelineStage[] = [
 
 export const StageDistributionChart: React.FC<StageDistributionChartProps> = ({
   stageCounts,
+  onSelectStage,
 }) => {
   const counts = stageCounts || {
     Applied: 0,
@@ -93,6 +95,12 @@ export const StageDistributionChart: React.FC<StageDistributionChartProps> = ({
               <BarChart
                 data={chartData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(state: unknown) => {
+                  const e = state as { activePayload?: Array<{ payload: { stage: PipelineStage } }> };
+                  if (e && e.activePayload && e.activePayload.length && onSelectStage) {
+                    onSelectStage(e.activePayload[0].payload.stage);
+                  }
+                }}
               >
                 <XAxis
                   dataKey="label"
@@ -125,13 +133,14 @@ export const StageDistributionChart: React.FC<StageDistributionChartProps> = ({
                           <p className="text-slate-400">
                             Share of active: {data.percentage}%
                           </p>
+                          <p className="text-purple-300 text-[10px] mt-1 font-medium">Click to inspect stage</p>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48} cursor="pointer">
                   {chartData.map((entry) => (
                     <Cell key={entry.stage} fill={entry.color} />
                   ))}
@@ -143,9 +152,12 @@ export const StageDistributionChart: React.FC<StageDistributionChartProps> = ({
           {/* Breakdown table / tags for accessible screen reading & color-independent view */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-100">
             {chartData.map((item) => (
-              <div
+              <button
                 key={item.stage}
-                className="flex items-center justify-between p-2 rounded-lg bg-slate-50/70 border border-slate-100 text-xs"
+                type="button"
+                onClick={() => onSelectStage?.(item.stage)}
+                className="flex items-center justify-between p-2 rounded-lg bg-slate-50/70 hover:bg-purple-50/60 border border-slate-100 hover:border-purple-200 text-xs transition-colors cursor-pointer text-left"
+                title={`Filter applications by stage: ${item.label}`}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span
@@ -160,7 +172,7 @@ export const StageDistributionChart: React.FC<StageDistributionChartProps> = ({
                   <span className="font-bold text-slate-900">{item.count}</span>
                   <span>({item.percentage}%)</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Job } from "../models/job.model.js";
 import { createJobSchema, updateJobSchema, jobQuerySchema } from "../schemas/job.schema.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { sseEventHub } from "../services/sse/sseEventHub.js";
 
 /**
  * Escapes regex metacharacters to prevent ReDoS and injection in text searches.
@@ -30,6 +31,13 @@ export const createJob = async (req: Request, res: Response, next: NextFunction)
     };
 
     const job = await Job.create(jobData);
+
+    sseEventHub.broadcast({
+      type: "job:created",
+      entity: "job",
+      entityId: job.id,
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(201).json({
       success: true,
@@ -204,6 +212,13 @@ export const updateJob = async (req: Request, res: Response, next: NextFunction)
 
     await job.save();
 
+    sseEventHub.broadcast({
+      type: "job:updated",
+      entity: "job",
+      entityId: job.id,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -235,6 +250,13 @@ export const deleteJob = async (req: Request, res: Response, next: NextFunction)
     job.status = "Archived";
     job.archivedAt = new Date();
     await job.save();
+
+    sseEventHub.broadcast({
+      type: "job:updated",
+      entity: "job",
+      entityId: job.id,
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(200).json({
       success: true,

@@ -8,6 +8,7 @@ import { Job } from "../models/job.model.js";
 import { googleCalendarService } from "../services/calendar/googleCalendarService.js";
 import { env } from "../config/env.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { sseEventHub } from "../services/sse/sseEventHub.js";
 
 const updateRoleSchema = z.object({
   role: z.enum(ALL_USER_ROLES),
@@ -72,6 +73,13 @@ export const updatePlatformUserRole = async (req: Request, res: Response, next: 
 
     targetUser.role = validated.role;
     await targetUser.save();
+
+    sseEventHub.broadcast({
+      type: "user:updated",
+      entity: "user",
+      entityId: targetUser.id,
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(200).json({
       success: true,

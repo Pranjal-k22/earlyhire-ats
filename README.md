@@ -650,7 +650,28 @@ All backend endpoints are prefixed with `/api/v1`. Authentication is validated v
 | `GET` | `/api/v1/platform/telemetry` | Platform Manager | View AI provider health, system metrics, and queues |
 | `GET` | `/api/v1/platform/users` | Platform Manager | List platform users with assigned roles |
 | `PATCH`| `/api/v1/platform/users/:id/role`| Platform Manager | Update user role (protects last administrator) |
-| `GET` | `/api/v1/analytics/overview` | Hiring Team | Retrieve hiring funnel metrics, time-to-hire, and drop-offs |
+
+### 📊 Real-Time Analytics & Recharts Visualization Engine
+
+EarlyAI ATS provides an enterprise-grade analytics suite powered by authoritative MongoDB aggregation pipelines, period-over-period trend calculations, interactive Recharts components, and real-time Server-Sent Events (SSE) updates. Zero mock or fabricated data is permitted in production.
+
+| Method | Endpoint | Access Level | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/analytics/overview` | Hiring Team / Admin | Comprehensive hiring metrics, period-over-period trends, Time-to-Hire, application volume series, top skills, score brackets, job comparison, and recent applicant submissions |
+| `GET` | `/api/v1/analytics/funnel` | Hiring Team / Admin | Cohort funnel throughput, step-by-step conversion rates, and offer acceptance metrics |
+| `GET` | `/api/v1/analytics/platform` | Platform Manager / Admin | Platform governance analytics: user role distribution, parser health, and requisition status breakdown |
+| `GET` | `/api/v1/analytics/candidate` | Candidate (Strictly Isolated) | Personal candidate metrics: active applications, stage progression, interview counts, and average ATS score |
+| `GET` | `/api/v1/analytics/events` | Authenticated (All Roles) | Real-time Server-Sent Events (SSE) stream delivering mutation notifications (`application.*`, `job.*`, `ats.*`, `interview.*`) with 20s keep-alive heartbeat |
+
+#### Visualizations & Interactive Dashboard Components
+
+- **`MonthlyApplicationsChart`:** Responsive `AreaChart` with gradient fill, date hover tooltips, and independent CSV series export.
+- **`TopSkillsChart`:** Responsive `PieChart` / Donut chart displaying real applicant skill frequencies with click-to-filter capability.
+- **`JobPerformanceChart`:** Multi-metric `BarChart` comparing requisitions across applications, interviews, and hires with click-to-filter job binding.
+- **`ScoreDistributionChart`:** `BarChart` segmenting candidate ATS scores across standard `0-40`, `41-60`, `61-80`, `81-100` brackets.
+- **`StageDistributionChart`:** Canonical 6-stage pipeline bar distribution with accessible percentage tags and stage click filtering.
+- **`RealtimeStatusIndicator`:** Live SSE status pill with pulsing indicator, connection state (`connected`, `connecting`, `reconnecting`, `offline`), last synced timestamp, and manual refresh button.
+- **Full Cohort CSV Export:** One-click download of the active dashboard dataset including KPI metrics, stage volumes, conversion rates, and score distributions.
 
 ---
 

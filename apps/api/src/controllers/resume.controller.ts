@@ -6,6 +6,7 @@ import { Candidate } from "../models/candidate.model.js";
 import { resumeStorage } from "../services/storage/resumeStorage.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
+import { sseEventHub } from "../services/sse/sseEventHub.js";
 
 // Multer in-memory storage with 5MB ceiling
 export const resumeUploadMiddleware = multer({
@@ -111,6 +112,14 @@ export const uploadResume = async (req: Request, res: Response, next: NextFuncti
       },
       { $set: { resumeUrl: resumeDownloadUrl } }
     );
+
+    sseEventHub.broadcast({
+      type: "resume:uploaded",
+      entity: "resume",
+      entityId: resumeDoc.id,
+      candidateUserId: req.user.id,
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(201).json({
       success: true,

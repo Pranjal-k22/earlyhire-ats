@@ -20,6 +20,7 @@ import {
   applicationQuerySchema,
 } from "../schemas/application.schema.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { sseEventHub } from "../services/sse/sseEventHub.js";
 
 const applyForJobSchema = z.object({
   jobId: z.string().min(1, "Job ID is required"),
@@ -216,6 +217,14 @@ export const createApplication = async (
       { path: "jobId", select: "title department location employmentType status" },
       { path: "recruiterId", select: "name email role" },
     ]);
+
+    sseEventHub.broadcast({
+      type: "application:created",
+      entity: "application",
+      entityId: createdApplication.id,
+      jobId: (createdApplication.jobId as unknown as { _id?: { toString(): string } })?._id?.toString(),
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(201).json({
       success: true,
@@ -476,6 +485,15 @@ export const applyForJob = async (
       { path: "recruiterId", select: "name email role" },
       { path: "resumeId", select: "originalFilename fileSizeBytes createdAt version" },
     ]);
+
+    sseEventHub.broadcast({
+      type: "application:created",
+      entity: "application",
+      entityId: createdApplication.id,
+      candidateUserId: req.user.id,
+      jobId: validated.jobId,
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(201).json({
       success: true,
@@ -865,6 +883,14 @@ export const transitionStage = async (
       { path: "updatedBy", select: "name email role" },
     ]);
 
+    sseEventHub.broadcast({
+      type: "application:stage_changed",
+      entity: "application",
+      entityId: application.id,
+      jobId: (application.jobId as unknown as { _id?: { toString(): string } })?._id?.toString(),
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -984,6 +1010,14 @@ export const updateApplication = async (
       { path: "recruiterId", select: "name email role" },
       { path: "updatedBy", select: "name email role" },
     ]);
+
+    sseEventHub.broadcast({
+      type: "application:updated",
+      entity: "application",
+      entityId: application.id,
+      jobId: (application.jobId as unknown as { _id?: { toString(): string } })?._id?.toString(),
+      timestamp: new Date().toISOString(),
+    });
 
     res.status(200).json({
       success: true,
