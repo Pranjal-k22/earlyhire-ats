@@ -8,7 +8,6 @@ import {
   Search,
   Server,
   Zap,
-  Bell,
   Download,
   Plus,
   Layers,
@@ -19,6 +18,7 @@ import {
   Radio,
   FileCheck2,
 } from "lucide-react";
+import { NotificationsDropdown } from "../notifications/NotificationsDropdown";
 import {
   ResponsiveContainer,
   PieChart,
@@ -190,13 +190,7 @@ export const PlatformPortalView: React.FC = () => {
             isRefreshing={loading}
           />
 
-          <button
-            type="button"
-            className="p-2.5 bg-white border border-slate-200/90 rounded-xl text-slate-600 hover:text-slate-900 shadow-2xs hover:bg-slate-50 transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
+          <NotificationsDropdown />
 
           <button
             type="button"

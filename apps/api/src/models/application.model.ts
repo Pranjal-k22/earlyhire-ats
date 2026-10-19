@@ -18,6 +18,8 @@ export interface IAtsSnapshot {
     | "partial_gemini"
     | "completed"
     | "in_progress"
+    | "processing"
+    | "needs_review"
     | "pending"
     | "failed";
   provider: string;
@@ -29,10 +31,16 @@ export interface IAtsSnapshot {
   rubricVersion: string;
   assessedAt: Date;
   snapshotTimestamp?: Date;
+  startedAt?: Date | null;
+  completedAt?: Date | null;
   reportRef?: mongoose.Types.ObjectId | null;
   matchedSkills?: string[];
   requiredSkillsFound?: string[];
   missingCriteria?: string[];
+  screeningRecommendation?: "strong_match" | "potential_match" | "needs_review" | "insufficient_evidence" | string | null;
+  retryCount?: number;
+  errorCategory?: string | null;
+  triggerSource?: string;
 }
 
 export interface IApplication {
@@ -121,10 +129,16 @@ const applicationSchema = new Schema<IApplicationDocument, IApplicationModel>(
         rubricVersion: { type: String, default: "v2.0-deterministic-hybrid" },
         assessedAt: { type: Date, default: Date.now },
         snapshotTimestamp: { type: Date, default: Date.now },
+        startedAt: { type: Date, default: null },
+        completedAt: { type: Date, default: null },
         reportRef: { type: Schema.Types.ObjectId, ref: "AtsAnalysis", default: null },
         matchedSkills: { type: [String], default: [] },
         requiredSkillsFound: { type: [String], default: [] },
         missingCriteria: { type: [String], default: [] },
+        screeningRecommendation: { type: String, default: null },
+        retryCount: { type: Number, default: 0 },
+        errorCategory: { type: String, default: null },
+        triggerSource: { type: String, default: "application_submission" },
       },
       default: null,
     },

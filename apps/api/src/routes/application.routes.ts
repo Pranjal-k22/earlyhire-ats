@@ -8,6 +8,7 @@ import {
   getApplicationHistory,
   updateApplication,
   getApplicationComparison,
+  retryApplicationScreening,
 } from "../controllers/application.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -25,6 +26,10 @@ router.get("/:id", getApplicationById);
 router.get("/:id/comparison", getApplicationComparison);
 router.get("/:id/history", getApplicationHistory);
 router.get("/:id/stage-history", getApplicationHistory);
+
+// Screening Retry Endpoints (Restricted to hiring_team and platform_manager roles)
+router.post("/:id/screening/retry", requireRole("hiring_team", "platform_manager"), retryApplicationScreening);
+router.post("/:id/retry-screening", requireRole("hiring_team", "platform_manager"), retryApplicationScreening);
 
 // Application Mutating Endpoints (Restricted to hiring_team and platform_manager roles)
 router.post("/", requireRole("hiring_team", "platform_manager"), createApplication);

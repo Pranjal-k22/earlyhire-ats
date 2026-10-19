@@ -98,7 +98,17 @@ describe("CandidatesView Component — Phase 4 UI Verification", () => {
     let callCount = 0;
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockImplementation(() => {
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const urlStr = typeof input === "string" ? input : input instanceof URL ? input.href : (input as Request)?.url || "";
+        if (urlStr.includes("/notifications")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: { unreadCount: 0, notifications: [], pagination: { total: 0 } },
+            }),
+          });
+        }
         callCount++;
         if (callCount === 1) {
           return Promise.resolve({

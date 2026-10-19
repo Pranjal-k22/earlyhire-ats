@@ -4,7 +4,6 @@ import {
   Sparkles,
   Target,
   Layers,
-  Search,
   Kanban,
   CheckCircle,
   Calendar,
@@ -12,10 +11,68 @@ import {
   ShieldCheck,
   Lock,
   History,
+  FileCheck2,
 } from "lucide-react";
 
 export const LandingFeaturesSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"all" | "candidates" | "hiring" | "platform">("all");
+
+  const coreFeatures = [
+    {
+      icon: Sparkles,
+      title: "Intelligent Resume Screening",
+      description:
+        "Evaluate resumes against job-specific requirements and surface relevant evidence, skill matches, and areas needing review.",
+      badge: "Core AI",
+      colorClass: "bg-purple-100 text-[#7651E8] border-purple-200",
+      category: "all",
+    },
+    {
+      icon: Target,
+      title: "Candidate Matching",
+      description:
+        "Help recruiters compare candidate qualifications, skills, and relevant experience against an opening.",
+      badge: "Matching",
+      colorClass: "bg-pink-100 text-pink-700 border-pink-200",
+      category: "all",
+    },
+    {
+      icon: Kanban,
+      title: "Job-Specific Hiring Pipelines",
+      description:
+        "Manage applications independently for each job using structured stages and clear candidate records.",
+      badge: "Pipelines",
+      colorClass: "bg-blue-100 text-blue-700 border-blue-200",
+      category: "hiring",
+    },
+    {
+      icon: Calendar,
+      title: "Interview Scheduling",
+      description:
+        "Coordinate interviews and support Google Calendar and Google Meet integration when authorized.",
+      badge: "Scheduling",
+      colorClass: "bg-amber-100 text-amber-700 border-amber-200",
+      category: "hiring",
+    },
+    {
+      icon: FileCheck2,
+      title: "Interview Scorecards",
+      description:
+        "Capture structured interviewer evaluations and support consistent candidate comparisons.",
+      badge: "Evaluation",
+      colorClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
+      category: "hiring",
+    },
+    {
+      icon: BarChart3,
+      title: "Offers and Hiring Decisions",
+      description:
+        "Manage offer drafts, approvals, candidate responses, and subsequent hiring workflow updates.",
+      badge: "Decisions",
+      colorClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      category: "hiring",
+    },
+  ];
 
   const candidateFeatures = [
     {
@@ -24,6 +81,8 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Upload any standard PDF resume up to 5MB with automated metadata extraction, safe parsing, and local persistent storage.",
       badge: "Candidate",
+      colorClass: "bg-purple-100 text-[#7651E8] border-purple-200",
+      category: "candidates",
     },
     {
       icon: Sparkles,
@@ -31,6 +90,8 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Instant local ATS scoring across skills, experience, and education with granular breakdown and low-score coaching suggestions.",
       badge: "Candidate",
+      colorClass: "bg-pink-100 text-pink-700 border-pink-200",
+      category: "candidates",
     },
     {
       icon: Target,
@@ -38,6 +99,8 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Clear visualization of detected skills against job requisition criteria to highlight strengths and identify qualification gaps.",
       badge: "Candidate",
+      colorClass: "bg-blue-100 text-blue-700 border-blue-200",
+      category: "candidates",
     },
     {
       icon: Layers,
@@ -45,44 +108,8 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Submit job applications with permanent, immutable ATS snapshots and track progression across the 6 canonical stages.",
       badge: "Candidate",
-    },
-  ];
-
-  const hiringTeamFeatures = [
-    {
-      icon: Search,
-      title: "Candidate Discovery & Search",
-      description:
-        "Multi-attribute candidate filtering by name, email, skills, experience years, and sourcing channels with regex injection safety.",
-      badge: "Hiring Team",
-    },
-    {
-      icon: Kanban,
-      title: "Job & Application Pipeline",
-      description:
-        "Manage open requisitions and visually transition candidates through Applied, Screening, Interview, Offer, Hired, and Rejected.",
-      badge: "Hiring Team",
-    },
-    {
-      icon: CheckCircle,
-      title: "Structured Resume Review",
-      description:
-        "Inspect verified candidate resumes and review immutable application snapshots alongside independent human evaluation notes.",
-      badge: "Hiring Team",
-    },
-    {
-      icon: Calendar,
-      title: "Interview & Feedback Management",
-      description:
-        "Schedule interviews, capture multi-criteria interviewer feedback, and enforce candidate feedback confidentiality until release.",
-      badge: "Hiring Team",
-    },
-    {
-      icon: BarChart3,
-      title: "Recruitment Analytics & Funnel",
-      description:
-        "Real-time KPI metrics, conversion rates, stage velocity durations, and sourcing distribution charts for data-driven recruiting.",
-      badge: "Hiring Team",
+      colorClass: "bg-emerald-100 text-emerald-700 border-emerald-200",
+      category: "candidates",
     },
   ];
 
@@ -93,6 +120,8 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Strict separation between candidate, hiring_team, and platform_manager roles with zero public self-escalation.",
       badge: "Platform",
+      colorClass: "bg-purple-100 text-[#7651E8] border-purple-200",
+      category: "platform",
     },
     {
       icon: Lock,
@@ -100,6 +129,8 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Protected resume downloads and updates guarded by strict ownership validation and authenticated HttpOnly sessions.",
       badge: "Platform",
+      colorClass: "bg-blue-100 text-blue-700 border-blue-200",
+      category: "platform",
     },
     {
       icon: History,
@@ -107,36 +138,38 @@ export const LandingFeaturesSection: React.FC = () => {
       description:
         "Historical application snapshots remain preserved and immutable even after active profile resumes are modified or replaced.",
       badge: "Platform",
+      colorClass: "bg-indigo-100 text-indigo-700 border-indigo-200",
+      category: "platform",
     },
   ];
 
-  const filteredFeatures =
+  const displayedFeatures =
     activeTab === "candidates"
       ? candidateFeatures
       : activeTab === "hiring"
-      ? hiringTeamFeatures
+      ? coreFeatures.filter((f) => f.category === "hiring")
       : activeTab === "platform"
       ? platformFeatures
-      : [...candidateFeatures, ...hiringTeamFeatures, ...platformFeatures];
+      : coreFeatures;
 
   return (
-    <section id="features" className="py-24 bg-[#07152F] relative overflow-hidden border-t border-blue-500/10">
-      {/* Ambient background glow */}
-      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-blue-600/10 blur-[120px] pointer-events-none rounded-full" />
-      <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-cyan-500/10 blur-[130px] pointer-events-none rounded-full" />
+    <section id="features" className="py-24 bg-[#FAF8FF] relative overflow-hidden border-t border-[#EAE5F0]">
+      {/* Ambient background pastel glow */}
+      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-[#EEE8FF]/70 blur-[120px] pointer-events-none rounded-full" />
+      <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-[#F8DDEA]/60 blur-[130px] pointer-events-none rounded-full" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#EEE8FF] border border-[#DDD4F8] text-[#7651E8] text-xs font-semibold tracking-wider uppercase shadow-xs">
             <span>BUILT FOR THE ENTIRE HIRING JOURNEY</span>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#20202A]">
             Everything You Need to Hire Smarter
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg text-[#696977] max-w-2xl mx-auto leading-relaxed">
             From the first resume upload to the final hiring decision, EarlyAI ATS brings the
             recruitment workflow into one connected system.
           </p>
@@ -144,7 +177,7 @@ export const LandingFeaturesSection: React.FC = () => {
           {/* Category Filter Pills */}
           <div className="pt-4 flex flex-wrap items-center justify-center gap-2">
             {[
-              { id: "all", label: "All Capabilities" },
+              { id: "all", label: "Core Capabilities" },
               { id: "candidates", label: "For Candidates" },
               { id: "hiring", label: "For Hiring Teams" },
               { id: "platform", label: "Platform & Security" },
@@ -153,10 +186,10 @@ export const LandingFeaturesSection: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all duration-200 ${
+                className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-full transition-all duration-200 cursor-pointer ${
                   activeTab === tab.id
-                    ? "bg-white text-slate-950 shadow-md shadow-white/20"
-                    : "bg-slate-900/60 text-slate-300 hover:text-white border border-slate-700/60 hover:border-slate-500"
+                    ? "bg-[#7651E8] text-white shadow-md shadow-purple-500/20"
+                    : "bg-white text-[#696977] hover:text-[#20202A] border border-[#EAE5F0] hover:border-[#A78BFA]"
                 }`}
               >
                 {tab.label}
@@ -165,60 +198,44 @@ export const LandingFeaturesSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Feature Cards Grid */}
+        {/* Feature Cards Grid (3x2 or responsive) */}
         <div className="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {filteredFeatures.map((feature, idx) => {
+          {displayedFeatures.map((feature, idx) => {
             const Icon = feature.icon;
-            const isCandidate = feature.badge === "Candidate";
-            const isHiring = feature.badge === "Hiring Team";
 
             return (
               <div
                 key={feature.title}
-                className="group p-6 sm:p-7 rounded-2xl bg-[#030817]/70 border border-blue-500/15 hover:border-cyan-400/40 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/30 flex flex-col justify-between"
+                className="group p-7 sm:p-8 rounded-3xl bg-white border border-[#EAE5F0] hover:border-[#A78BFA] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-500/5 flex flex-col justify-between shadow-xs"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center justify-between mb-6">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${
-                        isCandidate
-                          ? "bg-cyan-500/15 text-cyan-400 border border-cyan-400/30"
-                          : isHiring
-                          ? "bg-blue-500/15 text-blue-400 border border-blue-400/30"
-                          : "bg-purple-500/15 text-purple-400 border border-purple-400/30"
-                      }`}
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs border ${feature.colorClass}`}
                     >
                       <Icon className="w-6 h-6" />
                     </div>
 
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                        isCandidate
-                          ? "bg-cyan-950/80 text-cyan-300 border border-cyan-800/40"
-                          : isHiring
-                          ? "bg-blue-950/80 text-blue-300 border border-blue-800/40"
-                          : "bg-purple-950/80 text-purple-300 border border-purple-800/40"
-                      }`}
-                    >
+                    <span className="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider bg-slate-50 text-[#696977] border border-[#EAE5F0]">
                       {feature.badge}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors tracking-tight">
+                  <h3 className="text-xl font-bold text-[#20202A] group-hover:text-[#7651E8] transition-colors tracking-tight">
                     {feature.title}
                   </h3>
 
-                  <p className="mt-2 text-sm text-slate-300/85 leading-relaxed">
+                  <p className="mt-2.5 text-sm text-[#696977] leading-relaxed">
                     {feature.description}
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
-                  <span className="flex items-center gap-1.5 text-cyan-400/90 font-medium">
-                    <CheckCircle className="w-3.5 h-3.5" />
+                <div className="mt-8 pt-4 border-t border-[#F2EFF7] flex items-center justify-between text-xs text-[#696977]">
+                  <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Verified in EarlyAI ATS</span>
                   </span>
-                  <span className="text-[11px] font-mono text-slate-500">0{idx + 1}</span>
+                  <span className="text-[11px] font-mono font-medium text-slate-400">0{idx + 1}</span>
                 </div>
               </div>
             );

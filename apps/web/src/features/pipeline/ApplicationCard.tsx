@@ -108,6 +108,12 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
               if (status === "pending" || status === "in_progress") {
                 label = "ATS pending";
                 badgeClass = "bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200";
+              } else if (status === "processing") {
+                label = "Screening...";
+                badgeClass = "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 animate-pulse";
+              } else if (status === "needs_review") {
+                label = "Needs Review";
+                badgeClass = "bg-orange-50 text-orange-800 border border-orange-200 hover:bg-orange-100";
               } else if (status === "failed") {
                 label = "ATS unavailable";
                 badgeClass = "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200";
@@ -115,6 +121,13 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
                 label = `ATS ${application.atsSnapshot.overallScore}/100`;
                 badgeSuffix = "partial";
                 badgeClass = "bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100";
+              } else if (status === "completed" || status === "dual_complete") {
+                const score = application.atsSnapshot.overallScore;
+                badgeClass = score >= 80
+                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                  : score >= 60
+                  ? "bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100"
+                  : "bg-slate-50 text-slate-800 border border-slate-200 hover:bg-slate-100";
               }
 
               return (

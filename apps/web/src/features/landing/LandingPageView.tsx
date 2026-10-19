@@ -1,6 +1,7 @@
 import React from "react";
 import { LandingNavBar } from "./LandingNavBar";
 import { LandingHeroSection } from "./LandingHeroSection";
+import { LandingTrustStrip } from "./LandingTrustStrip";
 import { LandingFeaturesSection } from "./LandingFeaturesSection";
 import { LandingHowItWorksSection } from "./LandingHowItWorksSection";
 import { LandingCandidateHiringSections } from "./LandingCandidateHiringSections";
@@ -27,7 +28,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#030817] text-slate-100 font-sans selection:bg-cyan-500 selection:text-slate-950">
+    <div className="min-h-screen bg-[#FFFCFA] text-[#20202A] font-sans selection:bg-purple-200 selection:text-purple-900">
       {/* Top Fixed Navigation Bar */}
       <LandingNavBar
         currentUser={currentUser}
@@ -41,6 +42,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
           onOpenAuth={onOpenAuth}
           onExploreFeatures={handleExploreFeatures}
         />
+
+        {/* Trust & Capabilities Transition Bar */}
+        <LandingTrustStrip />
 
         <LandingFeaturesSection />
 

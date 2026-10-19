@@ -74,6 +74,7 @@ export const createApp = (): Express => {
   app.use("/api/v1/notes", noteDirectRoutes);
   app.use("/api/v1/analytics", analyticsRoutes);
   app.use("/api/v1/dashboard", analyticsRoutes);
+  app.use("/api/v1/sse", analyticsRoutes);
 
   // 404 Fallback
   app.use(notFoundHandler);

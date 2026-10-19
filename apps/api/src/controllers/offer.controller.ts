@@ -7,9 +7,9 @@ import { Candidate } from "../models/candidate.model.js";
 import { Job } from "../models/job.model.js";
 import { User, normalizeRole } from "../models/user.model.js";
 import { InterviewStageHistory } from "../models/stageHistory.model.js";
-import { Notification } from "../models/notification.model.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { sseEventHub } from "../services/sse/sseEventHub.js";
+import { notificationService } from "../services/notification/notificationService.js";
 
 const createOfferSchema = z.object({
   applicationId: z.string().min(1, "Application ID is required"),
@@ -348,12 +348,13 @@ export const extendOffer = async (
 
     // Notify candidate
     if (offer.candidateUserId) {
-      await Notification.create({
+      await notificationService.createNotification({
         recipientUserId: offer.candidateUserId,
         title: "Official Job Offer Received!",
         message: `Congratulations! An offer for "${offer.title}" with compensation ${offer.currency} ${offer.salary.toLocaleString()} has been extended to you.`,
         type: "offer_extended",
         link: "/candidate/portal",
+        idempotencyKey: `offer-ext-${offer.id}`,
         metadata: { offerId: offer.id, jobId: offer.jobId },
       });
     }
@@ -460,12 +461,13 @@ export const respondToOffer = async (
       });
 
       // Notify recruiter / creator
-      await Notification.create({
+      await notificationService.createNotification({
         recipientUserId: offer.createdBy,
         title: "Offer Accepted! Candidate Hired 🎉",
         message: `Great news! The candidate accepted the offer for "${offer.title}". Application moved to Hired.`,
         type: "offer_accepted",
         link: `/pipeline?jobId=${offer.jobId}`,
+        idempotencyKey: `offer-acc-${offer.id}`,
         metadata: { offerId: offer.id, applicationId: application.id },
       });
 
@@ -478,12 +480,13 @@ export const respondToOffer = async (
       });
     } else if (validated.response === "Declined") {
       // Notify recruiter / creator
-      await Notification.create({
+      await notificationService.createNotification({
         recipientUserId: offer.createdBy,
         title: "Offer Declined by Candidate",
         message: `Candidate has declined the offer for "${offer.title}". Notes: ${validated.notes || "None provided"}`,
         type: "offer_declined",
         link: `/pipeline?jobId=${offer.jobId}`,
+        idempotencyKey: `offer-dec-${offer.id}`,
         metadata: { offerId: offer.id },
       });
     }

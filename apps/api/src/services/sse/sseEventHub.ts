@@ -17,11 +17,14 @@ export interface RealtimeAnalyticsEvent {
     | "offer:approved"
     | "offer:extended"
     | "offer:responded"
-    | "user:updated";
+    | "user:updated"
+    | "notification:created";
   entity?: string;
   entityId?: string;
   applicationId?: string;
   candidateUserId?: string;
+  recipientUserId?: string;
+  notification?: unknown;
   jobId?: string;
   response?: string;
   targetRoles?: string[];
@@ -105,10 +108,31 @@ class SSEEventHub {
           continue;
         }
 
+        // If recipient-specific event, guarantee user isolation
+        if (event.recipientUserId && event.recipientUserId !== client.userId) {
+          continue;
+        }
+
         client.res.write(payload);
       } catch {
         // Client write failed; remove on next cycle
         this.unregisterClient(client.id);
+      }
+    }
+  }
+
+  /**
+   * Dispatches an event directly to a specific user's connected client(s).
+   */
+  public sendToUser(userId: string, event: RealtimeAnalyticsEvent): void {
+    const payload = `data: ${JSON.stringify(event)}\n\n`;
+    for (const client of this.clients.values()) {
+      if (client.userId === userId) {
+        try {
+          client.res.write(payload);
+        } catch {
+          this.unregisterClient(client.id);
+        }
       }
     }
   }

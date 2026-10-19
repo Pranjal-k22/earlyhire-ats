@@ -56,76 +56,80 @@ export interface AppProps {
   initialMode?: AuthPortalMode;
 }
 
+const getInitialRouteState = (
+  initialTab?: AppTab,
+  initialPortal: AuthPortalRole = "candidate",
+  initialMode: AuthPortalMode = "login"
+): {
+  tab: AppTab;
+  portal: AuthPortalRole;
+  mode: AuthPortalMode;
+} => {
+  if (initialTab) {
+    return {
+      tab: initialTab,
+      portal: initialPortal,
+      mode: initialMode,
+    };
+  }
+
+  if (typeof window !== "undefined") {
+    const hash = window.location.hash.toLowerCase();
+    const path = window.location.pathname.toLowerCase();
+
+    // Check URL and hash for role-based authentication portals
+    if (path === "/login/candidate" || hash === "#login-candidate") {
+      return { tab: "auth", portal: "candidate", mode: "login" };
+    }
+    if (path === "/login/recruiter" || hash === "#login-recruiter") {
+      return { tab: "auth", portal: "recruiter", mode: "login" };
+    }
+    if (path === "/login/admin" || hash === "#login-admin") {
+      return { tab: "auth", portal: "admin", mode: "login" };
+    }
+    if (path === "/login" || hash === "#login") {
+      return { tab: "auth", portal: "candidate", mode: "login" };
+    }
+    if (path === "/register/candidate" || hash === "#register-candidate" || path === "/register" || hash === "#register") {
+      return { tab: "auth", portal: "candidate", mode: "signup" };
+    }
+    if (path === "/candidate" || hash === "#candidate") {
+      return { tab: "candidate", portal: "candidate", mode: "login" };
+    }
+    if (path === "/platform" || hash === "#platform") {
+      return { tab: "platform", portal: "admin", mode: "login" };
+    }
+    if (path === "/candidates" || hash === "#candidates") {
+      return { tab: "candidates", portal: "recruiter", mode: "login" };
+    }
+    if (path === "/jobs" || hash === "#jobs") {
+      return { tab: "jobs", portal: "candidate", mode: "login" };
+    }
+    if (path === "/pipeline" || hash === "#pipeline") {
+      return { tab: "pipeline", portal: "recruiter", mode: "login" };
+    }
+    if (hash === "#landing" || path === "/landing") {
+      return { tab: "landing", portal: "candidate", mode: "login" };
+    }
+    if (hash === "#workspace" || path === "/workspace" || path === "/overview") {
+      return { tab: "overview", portal: "recruiter", mode: "login" };
+    }
+  }
+
+  // In Vitest test environment, default to "overview" to preserve existing workspace tests
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
+    return { tab: "overview", portal: "recruiter", mode: "login" };
+  }
+
+  return { tab: "landing", portal: "candidate", mode: "login" };
+};
+
 export const App: React.FC<AppProps> = ({
   initialTab,
   initialPortal = "candidate",
   initialMode = "login",
 }) => {
-  const getInitialRouteState = (): {
-    tab: AppTab;
-    portal: AuthPortalRole;
-    mode: AuthPortalMode;
-  } => {
-    if (initialTab) {
-      return {
-        tab: initialTab,
-        portal: initialPortal,
-        mode: initialMode,
-      };
-    }
-
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash.toLowerCase();
-      const path = window.location.pathname.toLowerCase();
-
-      // Check URL and hash for role-based authentication portals
-      if (path === "/login/candidate" || hash === "#login-candidate") {
-        return { tab: "auth", portal: "candidate", mode: "login" };
-      }
-      if (path === "/login/recruiter" || hash === "#login-recruiter") {
-        return { tab: "auth", portal: "recruiter", mode: "login" };
-      }
-      if (path === "/login/admin" || hash === "#login-admin") {
-        return { tab: "auth", portal: "admin", mode: "login" };
-      }
-      if (path === "/login" || hash === "#login") {
-        return { tab: "auth", portal: "candidate", mode: "login" };
-      }
-      if (path === "/register/candidate" || hash === "#register-candidate" || path === "/register" || hash === "#register") {
-        return { tab: "auth", portal: "candidate", mode: "signup" };
-      }
-      if (path === "/candidate" || hash === "#candidate") {
-        return { tab: "candidate", portal: "candidate", mode: "login" };
-      }
-      if (path === "/platform" || hash === "#platform") {
-        return { tab: "platform", portal: "admin", mode: "login" };
-      }
-      if (path === "/candidates" || hash === "#candidates") {
-        return { tab: "candidates", portal: "recruiter", mode: "login" };
-      }
-      if (path === "/jobs" || hash === "#jobs") {
-        return { tab: "jobs", portal: "candidate", mode: "login" };
-      }
-      if (path === "/pipeline" || hash === "#pipeline") {
-        return { tab: "pipeline", portal: "recruiter", mode: "login" };
-      }
-      if (hash === "#landing" || path === "/landing") {
-        return { tab: "landing", portal: "candidate", mode: "login" };
-      }
-      if (hash === "#workspace" || path === "/workspace" || path === "/overview") {
-        return { tab: "overview", portal: "recruiter", mode: "login" };
-      }
-    }
-
-    // In Vitest test environment, default to "overview" to preserve existing workspace tests
-    if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
-      return { tab: "overview", portal: "recruiter", mode: "login" };
-    }
-
-    return { tab: "landing", portal: "candidate", mode: "login" };
-  };
-
-  const initialState = getInitialRouteState();
+  const initialState = getInitialRouteState(initialTab, initialPortal, initialMode);
   const [activeTab, setActiveTab] = useState<AppTab>(initialState.tab);
   const [authPortalRole, setAuthPortalRole] = useState<AuthPortalRole>(initialState.portal);
   const [authPortalMode, setAuthPortalMode] = useState<AuthPortalMode>(initialState.mode);
@@ -218,7 +222,7 @@ export const App: React.FC<AppProps> = ({
   // Handle URL PopState / HashChange
   useEffect(() => {
     const handleUrlChange = () => {
-      const state = getInitialRouteState();
+      const state = getInitialRouteState(initialTab, initialPortal, initialMode);
       setActiveTab(state.tab);
       setAuthPortalRole(state.portal);
       setAuthPortalMode(state.mode);
@@ -230,7 +234,7 @@ export const App: React.FC<AppProps> = ({
       window.removeEventListener("popstate", handleUrlChange);
       window.removeEventListener("hashchange", handleUrlChange);
     };
-  }, []);
+  }, [initialTab, initialPortal, initialMode]);
 
   // Close User Menu on Outside Click
   useEffect(() => {

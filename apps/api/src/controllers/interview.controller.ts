@@ -6,7 +6,6 @@ import { Application } from "../models/application.model.js";
 import { Candidate } from "../models/candidate.model.js";
 import { Job } from "../models/job.model.js";
 import { User } from "../models/user.model.js";
-import { Notification } from "../models/notification.model.js";
 import { GoogleCalendarConnection } from "../models/googleCalendarConnection.model.js";
 import { googleCalendarService } from "../services/calendar/googleCalendarService.js";
 import { decryptToken } from "../utils/crypto.js";
@@ -14,6 +13,7 @@ import { env } from "../config/env.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
 import { sseEventHub } from "../services/sse/sseEventHub.js";
+import { notificationService } from "../services/notification/notificationService.js";
 
 const scheduleInterviewSchema = z.object({
   applicationId: z.string().min(1, "Application ID is required"),
@@ -184,7 +184,7 @@ export const scheduleInterview = async (req: Request, res: Response, next: NextF
 
     // Notify candidate if user account exists
     if (candidateUser) {
-      await Notification.create({
+      await notificationService.createNotification({
         recipientUserId: candidateUser.id,
         title: "Interview Scheduled",
         message: `An interview for ${job.title} has been scheduled for ${startTime.toUTCString()}.`,
@@ -349,11 +349,11 @@ export const rescheduleInterview = async (req: Request, res: Response, next: Nex
     await interview.save();
 
     // Notify candidate
-    await Notification.create({
+    await notificationService.createNotification({
       recipientUserId: interview.candidateUserId,
       title: "Interview Rescheduled",
       message: `Your interview for ${interview.title} has been rescheduled to ${startTime.toUTCString()}.`,
-      type: "interview_scheduled",
+      type: "interview_rescheduled",
       link: `/candidate/interviews`,
       metadata: { interviewId: interview.id },
     });
@@ -411,12 +411,13 @@ export const cancelInterview = async (req: Request, res: Response, next: NextFun
     await interview.save();
 
     // Notify candidate
-    await Notification.create({
+    await notificationService.createNotification({
       recipientUserId: interview.candidateUserId,
       title: "Interview Cancelled",
       message: `Your interview scheduled for ${interview.scheduledStartTime.toUTCString()} has been cancelled.`,
-      type: "interview_scheduled",
+      type: "interview_cancelled",
       link: `/candidate/interviews`,
+      metadata: { interviewId: interview.id },
     });
 
     sseEventHub.broadcast({

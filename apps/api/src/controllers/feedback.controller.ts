@@ -5,10 +5,10 @@ import { InterviewFeedback } from "../models/interviewFeedback.model.js";
 import { Interview } from "../models/interview.model.js";
 import { Application } from "../models/application.model.js";
 import { Candidate } from "../models/candidate.model.js";
-import { Notification } from "../models/notification.model.js";
 import { aiRouter } from "../services/ai/aiRouter.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { normalizeRole } from "../models/user.model.js";
+import { notificationService } from "../services/notification/notificationService.js";
 
 const submitFeedbackSchema = z.object({
   interviewId: z.string().min(1, "Interview ID is required"),
@@ -161,12 +161,13 @@ export const releaseFeedback = async (req: Request, res: Response, next: NextFun
     if (application && application.candidateId) {
       const interview = await Interview.findById(feedback.interviewId);
       if (interview) {
-        await Notification.create({
+        await notificationService.createNotification({
           recipientUserId: interview.candidateUserId,
           title: "Interview Feedback Released",
           message: "The hiring team has released constructive feedback for your recent interview.",
           type: "feedback_released",
           link: "/candidate/interviews",
+          idempotencyKey: `feedback-rel-${feedback.id}`,
         });
       }
     }

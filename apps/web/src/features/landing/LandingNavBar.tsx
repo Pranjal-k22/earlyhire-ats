@@ -64,14 +64,12 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
     }
   };
 
-
-
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-[#030817]/85 backdrop-blur-md border-b border-blue-500/15 shadow-xl shadow-black/40"
-          : "bg-transparent border-b border-white/5"
+          ? "bg-white/90 backdrop-blur-md border-b border-[#EAE5F0] shadow-xs"
+          : "bg-white/60 backdrop-blur-sm border-b border-[#EAE5F0]/60"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -83,16 +81,16 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
               e.preventDefault();
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="flex items-center gap-3 group cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-cyan-400 rounded-xl p-1"
+            className="flex items-center gap-3 group cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-purple-400 rounded-xl p-1"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform duration-200">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7651E8] via-[#8B5CF6] to-[#A78BFA] flex items-center justify-center text-white shadow-md shadow-purple-500/25 group-hover:scale-105 transition-transform duration-200">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5 font-sans">
-                EarlyAI <span className="text-cyan-400 font-extrabold">ATS</span>
+              <span className="text-xl font-bold tracking-tight text-[#20202A] flex items-center gap-1.5 font-sans">
+                EarlyAI <span className="text-[#7651E8] font-extrabold">ATS</span>
               </span>
-              <span className="text-[10px] text-blue-300/80 font-medium tracking-wide uppercase">
+              <span className="text-[10px] text-[#696977] font-medium tracking-wide uppercase">
                 Intelligent Recruitment
               </span>
             </div>
@@ -105,7 +103,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                 key={link.label}
                 href={link.href}
                 onClick={(e) => handleNavLinkClick(e, link.href)}
-                className="text-sm font-medium text-slate-300 hover:text-white transition-colors py-1.5 focus:outline-hidden focus:ring-2 focus:ring-cyan-400 rounded-md"
+                className="text-sm font-medium text-[#696977] hover:text-[#7651E8] transition-colors py-1.5 focus:outline-hidden focus:ring-2 focus:ring-purple-400 rounded-md"
               >
                 {link.label}
               </a>
@@ -117,18 +115,18 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
             {currentUser ? (
               <div className="flex items-center gap-3">
                 <div className="hidden md:flex flex-col items-end text-right">
-                  <span className="text-xs font-semibold text-white">{currentUser.name}</span>
-                  <span className="text-[10px] text-cyan-300 uppercase font-medium">
+                  <span className="text-xs font-semibold text-[#20202A]">{currentUser.name}</span>
+                  <span className="text-[10px] text-[#7651E8] uppercase font-medium">
                     {currentUser.role.replace("_", " ")}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={onNavigateToWorkspace}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-900 bg-white hover:bg-slate-100 rounded-full shadow-lg shadow-blue-500/20 transition-all hover:scale-102 focus:outline-hidden focus:ring-2 focus:ring-white"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#7651E8] hover:bg-[#633DD8] rounded-full shadow-md shadow-purple-500/20 transition-all hover:scale-102 focus:outline-hidden focus:ring-2 focus:ring-purple-400"
                 >
                   <span>Enter Workspace</span>
-                  <ArrowRight className="w-4 h-4 text-slate-900" />
+                  <ArrowRight className="w-4 h-4 text-white" />
                 </button>
               </div>
             ) : (
@@ -137,7 +135,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                   type="button"
                   data-testid="header-sign-in-button"
                   onClick={() => onOpenAuth("login")}
-                  className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors focus:outline-hidden focus:ring-2 focus:ring-cyan-400 rounded-full"
+                  className="px-4 py-2 text-sm font-medium text-[#20202A] hover:text-[#7651E8] transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-400 rounded-full"
                 >
                   Sign In
                 </button>
@@ -145,13 +143,10 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                   type="button"
                   data-testid="header-register-button"
                   onClick={() => onOpenAuth("signup")}
-                  className="relative group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-950 bg-white hover:bg-slate-100 rounded-full shadow-xl transition-all duration-200 hover:scale-102 focus:outline-hidden focus:ring-2 focus:ring-cyan-400"
+                  className="relative group inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-slate-950 bg-[#FFAA45] hover:bg-[#F59218] rounded-full shadow-md shadow-amber-500/20 transition-all duration-200 hover:scale-102 focus:outline-hidden focus:ring-2 focus:ring-amber-400"
                 >
-                  <span className="absolute -inset-0.5 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full blur-xs opacity-60 group-hover:opacity-100 transition duration-200" />
-                  <span className="relative flex items-center gap-1.5 text-slate-950">
-                    <UserPlus className="w-4 h-4 text-blue-600" />
-                    <span>Get Started</span>
-                  </span>
+                  <UserPlus className="w-4 h-4 text-slate-950" />
+                  <span>Get Started</span>
                 </button>
               </>
             )}
@@ -163,7 +158,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-              className="p-2 text-slate-300 hover:text-white rounded-lg focus:outline-hidden focus:ring-2 focus:ring-cyan-400"
+              className="p-2 text-[#20202A] hover:text-[#7651E8] rounded-lg focus:outline-hidden focus:ring-2 focus:ring-purple-400"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -177,9 +172,9 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
           role="dialog"
           aria-modal="true"
           aria-label="Mobile Navigation"
-          className="fixed inset-0 top-20 z-40 bg-[#030817]/95 backdrop-blur-xl border-t border-blue-500/20 sm:hidden flex flex-col p-6 space-y-6"
+          className="fixed inset-0 top-20 z-40 bg-white/95 backdrop-blur-xl border-t border-[#EAE5F0] sm:hidden flex flex-col p-6 space-y-6 shadow-xl"
         >
-          <nav className="flex flex-col space-y-4">
+          <nav className="flex flex-col space-y-3">
             {navLinks.map((link) => {
               const Icon = link.icon;
               return (
@@ -187,16 +182,16 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                   key={link.label}
                   href={link.href}
                   onClick={(e) => handleNavLinkClick(e, link.href)}
-                  className="flex items-center gap-3 p-3 text-base font-medium text-slate-200 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+                  className="flex items-center gap-3 p-3 text-base font-medium text-[#20202A] hover:text-[#7651E8] hover:bg-purple-50 rounded-xl transition-colors"
                 >
-                  <Icon className="w-5 h-5 text-cyan-400" />
+                  <Icon className="w-5 h-5 text-[#7651E8]" />
                   <span>{link.label}</span>
                 </a>
               );
             })}
           </nav>
 
-          <div className="pt-6 border-t border-white/10 flex flex-col gap-3">
+          <div className="pt-6 border-t border-[#EAE5F0] flex flex-col gap-3">
             {currentUser ? (
               <button
                 type="button"
@@ -204,10 +199,10 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                   setIsMobileMenuOpen(false);
                   onNavigateToWorkspace();
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold text-slate-950 bg-white rounded-xl shadow-lg"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold text-white bg-[#7651E8] hover:bg-[#633DD8] rounded-xl shadow-md"
               >
                 <span>Enter Workspace</span>
-                <ArrowRight className="w-4 h-4 text-slate-950" />
+                <ArrowRight className="w-4 h-4 text-white" />
               </button>
             ) : (
               <>
@@ -217,7 +212,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                     setIsMobileMenuOpen(false);
                     onOpenAuth("login");
                   }}
-                  className="w-full py-3 px-4 text-sm font-medium text-white border border-white/20 rounded-xl hover:bg-white/5"
+                  className="w-full py-3 px-4 text-sm font-semibold text-[#20202A] border border-[#EAE5F0] bg-white rounded-xl hover:bg-slate-50"
                 >
                   Sign In
                 </button>
@@ -227,7 +222,7 @@ export const LandingNavBar: React.FC<LandingNavBarProps> = ({
                     setIsMobileMenuOpen(false);
                     onOpenAuth("signup");
                   }}
-                  className="w-full py-3 px-4 text-sm font-semibold text-slate-950 bg-white rounded-xl shadow-lg shadow-blue-500/20"
+                  className="w-full py-3 px-4 text-sm font-bold text-slate-950 bg-[#FFAA45] hover:bg-[#F59218] rounded-xl shadow-md shadow-amber-500/20"
                 >
                   Get Started
                 </button>

@@ -39,8 +39,8 @@ import { StageBadge } from "./StageBadge";
 
 export type PipelineTab = "active" | "completed" | "all";
 
-export const ACTIVE_STAGES: HiringStage[] = ["Applied", "Screening", "Interview", "Offer"];
-export const COMPLETED_STAGES: HiringStage[] = ["Hired", "Rejected"];
+const ACTIVE_STAGES: HiringStage[] = ["Applied", "Screening", "Interview", "Offer"];
+const COMPLETED_STAGES: HiringStage[] = ["Hired", "Rejected"];
 
 export interface PipelineViewProps {
   initialTab?: PipelineTab;

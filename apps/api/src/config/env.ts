@@ -47,6 +47,12 @@ const envSchema = z
     GOOGLE_REDIRECT_URI: z.string().optional(),
     GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().optional(),
     GOOGLE_CALENDAR_REFRESH_TOKEN: z.string().optional(),
+    EMAIL_ENABLED: z.string().optional().transform((val) => val === "true" || val === "1"),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.string().optional().transform((val) => (val ? parseInt(val, 10) : 587)),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().default("EarlyAI ATS <no-reply@earlyhire.ai>"),
   })
   .transform((data) => {
     if (data.NODE_ENV === "test" || isTestMode) {

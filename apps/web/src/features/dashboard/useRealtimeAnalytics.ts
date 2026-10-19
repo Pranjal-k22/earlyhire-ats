@@ -72,6 +72,7 @@ export function useRealtimeAnalytics({
           if (!event.data || event.data.trim() === ":ping") return;
           const parsed = JSON.parse(event.data);
           setLastEventTimestamp(parsed.timestamp || new Date().toISOString());
+          window.dispatchEvent(new CustomEvent("earlyai:realtime-event", { detail: parsed }));
           triggerDebouncedInvalidate();
         } catch {
           // Non-JSON or comment ping

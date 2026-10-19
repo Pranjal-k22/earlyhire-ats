@@ -12,7 +12,6 @@ import {
   AlertCircle,
   FolderOpen,
   ExternalLink,
-  Bell,
   UserPlus,
   Sparkles,
   Calendar,
@@ -24,6 +23,7 @@ import {
   Info,
   FileText,
 } from "lucide-react";
+import { NotificationsDropdown } from "../notifications/NotificationsDropdown";
 import { Candidate, CandidateFormData, CandidateSource } from "../../types/candidate";
 import {
   fetchCandidates,
@@ -190,13 +190,7 @@ export const CandidatesView: React.FC = () => {
 
         {/* Right Controls: Bell, User Icon, Date, Add Candidate */}
         <div className="flex items-center gap-3 self-end md:self-auto">
-          <button
-            type="button"
-            className="p-2.5 bg-white border border-slate-200/90 rounded-xl text-slate-600 hover:text-slate-900 shadow-2xs hover:bg-slate-50 transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
+          <NotificationsDropdown />
 
           <button
             type="button"

@@ -35,6 +35,8 @@ export interface IAtsSnapshot {
     | "partial_gemini"
     | "completed"
     | "in_progress"
+    | "processing"
+    | "needs_review"
     | "pending"
     | "failed";
   provider: string;
@@ -45,9 +47,15 @@ export interface IAtsSnapshot {
   promptVersion: string;
   rubricVersion: string;
   assessedAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
   reportRef?: string | null;
   matchedSkills?: string[];
   missingCriteria?: string[];
+  screeningRecommendation?: "strong_match" | "potential_match" | "needs_review" | "insufficient_evidence" | string | null;
+  retryCount?: number;
+  errorCategory?: string | null;
+  triggerSource?: string;
 }
 
 export interface Application {

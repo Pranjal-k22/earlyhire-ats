@@ -11,7 +11,7 @@ import {
   ExternalLink,
   Download,
 } from "lucide-react";
-import { fetchApplicationAtsReport, AtsReport } from "../../api/atsApi";
+import { fetchApplicationAtsReport, retryApplicationScreening, AtsReport } from "../../api/atsApi";
 import { Application, IAtsSnapshot } from "../../types/application";
 
 interface AtsReportDrawerProps {
@@ -28,6 +28,8 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
   const [report, setReport] = useState<AtsReport | null>(null);
   const [snapshot, setSnapshot] = useState<IAtsSnapshot | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [retrying, setRetrying] = useState<boolean>(false);
+  const [retrySuccess, setRetrySuccess] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -185,22 +187,31 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                 </div>
 
                 <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shrink-0 min-w-[140px]">
-                  {snapshot.status === "pending" || snapshot.status === "in_progress" ? (
+                  {snapshot.status === "pending" || snapshot.status === "in_progress" || snapshot.status === "processing" ? (
                     <>
-                      <div className="text-2xl sm:text-3xl font-black text-slate-300">
-                        Pending
+                      <div className="text-xl sm:text-2xl font-black text-amber-300 animate-pulse">
+                        Screening...
                       </div>
                       <div className="text-xs uppercase font-semibold text-slate-400 mt-1">
                         In Progress
                       </div>
                     </>
+                  ) : snapshot.status === "needs_review" ? (
+                    <>
+                      <div className="text-xl sm:text-2xl font-black text-orange-400">
+                        Needs Review
+                      </div>
+                      <div className="text-xs uppercase font-semibold text-slate-300 mt-1">
+                        Manual Review
+                      </div>
+                    </>
                   ) : snapshot.status === "failed" ? (
                     <>
-                      <div className="text-xl sm:text-2xl font-black text-amber-400">
-                        Unavailable
+                      <div className="text-xl sm:text-2xl font-black text-rose-400">
+                        Failed
                       </div>
                       <div className="text-xs uppercase font-semibold text-slate-400 mt-1">
-                        Offline Fallback
+                        Screening Error
                       </div>
                     </>
                   ) : (
@@ -213,11 +224,42 @@ export const AtsReportDrawer: React.FC<AtsReportDrawerProps> = ({
                         {overallScore}/100
                       </div>
                       <div className="text-xs uppercase font-semibold text-slate-300 mt-1">
-                        {isHighMatch ? "Strong Alignment" : "Coaching Review"}
+                        {snapshot.screeningRecommendation?.replace(/_/g, " ") || (isHighMatch ? "Strong Alignment" : "Coaching Review")}
                       </div>
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Retry Screening Action Banner */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold text-slate-900 block">Screening Controls</span>
+                  <span>{snapshot.status === "completed" ? "Evaluation completed. You may re-trigger screening if requirements changed." : "Automatic screening needs manual review or re-run."}</span>
+                  {retrySuccess && <span className="block text-emerald-600 font-medium pt-1">{retrySuccess}</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!application) return;
+                    setRetrying(true);
+                    setRetrySuccess(null);
+                    try {
+                      await retryApplicationScreening(application.id);
+                      setRetrySuccess("Screening re-evaluation queued!");
+                      setTimeout(() => setRetrySuccess(null), 4000);
+                    } catch (err) {
+                      setErrorMessage(err instanceof Error ? err.message : "Retry failed");
+                    } finally {
+                      setRetrying(false);
+                    }
+                  }}
+                  disabled={retrying}
+                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-60 cursor-pointer shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${retrying ? "animate-spin" : ""}`} />
+                  <span>{retrying ? "Retrying..." : "Retry Screening"}</span>
+                </button>
               </div>
 
               {/* Subsequent Assessment Difference Notice if Candidate rechecked later */}

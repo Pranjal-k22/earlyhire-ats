@@ -118,3 +118,12 @@ export const fetchApplicationAtsReport = async (
     };
   }>(res, "Failed to fetch application ATS assessment");
 };
+
+export const retryApplicationScreening = async (applicationId: string): Promise<void> => {
+  const res = await fetch(`${API_BASE}/api/v1/applications/${applicationId}/screening/retry`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    credentials: "include",
+  });
+  await parseApiResponse<void>(res, "Failed to retry application screening");
+};

@@ -22,6 +22,8 @@ import {
 } from "../schemas/application.schema.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { sseEventHub } from "../services/sse/sseEventHub.js";
+import { notificationService } from "../services/notification/notificationService.js";
+import { screeningService } from "../services/screening/screeningService.js";
 
 const applyForJobSchema = z.object({
   jobId: z.string().min(1, "Job ID is required"),
@@ -226,6 +228,32 @@ export const createApplication = async (
       jobId: (createdApplication.jobId as unknown as { _id?: { toString(): string } })?._id?.toString(),
       timestamp: new Date().toISOString(),
     });
+
+    // Notify candidate & recruiter and trigger automatic screening if resume exists
+    const candidateUser = await User.findOne({ email: candidate.email });
+    const candUserId = candidateUser?.id || candidate.createdBy?.toString() || req.user.id;
+    await notificationService.notifyApplicationCreated({
+      applicationId: createdApplication.id,
+      candidateUserId: candUserId,
+      candidateName: candidate.fullName || candidate.name || "Candidate",
+      jobId: job.id,
+      jobTitle: job.title,
+      recruiterUserId: recruiterId.toString(),
+    });
+
+    const activeResume = await ResumeFile.findOne({
+      $or: [{ candidateUserId: candUserId }, { candidateUserId: candidate._id }],
+      isDeleted: false,
+    }).sort({ createdAt: -1 });
+
+    if (activeResume) {
+      createdApplication.resumeId = activeResume._id;
+      await createdApplication.save();
+      screeningService.triggerAutomaticScreening({
+        applicationId: createdApplication.id,
+        triggerSource: "recruiter_application_creation",
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -495,6 +523,35 @@ export const applyForJob = async (
       jobId: validated.jobId,
       timestamp: new Date().toISOString(),
     });
+
+    // Notify candidate and recruiter of application submission
+    await notificationService.notifyApplicationCreated({
+      applicationId: createdApplication.id,
+      candidateUserId: req.user.id,
+      candidateName: candidate.fullName || candidate.name || "Candidate",
+      jobId: job.id,
+      jobTitle: job.title,
+      recruiterUserId: recruiterId.toString(),
+    });
+
+    // If analysis was already computed, notify recruiter; otherwise trigger async screening
+    if (analysis) {
+      await notificationService.notifyScreeningResult({
+        applicationId: createdApplication.id,
+        candidateName: candidate.fullName || candidate.name || "Candidate",
+        jobId: job.id,
+        jobTitle: job.title,
+        recruiterUserId: recruiterId.toString(),
+        score: analysis.overallScore,
+        recommendation: screeningService.getScreeningRecommendation(analysis.overallScore),
+        status: "completed",
+      });
+    } else {
+      screeningService.triggerAutomaticScreening({
+        applicationId: createdApplication.id,
+        triggerSource: "candidate_application",
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -972,6 +1029,20 @@ export const transitionStage = async (
       timestamp: new Date().toISOString(),
     });
 
+    // Notify candidate of milestone stage advancement
+    const candObj = application.candidateId as unknown as { fullName?: string; name?: string; email?: string; userId?: mongoose.Types.ObjectId; createdBy?: mongoose.Types.ObjectId };
+    const jobObj = application.jobId as unknown as { title?: string };
+    const candUserIdForStage = candObj?.userId?.toString() || candObj?.createdBy?.toString();
+    notificationService.notifyStageChanged({
+      applicationId: application.id,
+      candidateUserId: candUserIdForStage,
+      candidateName: candObj?.fullName || candObj?.name || "Candidate",
+      recruiterUserId: application.recruiterId?.toString() || req.user.id,
+      jobTitle: jobObj?.title || "Job Opening",
+      fromStage: currentStage,
+      toStage: validated.toStage,
+    }).catch(() => {});
+
     res.status(200).json({
       success: true,
       data: {
@@ -1290,6 +1361,48 @@ export const getApplicationComparison = async (
             submittedAt: f.createdAt,
           })),
         },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Re-runs screening for an application (authorized recruiters and platform managers only).
+ */
+export const retryApplicationScreening = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError("Authentication required", 401, "UNAUTHENTICATED"));
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return next(new AppError("Invalid application ID format", 400, "INVALID_ID"));
+    }
+
+    const application = await Application.findById(id);
+    if (!application) {
+      return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user.role);
+    if (userRole !== "hiring_team" && userRole !== "platform_manager") {
+      return next(new AppError("Only hiring team members can trigger screening retries", 403, "FORBIDDEN"));
+    }
+
+    const updated = await screeningService.retryScreening(id, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Candidate screening re-evaluation initiated",
+      data: {
+        application: updated,
       },
     });
   } catch (error) {

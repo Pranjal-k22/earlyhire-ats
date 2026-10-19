@@ -1,20 +1,36 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
+export const NOTIFICATION_TYPES = [
+  "application_status",
+  "application_received",
+  "application_submitted",
+  "ats_ready",
+  "ats_failed",
+  "screening_completed",
+  "screening_failed",
+  "screening_needs_review",
+  "interview_scheduled",
+  "interview_rescheduled",
+  "interview_cancelled",
+  "feedback_submitted",
+  "feedback_released",
+  "offer_extended",
+  "offer_accepted",
+  "offer_declined",
+  "stage_changed",
+  "system",
+] as const;
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
 export interface INotification {
   recipientUserId: mongoose.Types.ObjectId;
   title: string;
   message: string;
-  type:
-    | "application_status"
-    | "ats_ready"
-    | "interview_scheduled"
-    | "feedback_released"
-    | "offer_extended"
-    | "offer_accepted"
-    | "offer_declined"
-    | "system";
+  type: NotificationType;
   link?: string | null;
   metadata?: Record<string, unknown>;
+  idempotencyKey?: string | null;
   isRead: boolean;
   readAt?: Date | null;
   createdAt: Date;
@@ -47,16 +63,7 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
     type: {
       type: String,
       required: true,
-      enum: [
-        "application_status",
-        "ats_ready",
-        "interview_scheduled",
-        "feedback_released",
-        "offer_extended",
-        "offer_accepted",
-        "offer_declined",
-        "system",
-      ],
+      enum: NOTIFICATION_TYPES,
       index: true,
     },
     link: {
@@ -66,6 +73,11 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
     metadata: {
       type: Schema.Types.Mixed,
       default: {},
+    },
+    idempotencyKey: {
+      type: String,
+      default: null,
+      trim: true,
     },
     isRead: {
       type: Boolean,
@@ -91,6 +103,10 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
 );
 
 notificationSchema.index({ recipientUserId: 1, isRead: 1, createdAt: -1 });
+notificationSchema.index(
+  { recipientUserId: 1, idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: "string" } } }
+);
 
 export const Notification = mongoose.model<INotificationDocument, INotificationModel>(
   "Notification",

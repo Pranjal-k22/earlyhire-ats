@@ -3,10 +3,12 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 export type AnalysisStatus =
   | "pending"
   | "in_progress"
+  | "processing"
   | "completed"
   | "dual_complete"
   | "partial_ollama"
   | "partial_gemini"
+  | "needs_review"
   | "failed";
 export type ConfidenceLevel = "low" | "medium" | "high";
 
@@ -196,10 +198,12 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
         values: [
           "pending",
           "in_progress",
+          "processing",
           "completed",
           "dual_complete",
           "partial_ollama",
           "partial_gemini",
+          "needs_review",
           "failed",
         ],
         message: "{VALUE} is not a valid analysis status",

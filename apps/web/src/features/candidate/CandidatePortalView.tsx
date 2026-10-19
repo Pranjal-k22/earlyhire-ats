@@ -18,7 +18,6 @@ import {
   Send,
   X,
   Search,
-  Bell,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -28,6 +27,7 @@ import {
 } from "lucide-react";
 import { fetchProfile, updateProfile, CandidateProfile } from "../../api/profileApi";
 import { uploadResume, fetchMyResumes, deleteResume, ResumeItem } from "../../api/resumeApi";
+import { NotificationsDropdown } from "../notifications/NotificationsDropdown";
 import { analyzeResume, fetchMyAnalyses, AtsReport } from "../../api/atsApi";
 import { fetchMyInterviews, InterviewItem } from "../../api/interviewApi";
 import { fetchJobs } from "../../api/jobApi";
@@ -387,13 +387,7 @@ export const CandidatePortalView: React.FC = () => {
           </div>
 
           {/* Notification Bell */}
-          <button
-            type="button"
-            className="p-2.5 bg-white border border-slate-200/90 rounded-xl text-slate-600 hover:text-slate-900 shadow-2xs hover:bg-slate-50 transition-colors shrink-0"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
+          <NotificationsDropdown />
 
           {/* Hidden File Input for Direct Upload */}
           <input
