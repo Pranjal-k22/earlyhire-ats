@@ -18,6 +18,7 @@
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "bootstrap:platform-manager": "npm run bootstrap:platform-manager --workspace=apps/api --",
+    "seed:demo": "npm run seed:demo --workspace=apps/api --",
     "ci": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "keywords": [
