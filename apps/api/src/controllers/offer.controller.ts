@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import { z } from "zod";
-import { Offer, OfferStatus, OFFER_STATUSES } from "../models/offer.model.js";
+import { Offer } from "../models/offer.model.js";
 import { Application } from "../models/application.model.js";
 import { Candidate } from "../models/candidate.model.js";
 import { Job } from "../models/job.model.js";

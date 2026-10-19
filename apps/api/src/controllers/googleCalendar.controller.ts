@@ -138,7 +138,7 @@ export const googleAuthCallback = async (req: Request, res: Response): Promise<v
         scope: tokens.scope || "https://www.googleapis.com/auth/calendar.events",
         connectedAt: new Date(),
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     res.redirect(`${clientBase}/#workspace?calendar=connected`);

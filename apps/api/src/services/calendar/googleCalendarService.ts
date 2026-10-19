@@ -32,14 +32,16 @@ export interface CalendarEventResult {
 }
 
 export class GoogleCalendarService {
-  private clientId?: string;
-  private clientSecret?: string;
-  private redirectUri?: string;
+  public get clientId(): string | undefined {
+    return env.GOOGLE_CLIENT_ID;
+  }
 
-  constructor() {
-    this.clientId = env.GOOGLE_CLIENT_ID;
-    this.clientSecret = env.GOOGLE_CLIENT_SECRET;
-    this.redirectUri = env.GOOGLE_REDIRECT_URI;
+  public get clientSecret(): string | undefined {
+    return env.GOOGLE_CLIENT_SECRET;
+  }
+
+  public get redirectUri(): string | undefined {
+    return env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/v1/auth/google/callback";
   }
 
   /**

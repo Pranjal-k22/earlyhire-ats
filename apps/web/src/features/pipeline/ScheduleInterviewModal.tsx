@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { X, Calendar, Video, Clock, AlertCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Calendar, Video, Clock, AlertCircle, CheckCircle2, ExternalLink } from "lucide-react";
 import { scheduleInterview } from "../../api/interviewApi";
+import { fetchGoogleCalendarStatus, getGoogleAuthUrl } from "../../api/authApi";
 import { Application } from "../../types/application";
 
 interface ScheduleInterviewModalProps {
@@ -25,18 +26,48 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
+  const [calendarEmail, setCalendarEmail] = useState<string | null>(null);
+
+  useEffect(() => {
     if (!isOpen) return;
+
+    let isMounted = true;
+    fetchGoogleCalendarStatus()
+      .then((res) => {
+        if (isMounted && res?.data) {
+          setCalendarConnected(res.data.connected);
+          setCalendarEmail(res.data.email);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setCalendarConnected(false);
+      });
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen || !application) return null;
+
+  const handleConnectGoogle = async () => {
+    try {
+      const res = await getGoogleAuthUrl();
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to initiate Google authorization");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +207,35 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
             </div>
           </div>
 
+          {meetingType === "google_meet" && (
+            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700">
+              {calendarConnected === true ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-emerald-700 font-medium">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>Google Calendar Connected ({calendarEmail || "Authorized Account"})</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">Auto Meet Enabled</span>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-amber-700">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                    <span>Google Calendar not connected to your profile</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogle}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-brand-700 bg-white border border-brand-200 rounded-lg hover:bg-brand-50 cursor-pointer"
+                  >
+                    <span>Connect Google</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {meetingType === "manual_link" && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
@@ -209,14 +269,14 @@ export const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+              className="px-4 py-2 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold shadow-xs disabled:opacity-50"
+              className="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Scheduling..." : "Confirm & Send Invitation"}
             </button>

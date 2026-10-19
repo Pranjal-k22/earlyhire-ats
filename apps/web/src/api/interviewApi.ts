@@ -68,6 +68,25 @@ export const fetchInterviewsForApplication = async (
   return parseApiResponse<{ success: boolean; data: { interviews: InterviewItem[] } }>(res, "Failed to fetch interviews");
 };
 
+export const rescheduleInterview = async (
+  id: string,
+  payload: {
+    scheduledStartTime: string;
+    scheduledEndTime: string;
+    timezone?: string;
+    notes?: string;
+  }
+): Promise<{ success: boolean; data: { interview: InterviewItem } }> => {
+  const res = await fetch(`${API_BASE}/api/v1/interviews/${id}/reschedule`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  return parseApiResponse<{ success: boolean; data: { interview: InterviewItem } }>(res, "Failed to reschedule interview");
+};
+
 export const cancelInterview = async (
   id: string,
   reason: string
