@@ -1,4 +1,9 @@
-import { JobListResponse, SingleJobResponse, JobFormData } from "../types/job";
+import {
+  JobListResponse,
+  SingleJobResponse,
+  JobFormData,
+  JobPipelineStatsResponse,
+} from "../types/job";
 import { API_BASE } from "./baseUrl";
 import { parseApiResponse } from "./clientHelper";
 
@@ -89,3 +94,16 @@ export const archiveJob = async (id: string): Promise<SingleJobResponse> => {
 
   return parseApiResponse<SingleJobResponse>(res, "Failed to archive job");
 };
+
+export const fetchJobPipelineStats = async (id: string): Promise<JobPipelineStatsResponse> => {
+  const res = await fetch(`${API_BASE}/api/v1/jobs/${id}/pipeline-stats`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      "Accept": "application/json",
+    },
+  });
+
+  return parseApiResponse<JobPipelineStatsResponse>(res, "Failed to fetch job pipeline stats");
+};
+

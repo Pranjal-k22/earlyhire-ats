@@ -2,6 +2,7 @@ import {
   ApplicationListResponse,
   SingleApplicationResponse,
   ApplicationHistoryResponse,
+  CandidateComparisonResponse,
   HiringStage,
   IAtsSnapshot,
 } from "../types/application";
@@ -137,3 +138,21 @@ export const applyForJobApi = async (data: {
     "Failed to submit application"
   );
 };
+
+export const fetchApplicationComparison = async (
+  id: string
+): Promise<CandidateComparisonResponse> => {
+  const res = await fetch(`${API_BASE}/api/v1/applications/${id}/comparison`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  return parseApiResponse<CandidateComparisonResponse>(
+    res,
+    "Failed to fetch candidate comparison"
+  );
+};
+

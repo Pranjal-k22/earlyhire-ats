@@ -17,6 +17,7 @@ import feedbackRoutes from "./routes/feedback.routes.js";
 import stageReviewRoutes from "./routes/stageReview.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import platformRoutes from "./routes/platform.routes.js";
+import offerRoutes from "./routes/offer.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFound.js";
 import { sanitizeMongo } from "./middleware/mongoSanitize.js";
@@ -69,6 +70,7 @@ export const createApp = (): Express => {
   app.use("/api/v1/jobs", jobRoutes);
   app.use("/api/v1/candidates", candidateRoutes);
   app.use("/api/v1/applications", applicationRoutes);
+  app.use("/api/v1/offers", offerRoutes);
   app.use("/api/v1/notes", noteDirectRoutes);
   app.use("/api/v1/analytics", analyticsRoutes);
   app.use("/api/v1/dashboard", analyticsRoutes);

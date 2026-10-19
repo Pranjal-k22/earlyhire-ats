@@ -95,8 +95,26 @@ export const getDashboardOverview = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    if (!req.user) {
+      return next(new AppError("Authentication required", 401, "UNAUTHENTICATED"));
+    }
+
     const query = analyticsQuerySchema.parse(req.query);
     const { fromDate, toDate, periodLabel, previousPeriod } = resolveDateRange(query);
+
+    const userRole = normalizeRole(req.user.role);
+    let recruiterJobIds: mongoose.Types.ObjectId[] | null = null;
+
+    if (userRole === "hiring_team") {
+      const recruiterJobs = await Job.find({ ownerId: req.user._id }).select("_id");
+      recruiterJobIds = recruiterJobs.map((j) => j._id as mongoose.Types.ObjectId);
+
+      if (query.jobId) {
+        if (!recruiterJobIds.some((id) => id.toString() === query.jobId)) {
+          return next(new AppError("You do not have permission to view analytics for this job", 403, "FORBIDDEN"));
+        }
+      }
+    }
 
     // Filter by specific job if provided
     const jobFilter: Record<string, unknown> = {};
@@ -105,6 +123,8 @@ export const getDashboardOverview = async (
         return next(new AppError("Invalid jobId format", 422, "VALIDATION_ERROR"));
       }
       jobFilter._id = new mongoose.Types.ObjectId(query.jobId);
+    } else if (userRole === "hiring_team" && recruiterJobIds) {
+      jobFilter.ownerId = req.user._id;
     }
 
     // 1. Total Active Candidates & Open Positions
@@ -120,6 +140,8 @@ export const getDashboardOverview = async (
 
     if (query.jobId) {
       appMatch.jobId = new mongoose.Types.ObjectId(query.jobId);
+    } else if (userRole === "hiring_team" && recruiterJobIds) {
+      appMatch.jobId = { $in: recruiterJobIds };
     }
 
     if (fromDate || toDate) {
@@ -328,6 +350,8 @@ export const getDashboardOverview = async (
       };
       if (query.jobId) {
         prevAppMatch.jobId = new mongoose.Types.ObjectId(query.jobId);
+      } else if (appMatch.jobId) {
+        prevAppMatch.jobId = appMatch.jobId;
       }
 
       const [prevApps, prevHired] = await Promise.all([
@@ -724,8 +748,24 @@ export const getRecruitmentFunnel = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    if (!req.user) {
+      return next(new AppError("Authentication required", 401, "UNAUTHENTICATED"));
+    }
+
     const query = analyticsQuerySchema.parse(req.query);
     const { fromDate, toDate, periodLabel } = resolveDateRange(query);
+
+    const userRole = normalizeRole(req.user.role);
+    let recruiterJobIds: mongoose.Types.ObjectId[] | null = null;
+    if (userRole === "hiring_team") {
+      const recruiterJobs = await Job.find({ ownerId: req.user._id }).select("_id");
+      recruiterJobIds = recruiterJobs.map((j) => j._id as mongoose.Types.ObjectId);
+      if (query.jobId) {
+        if (!recruiterJobIds.some((id) => id.toString() === query.jobId)) {
+          return next(new AppError("You do not have permission to view analytics for this job", 403, "FORBIDDEN"));
+        }
+      }
+    }
 
     const appMatch: Record<string, unknown> = {
       status: { $nin: ["Archived", "Withdrawn"] },
@@ -736,6 +776,8 @@ export const getRecruitmentFunnel = async (
         return next(new AppError("Invalid jobId format", 422, "VALIDATION_ERROR"));
       }
       appMatch.jobId = new mongoose.Types.ObjectId(query.jobId);
+    } else if (userRole === "hiring_team" && recruiterJobIds) {
+      appMatch.jobId = { $in: recruiterJobIds };
     }
 
     if (fromDate || toDate) {

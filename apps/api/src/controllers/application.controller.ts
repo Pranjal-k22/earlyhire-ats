@@ -11,8 +11,9 @@ import { Candidate } from "../models/candidate.model.js";
 import { Job } from "../models/job.model.js";
 import { ResumeFile } from "../models/resume.model.js";
 import { AtsAnalysis, IAtsAnalysisDocument } from "../models/atsAnalysis.model.js";
+import { InterviewFeedback } from "../models/interviewFeedback.model.js";
 import { atsReviewService } from "../services/ai/atsReviewService.js";
-import { normalizeRole } from "../models/user.model.js";
+import { User, normalizeRole } from "../models/user.model.js";
 import {
   createApplicationSchema,
   stageTransitionSchema,
@@ -534,6 +535,7 @@ export const getApplications = async (
     const query = applicationQuerySchema.parse(req.query);
 
     const filter: Record<string, unknown> = {};
+    const andClauses: Array<Record<string, unknown>> = [];
 
     const userRole = normalizeRole(req.user?.role || "candidate");
     if (userRole === "candidate") {
@@ -582,30 +584,71 @@ export const getApplications = async (
       } else {
         filter.candidateId = { $in: candIds };
       }
-    } else if (query.candidateId) {
-      if (!mongoose.Types.ObjectId.isValid(query.candidateId)) {
-        return next(new AppError("Invalid candidate ID format", 400, "INVALID_ID"));
-      }
-      filter.candidateId = new mongoose.Types.ObjectId(query.candidateId);
-    }
+    } else if (userRole === "hiring_team") {
+      // Recruiter isolation: strictly cannot access applications for jobs posted by another recruiter
+      const otherRecruiters = await User.find({
+        role: { $in: ["recruiter", "hiring_team", "hiring_manager"] },
+        _id: { $ne: req.user!._id },
+      }).select("_id");
+      const otherRecruiterIds = otherRecruiters.map((r) => r._id);
 
-    if (query.jobId) {
-      if (!mongoose.Types.ObjectId.isValid(query.jobId)) {
-        return next(new AppError("Invalid job ID format", 400, "INVALID_ID"));
-      }
-      filter.jobId = new mongoose.Types.ObjectId(query.jobId);
-    }
+      const otherRecruiterJobs = otherRecruiterIds.length > 0
+        ? await Job.find({ ownerId: { $in: otherRecruiterIds } }).select("_id")
+        : [];
+      const otherRecruiterJobIds = otherRecruiterJobs.map((j) => j._id);
 
-    if (query.recruiterId) {
-      if (!mongoose.Types.ObjectId.isValid(query.recruiterId)) {
-        return next(new AppError("Invalid recruiter ID format", 400, "INVALID_ID"));
+      if (query.jobId) {
+        if (!mongoose.Types.ObjectId.isValid(query.jobId)) {
+          return next(new AppError("Invalid job ID format", 400, "INVALID_ID"));
+        }
+        const isOtherRecruiterJob = otherRecruiterJobIds.some(
+          (id) => id.toString() === query.jobId?.toString()
+        );
+        if (isOtherRecruiterJob) {
+          return next(
+            new AppError("You do not have permission to view applications for jobs posted by another recruiter", 403, "FORBIDDEN")
+          );
+        }
+        filter.jobId = new mongoose.Types.ObjectId(query.jobId);
+      } else {
+        if (otherRecruiterJobIds.length > 0) {
+          filter.jobId = { $nin: otherRecruiterJobIds };
+        }
       }
-      filter.recruiterId = new mongoose.Types.ObjectId(query.recruiterId);
+
+      if (query.candidateId) {
+        if (!mongoose.Types.ObjectId.isValid(query.candidateId)) {
+          return next(new AppError("Invalid candidate ID format", 400, "INVALID_ID"));
+        }
+        filter.candidateId = new mongoose.Types.ObjectId(query.candidateId);
+      }
+    } else {
+      // platform_manager (Admin)
+      if (query.candidateId) {
+        if (!mongoose.Types.ObjectId.isValid(query.candidateId)) {
+          return next(new AppError("Invalid candidate ID format", 400, "INVALID_ID"));
+        }
+        filter.candidateId = new mongoose.Types.ObjectId(query.candidateId);
+      }
+      if (query.jobId) {
+        if (!mongoose.Types.ObjectId.isValid(query.jobId)) {
+          return next(new AppError("Invalid job ID format", 400, "INVALID_ID"));
+        }
+        filter.jobId = new mongoose.Types.ObjectId(query.jobId);
+      }
+      if (query.recruiterId) {
+        if (!mongoose.Types.ObjectId.isValid(query.recruiterId)) {
+          return next(new AppError("Invalid recruiter ID format", 400, "INVALID_ID"));
+        }
+        filter.recruiterId = new mongoose.Types.ObjectId(query.recruiterId);
+      }
     }
 
     const requestedStage = query.stage || query.currentStage;
     if (requestedStage) {
-      filter.$or = [{ stage: requestedStage }, { currentStage: requestedStage }];
+      andClauses.push({
+        $or: [{ stage: requestedStage }, { currentStage: requestedStage }],
+      });
     }
 
     if (query.status) {
@@ -652,17 +695,16 @@ export const getApplications = async (
       const candIds = matchedCandidates.map((c) => c._id);
       const jobIds = matchedJobs.map((j) => j._id);
 
-      const searchConditions: Record<string, unknown>[] = [
-        { candidateId: { $in: candIds } },
-        { jobId: { $in: jobIds } },
-      ];
+      andClauses.push({
+        $or: [
+          { candidateId: { $in: candIds } },
+          { jobId: { $in: jobIds } },
+        ],
+      });
+    }
 
-      if (filter.$or) {
-        filter.$and = [{ $or: filter.$or }, { $or: searchConditions }];
-        delete filter.$or;
-      } else {
-        filter.$or = searchConditions;
-      }
+    if (andClauses.length > 0) {
+      filter.$and = andClauses;
     }
 
     const skip = (query.page - 1) * query.limit;
@@ -744,6 +786,24 @@ export const getApplicationById = async (
       if (!isOwner) {
         return next(new AppError("You do not have permission to view this application", 403, "FORBIDDEN"));
       }
+    } else if (userRole === "hiring_team") {
+      const job = await Job.findById(application.jobId);
+      const jobOwnerId = job?.ownerId?.toString();
+      const otherRecruiters = await User.find({
+        role: { $in: ["recruiter", "hiring_team", "hiring_manager"] },
+        _id: { $ne: req.user!._id },
+      }).select("_id");
+      const isOtherRecruiterJob = otherRecruiters.some((r) => r._id.toString() === jobOwnerId);
+      const isRecruiter = application.recruiterId && (
+        (application.recruiterId as { _id?: { toString(): string } })._id
+          ? (application.recruiterId as { _id: { toString(): string } })._id.toString() === req.user?._id.toString()
+          : application.recruiterId.toString() === req.user?._id.toString()
+      );
+      if (isOtherRecruiterJob && !isRecruiter) {
+        return next(
+          new AppError("You do not have permission to view applications for jobs posted by another recruiter", 403, "FORBIDDEN")
+        );
+      }
     }
 
     res.status(200).json({
@@ -785,6 +845,27 @@ export const transitionStage = async (
 
     if (!application) {
       return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user.role);
+    if (userRole === "hiring_team") {
+      const job = await Job.findById(application.jobId);
+      const jobOwnerId = job?.ownerId?.toString();
+      const otherRecruiters = await User.find({
+        role: { $in: ["recruiter", "hiring_team", "hiring_manager"] },
+        _id: { $ne: req.user._id },
+      }).select("_id");
+      const isOtherRecruiterJob = otherRecruiters.some((r) => r._id.toString() === jobOwnerId);
+      const isRecruiter = application.recruiterId && application.recruiterId.toString() === req.user._id.toString();
+      if (isOtherRecruiterJob && !isRecruiter) {
+        return next(
+          new AppError(
+            "You do not have permission to modify applications for jobs posted by another recruiter",
+            403,
+            "FORBIDDEN"
+          )
+        );
+      }
     }
 
     const currentStage = (application.currentStage || application.stage) as HiringStage;
@@ -934,6 +1015,20 @@ export const getApplicationHistory = async (
       if (!isOwner) {
         return next(new AppError("You do not have permission to view history for this application", 403, "FORBIDDEN"));
       }
+    } else if (userRole === "hiring_team") {
+      const job = await Job.findById(application.jobId);
+      const jobOwnerId = job?.ownerId?.toString();
+      const otherRecruiters = await User.find({
+        role: { $in: ["recruiter", "hiring_team", "hiring_manager"] },
+        _id: { $ne: req.user!._id },
+      }).select("_id");
+      const isOtherRecruiterJob = otherRecruiters.some((r) => r._id.toString() === jobOwnerId);
+      const isRecruiter = application.recruiterId && application.recruiterId.toString() === req.user!._id.toString();
+      if (isOtherRecruiterJob && !isRecruiter) {
+        return next(
+          new AppError("You do not have permission to view history for applications posted by another recruiter", 403, "FORBIDDEN")
+        );
+      }
     }
 
     const sortOrder = req.query.order === "desc" ? -1 : 1;
@@ -991,6 +1086,27 @@ export const updateApplication = async (
       return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
     }
 
+    const userRole = normalizeRole(req.user.role);
+    if (userRole === "hiring_team") {
+      const job = await Job.findById(application.jobId);
+      const jobOwnerId = job?.ownerId?.toString();
+      const otherRecruiters = await User.find({
+        role: { $in: ["recruiter", "hiring_team", "hiring_manager"] },
+        _id: { $ne: req.user._id },
+      }).select("_id");
+      const isOtherRecruiterJob = otherRecruiters.some((r) => r._id.toString() === jobOwnerId);
+      const isRecruiter = application.recruiterId && application.recruiterId.toString() === req.user._id.toString();
+      if (isOtherRecruiterJob && !isRecruiter) {
+        return next(
+          new AppError(
+            "You do not have permission to modify applications for jobs posted by another recruiter",
+            403,
+            "FORBIDDEN"
+          )
+        );
+      }
+    }
+
     if (validated.recruiterId) {
       application.recruiterId = new mongoose.Types.ObjectId(validated.recruiterId);
     }
@@ -1029,3 +1145,155 @@ export const updateApplication = async (
     next(error);
   }
 };
+
+/**
+ * Calculates a consolidated, transparent candidate comparison combining
+ * Resume ATS score (40%) and Interview evaluation score (60%) per Phase 7.1.
+ */
+export const getApplicationComparison = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      return next(new AppError("Authentication required", 401, "UNAUTHENTICATED"));
+    }
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return next(new AppError("Invalid application ID format", 400, "INVALID_ID"));
+    }
+
+    const application = await Application.findById(id).populate([
+      { path: "candidateId", select: "name fullName email currentTitle skills experienceYears" },
+      { path: "jobId", select: "title department location requirements ownerId" },
+    ]);
+
+    if (!application) {
+      return next(new AppError("Application not found", 404, "APPLICATION_NOT_FOUND"));
+    }
+
+    const userRole = normalizeRole(req.user.role);
+    if (userRole === "hiring_team") {
+      const job = application.jobId as unknown as { ownerId?: mongoose.Types.ObjectId };
+      const jobOwnerId = job?.ownerId?.toString();
+      const otherRecruiters = await User.find({
+        role: { $in: ["recruiter", "hiring_team", "hiring_manager"] },
+        _id: { $ne: req.user._id },
+      }).select("_id");
+      const isOtherRecruiterJob = otherRecruiters.some((r) => r._id.toString() === jobOwnerId);
+      const isRecruiter =
+        application.recruiterId && application.recruiterId.toString() === req.user._id.toString();
+
+      if (isOtherRecruiterJob && !isRecruiter) {
+        return next(
+          new AppError(
+            "You do not have permission to view comparison for jobs posted by another recruiter",
+            403,
+            "FORBIDDEN"
+          )
+        );
+      }
+    }
+
+    // 1. Resume ATS Score (0 - 100)
+    let atsScore: number | null = application.atsSnapshot?.overallScore ?? null;
+    let atsBreakdown = application.atsSnapshot?.breakdown ?? null;
+    let matchedSkills = application.atsSnapshot?.matchedSkills ?? [];
+    let missingCriteria = application.atsSnapshot?.missingCriteria ?? [];
+
+    if (atsScore === null) {
+      const atsDoc = await AtsAnalysis.findOne({ applicationId: application._id });
+      if (atsDoc) {
+        atsScore = atsDoc.overallScore;
+        atsBreakdown = {
+          skillsScore: atsDoc.breakdown?.skillsScore ?? atsDoc.overallScore,
+          experienceScore: atsDoc.breakdown?.experienceScore ?? atsDoc.overallScore,
+          educationScore: atsDoc.breakdown?.educationScore ?? atsDoc.overallScore,
+          roleRelevanceScore: atsDoc.breakdown?.roleRelevanceScore ?? atsDoc.overallScore,
+        };
+        matchedSkills = atsDoc.requiredSkillsFound || [];
+        missingCriteria = atsDoc.missingCriteria || [];
+      }
+    }
+
+    // 2. Interview Score & Feedbacks (Scale 1-5, normalized to 0-100)
+    const feedbacks = await InterviewFeedback.find({ applicationId: application._id }).sort({
+      createdAt: -1,
+    });
+    const hasInterviewFeedbacks = feedbacks.length > 0;
+
+    let interviewNormalizedScore: number | null = null;
+    let interviewRawAverage: number | null = null;
+
+    if (hasInterviewFeedbacks) {
+      const sumRatings = feedbacks.reduce(
+        (acc, f) => acc + (f.ratings?.overallRating || 3),
+        0
+      );
+      interviewRawAverage = Number((sumRatings / feedbacks.length).toFixed(2));
+      interviewNormalizedScore = Math.round((interviewRawAverage / 5) * 100);
+    }
+
+    // 3. Composite Decision-Support Score (40% Resume ATS + 60% Interview)
+    // Avoid calculating final score silently when feedback is incomplete
+    let compositeScore: number | null = null;
+    let evaluationStatus:
+      | "complete"
+      | "pending_interview_evaluation"
+      | "pending_ats_screening" = "complete";
+
+    if (atsScore !== null && interviewNormalizedScore !== null) {
+      compositeScore = Math.round(atsScore * 0.4 + interviewNormalizedScore * 0.6);
+      evaluationStatus = "complete";
+    } else if (atsScore !== null && interviewNormalizedScore === null) {
+      evaluationStatus = "pending_interview_evaluation";
+    } else {
+      evaluationStatus = "pending_ats_screening";
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        applicationId: application.id,
+        currentStage: application.currentStage || application.stage,
+        candidate: application.candidateId,
+        job: application.jobId,
+        scoring: {
+          formula: "40% Resume ATS Score + 60% Interview Evaluation Score",
+          weights: { ats: 0.4, interview: 0.6 },
+          compositeScore,
+          evaluationStatus,
+          isComplete: evaluationStatus === "complete",
+        },
+        atsEvaluation: {
+          score: atsScore,
+          breakdown: atsBreakdown,
+          matchedSkills,
+          missingCriteria,
+          hasAtsScore: atsScore !== null,
+        },
+        interviewEvaluation: {
+          normalizedScore: interviewNormalizedScore,
+          rawAverageRating: interviewRawAverage,
+          feedbackCount: feedbacks.length,
+          hasInterviewScore: hasInterviewFeedbacks,
+          feedbacks: feedbacks.map((f) => ({
+            id: f.id,
+            interviewerName: f.interviewerName,
+            ratings: f.ratings,
+            recommendation: f.recommendation,
+            strengths: f.strengths,
+            concerns: f.concerns,
+            internalNotes: userRole !== "candidate" ? f.internalNotes : undefined,
+            submittedAt: f.createdAt,
+          })),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

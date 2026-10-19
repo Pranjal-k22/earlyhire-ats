@@ -3,6 +3,7 @@ import {
   createJob,
   getJobs,
   getJobById,
+  getJobPipelineStats,
   updateJob,
   deleteJob,
 } from "../controllers/job.controller.js";
@@ -15,6 +16,7 @@ router.use(requireAuth);
 
 // Public read access for all authenticated roles (Admin, Recruiter, Hiring Manager)
 router.get("/", getJobs);
+router.get("/:id/pipeline-stats", getJobPipelineStats);
 router.get("/:id", getJobById);
 
 // Write operations restricted to hiring_team and platform_manager roles

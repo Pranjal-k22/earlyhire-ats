@@ -9,6 +9,17 @@ import {
   Users,
   Search,
   Sparkles,
+  ArrowLeft,
+  LayoutGrid,
+  List,
+  MapPin,
+  Briefcase,
+  Award,
+  FileCheck,
+  Video,
+  Clock,
+  ArrowRight,
+  MessageSquare,
 } from "lucide-react";
 import { Application, HiringStage } from "../../types/application";
 import { Job } from "../../types/job";
@@ -22,6 +33,9 @@ import { StageReviewDrawer } from "./StageReviewDrawer";
 import { ScheduleInterviewModal } from "./ScheduleInterviewModal";
 import { InterviewFeedbackModal } from "./InterviewFeedbackModal";
 import { AtsReportDrawer } from "./AtsReportDrawer";
+import { CandidateComparisonModal } from "./CandidateComparisonModal";
+import { OfferModal } from "./OfferModal";
+import { StageBadge } from "./StageBadge";
 
 export type PipelineTab = "active" | "completed" | "all";
 
@@ -30,6 +44,8 @@ export const COMPLETED_STAGES: HiringStage[] = ["Hired", "Rejected"];
 
 export interface PipelineViewProps {
   initialTab?: PipelineTab;
+  initialJobId?: string;
+  onClearJob?: () => void;
 }
 
 const STAGE_COLUMNS: { stage: HiringStage; label: string; dot: string; bg: string }[] = [
@@ -41,12 +57,21 @@ const STAGE_COLUMNS: { stage: HiringStage; label: string; dot: string; bg: strin
   { stage: "Rejected", label: "Rejected", dot: "bg-rose-500", bg: "border-t-rose-500" },
 ];
 
-export const PipelineView: React.FC<PipelineViewProps> = ({ initialTab = "active" }) => {
+export const PipelineView: React.FC<PipelineViewProps> = ({
+  initialTab = "active",
+  initialJobId,
+  onClearJob,
+}) => {
+  const urlJobId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("jobId") || ""
+      : "";
   const [pipelineTab, setPipelineTab] = useState<PipelineTab>(initialTab);
   const [applications, setApplications] = useState<Application[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string>("all");
+  const [selectedJobId, setSelectedJobId] = useState<string>(initialJobId || urlJobId || "all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -63,6 +88,19 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ initialTab = "active
   const [scheduleTarget, setScheduleTarget] = useState<Application | null>(null);
   const [feedbackTarget, setFeedbackTarget] = useState<Application | null>(null);
   const [atsReportTarget, setAtsReportTarget] = useState<Application | null>(null);
+  const [comparisonTarget, setComparisonTarget] = useState<Application | null>(null);
+  const [offerTarget, setOfferTarget] = useState<Application | null>(null);
+
+  useEffect(() => {
+    if (initialJobId) {
+      setSelectedJobId(initialJobId);
+    }
+  }, [initialJobId]);
+
+  const selectedJob = useMemo(() => {
+    if (selectedJobId === "all") return null;
+    return jobs.find((j) => j.id === selectedJobId) || null;
+  }, [jobs, selectedJobId]);
 
   const loadData = React.useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -200,6 +238,93 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ initialTab = "active
 
   return (
     <div className="space-y-6">
+      {/* Dedicated Job Pipeline Banner */}
+      {selectedJob && (
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-950 text-white rounded-2xl p-5 shadow-sm border border-slate-800 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedJobId("all");
+                    if (onClearJob) onClearJob();
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>All Pipelines</span>
+                </button>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                  Dedicated Job Pipeline
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                    selectedJob.status === "Open"
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                      : "bg-slate-700 text-slate-300 border-slate-600"
+                  }`}
+                >
+                  {selectedJob.status}
+                </span>
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                {selectedJob.title}
+              </h2>
+              <div className="flex items-center gap-4 text-xs text-slate-300 flex-wrap pt-0.5">
+                <span className="flex items-center gap-1">
+                  <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                  {selectedJob.department}
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  {selectedJob.location} ({selectedJob.employmentType})
+                </span>
+                <span>
+                  Experience:{" "}
+                  <strong className="text-white">
+                    {selectedJob.experienceMin || 0}-
+                    {selectedJob.experienceMax ? `${selectedJob.experienceMax} yrs` : "+ yrs"}
+                  </strong>
+                </span>
+                <span>
+                  Assigned Recruiter:{" "}
+                  <strong className="text-white">
+                    {typeof selectedJob.ownerId === "object" && selectedJob.ownerId
+                      ? selectedJob.ownerId.name || selectedJob.ownerId.email
+                      : "Assigned"}
+                  </strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Pipeline Stage Counts Strip */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="bg-white/10 backdrop-blur-xs border border-white/10 rounded-xl px-3 py-2 text-center min-w-[70px]">
+                <div className="text-[10px] text-slate-300 uppercase tracking-wider font-semibold">Total</div>
+                <div className="text-lg font-bold text-white">{filteredApplications.length}</div>
+              </div>
+              <div className="bg-sky-500/15 border border-sky-400/20 rounded-xl px-3 py-2 text-center min-w-[70px]">
+                <div className="text-[10px] text-sky-200 uppercase tracking-wider font-semibold">Screening</div>
+                <div className="text-lg font-bold text-sky-300">{stageMap.Screening?.length || 0}</div>
+              </div>
+              <div className="bg-purple-500/15 border border-purple-400/20 rounded-xl px-3 py-2 text-center min-w-[70px]">
+                <div className="text-[10px] text-purple-200 uppercase tracking-wider font-semibold">Interview</div>
+                <div className="text-lg font-bold text-purple-300">{stageMap.Interview?.length || 0}</div>
+              </div>
+              <div className="bg-amber-500/15 border border-amber-400/20 rounded-xl px-3 py-2 text-center min-w-[70px]">
+                <div className="text-[10px] text-amber-200 uppercase tracking-wider font-semibold">Offer</div>
+                <div className="text-lg font-bold text-amber-300">{stageMap.Offer?.length || 0}</div>
+              </div>
+              <div className="bg-emerald-500/15 border border-emerald-400/20 rounded-xl px-3 py-2 text-center min-w-[70px]">
+                <div className="text-[10px] text-emerald-200 uppercase tracking-wider font-semibold">Hired</div>
+                <div className="text-lg font-bold text-emerald-300">{stageMap.Hired?.length || 0}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* View Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
@@ -395,87 +520,296 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ initialTab = "active
           </button>
         </div>
 
-        <div className="flex items-center gap-2 px-3 text-xs text-slate-500">
-          {pipelineTab === "active" && (
-            <span>
-              In-progress stages: <strong>Applied</strong>, <strong>Screening</strong>,{" "}
-              <strong>Interview</strong>, <strong>Offer</strong>
-            </span>
-          )}
-          {pipelineTab === "completed" && (
-            <span>
-              Terminal outcomes: <strong>Hired ({stageMap.Hired?.length || 0})</strong> and{" "}
-              <strong>Rejected ({stageMap.Rejected?.length || 0})</strong>
-            </span>
-          )}
-          {pipelineTab === "all" && (
-            <span>Complete end-to-end recruitment board (all 6 stages)</span>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 px-1 text-xs text-slate-500">
+            {pipelineTab === "active" && (
+              <span>
+                In-progress: <strong>Applied</strong>, <strong>Screening</strong>,{" "}
+                <strong>Interview</strong>, <strong>Offer</strong>
+              </span>
+            )}
+            {pipelineTab === "completed" && (
+              <span>
+                Outcomes: <strong>Hired ({stageMap.Hired?.length || 0})</strong>,{" "}
+                <strong>Rejected ({stageMap.Rejected?.length || 0})</strong>
+              </span>
+            )}
+            {pipelineTab === "all" && (
+              <span>Complete end-to-end recruitment board (all 6 stages)</span>
+            )}
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Kanban Board View"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Kanban</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-white text-slate-900 shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+              title="Table List View"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Table List</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Kanban Pipeline Columns */}
-      <div className="overflow-x-auto pb-6 scrollbar-thin">
-        <div className={`flex gap-4 ${containerMinWidth} items-start`}>
-          {displayedColumns.map((col) => {
-            const stageApps = stageMap[col.stage] || [];
-            return (
-              <div
-                key={col.stage}
-                data-testid={`stage-column-${col.stage.toLowerCase()}`}
-                className={`w-[245px] shrink-0 bg-slate-100/70 rounded-2xl p-3 border border-slate-200/60 border-t-4 ${col.bg} flex flex-col min-h-[560px]`}
-              >
-                {/* Stage Header */}
-                <div className="flex items-center justify-between pb-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
-                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      {col.label}
-                    </h2>
-                  </div>
-                  <span className="bg-white text-slate-700 font-bold text-xs px-2 py-0.5 rounded-full border border-slate-200/80 shadow-2xs">
-                    {stageApps.length}
-                  </span>
-                </div>
-
-                {/* Cards Container */}
-                <div className="space-y-3 flex-1 overflow-y-auto">
-                  {loading ? (
-                    <div className="space-y-3 pt-2">
-                      <div className="bg-white/80 rounded-xl p-4 border border-slate-200/60 h-28 animate-pulse" />
-                      <div className="bg-white/80 rounded-xl p-4 border border-slate-200/60 h-28 animate-pulse" />
-                    </div>
-                  ) : stageApps.length === 0 ? (
-                    <div className="h-40 rounded-xl border border-dashed border-slate-300/80 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                      <Users className="w-5 h-5 mb-1.5 opacity-40" />
-                      <p className="text-xs font-medium">No applications</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {col.stage === "Applied"
-                          ? "Add new candidates here"
-                          : `Move here from previous`}
+      {viewMode === "list" ? (
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 px-4">Candidate</th>
+                  <th className="py-3.5 px-4">Job Opening</th>
+                  <th className="py-3.5 px-4">Applied Date</th>
+                  <th className="py-3.5 px-4">Stage</th>
+                  <th className="py-3.5 px-4">ATS Screening</th>
+                  <th className="py-3.5 px-4 text-center">Lifecycle Actions</th>
+                  <th className="py-3.5 px-4 text-right">Stage Advance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredApplications.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                      <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="font-medium text-sm">No applications found</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Try adjusting your search query or pipeline filter
                       </p>
-                    </div>
-                  ) : (
-                    stageApps.map((app) => (
-                      <ApplicationCard
-                        key={app.id}
-                        application={app}
-                        onAdvance={handleAdvance}
-                        onReject={(target) => setRejectTarget(target)}
-                        onViewHistory={(target) => setHistoryTarget(target)}
-                        onOpenReview={(target) => setReviewTarget(target)}
-                        onSchedule={(target) => setScheduleTarget(target)}
-                        onFeedback={(target) => setFeedbackTarget(target)}
-                        onOpenAtsReport={(target) => setAtsReportTarget(target)}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredApplications.map((app) => {
+                    const candidateName =
+                      app.candidateId?.fullName || app.candidateId?.name || "Candidate";
+                    const candidateEmail = app.candidateId?.email || "";
+                    const currentStage = (app.currentStage || app.stage || "Applied") as HiringStage;
+                    const nextConfig = (
+                      {
+                        Applied: { next: "Screening" as HiringStage, label: "Screening" },
+                        Screening: { next: "Interview" as HiringStage, label: "Interview" },
+                        Interview: { next: "Offer" as HiringStage, label: "Offer" },
+                        Offer: { next: "Hired" as HiringStage, label: "Hire" },
+                      } as Record<string, { next: HiringStage; label: string } | undefined>
+                    )[currentStage];
+                    const isTerminal = currentStage === "Hired" || currentStage === "Rejected";
+
+                    return (
+                      <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900 text-sm">{candidateName}</div>
+                          <div className="text-slate-500 text-[11px]">{candidateEmail}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-slate-800">
+                            {app.jobId?.title || "Unknown Job"}
+                          </div>
+                          <div className="text-slate-400 text-[11px]">
+                            {app.jobId?.department || "General"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">
+                          {app.appliedAt
+                            ? new Date(app.appliedAt).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "Recently"}
+                        </td>
+                        <td className="py-3 px-4">
+                          <StageBadge stage={currentStage} size="sm" />
+                        </td>
+                        <td className="py-3 px-4">
+                          {app.atsSnapshot ? (
+                            <button
+                              type="button"
+                              onClick={() => setAtsReportTarget(app)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer"
+                              title="View full ATS scorecard & skills match"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                              <span>{app.atsSnapshot.overallScore}/100</span>
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 italic text-xs">Pending</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setComparisonTarget(app)}
+                              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                              title="Candidate Decision Comparison"
+                            >
+                              <Award className="w-4 h-4" />
+                            </button>
+
+                            {(currentStage === "Interview" || currentStage === "Screening") && (
+                              <button
+                                type="button"
+                                onClick={() => setScheduleTarget(app)}
+                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                                title="Schedule Google Meet"
+                              >
+                                <Video className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {(currentStage === "Interview" || currentStage === "Screening") && (
+                              <button
+                                type="button"
+                                onClick={() => setFeedbackTarget(app)}
+                                className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                title="Submit Interviewer Scorecard"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {(currentStage === "Interview" || currentStage === "Offer") && (
+                              <button
+                                type="button"
+                                onClick={() => setOfferTarget(app)}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                title="Offer Management"
+                              >
+                                <FileCheck className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => setHistoryTarget(app)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              title="View Stage Audit History"
+                            >
+                              <Clock className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {!isTerminal && (
+                              <button
+                                type="button"
+                                onClick={() => setRejectTarget(app)}
+                                className="text-xs text-rose-600 hover:bg-rose-50 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            )}
+
+                            {nextConfig ? (
+                              <button
+                                type="button"
+                                onClick={() => handleAdvance(app, nextConfig.next)}
+                                className="inline-flex items-center gap-1 text-xs text-white bg-brand-600 hover:bg-brand-700 px-3 py-1 rounded-lg font-medium transition-colors shadow-2xs cursor-pointer"
+                              >
+                                <span>To {nextConfig.label}</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400">
+                                {currentStage === "Hired" ? "Hired" : "Closed"}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Kanban Pipeline Columns */
+        <div className="overflow-x-auto pb-6 scrollbar-thin">
+          <div className={`flex gap-4 ${containerMinWidth} items-start`}>
+            {displayedColumns.map((col) => {
+              const stageApps = stageMap[col.stage] || [];
+              return (
+                <div
+                  key={col.stage}
+                  data-testid={`stage-column-${col.stage.toLowerCase()}`}
+                  className={`w-[245px] shrink-0 bg-slate-100/70 rounded-2xl p-3 border border-slate-200/60 border-t-4 ${col.bg} flex flex-col min-h-[560px]`}
+                >
+                  {/* Stage Header */}
+                  <div className="flex items-center justify-between pb-3 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${col.dot}`} />
+                      <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        {col.label}
+                      </h2>
+                    </div>
+                    <span className="bg-white text-slate-700 font-bold text-xs px-2 py-0.5 rounded-full border border-slate-200/80 shadow-2xs">
+                      {stageApps.length}
+                    </span>
+                  </div>
+
+                  {/* Cards Container */}
+                  <div className="space-y-3 flex-1 overflow-y-auto">
+                    {loading ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="bg-white/80 rounded-xl p-4 border border-slate-200/60 h-28 animate-pulse" />
+                        <div className="bg-white/80 rounded-xl p-4 border border-slate-200/60 h-28 animate-pulse" />
+                      </div>
+                    ) : stageApps.length === 0 ? (
+                      <div className="h-40 rounded-xl border border-dashed border-slate-300/80 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                        <Users className="w-5 h-5 mb-1.5 opacity-40" />
+                        <p className="text-xs font-medium">No applications</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {col.stage === "Applied"
+                            ? "Add new candidates here"
+                            : `Move here from previous`}
+                        </p>
+                      </div>
+                    ) : (
+                      stageApps.map((app) => (
+                        <ApplicationCard
+                          key={app.id}
+                          application={app}
+                          onAdvance={handleAdvance}
+                          onReject={(target) => setRejectTarget(target)}
+                          onViewHistory={(target) => setHistoryTarget(target)}
+                          onOpenReview={(target) => setReviewTarget(target)}
+                          onSchedule={(target) => setScheduleTarget(target)}
+                          onFeedback={(target) => setFeedbackTarget(target)}
+                          onOpenAtsReport={(target) => setAtsReportTarget(target)}
+                          onCompare={(target) => setComparisonTarget(target)}
+                          onOffer={(target) => setOfferTarget(target)}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <ApplicationCreateModal
@@ -549,6 +883,36 @@ export const PipelineView: React.FC<PipelineViewProps> = ({ initialTab = "active
         isOpen={Boolean(atsReportTarget)}
         application={atsReportTarget}
         onClose={() => setAtsReportTarget(null)}
+      />
+
+      <CandidateComparisonModal
+        isOpen={Boolean(comparisonTarget)}
+        applicationId={comparisonTarget?.id || null}
+        onClose={() => setComparisonTarget(null)}
+        onOpenOffer={(appId) => {
+          setComparisonTarget(null);
+          const app = applications.find((a) => a.id === appId);
+          if (app) setOfferTarget(app);
+        }}
+      />
+
+      <OfferModal
+        isOpen={Boolean(offerTarget)}
+        applicationId={offerTarget?.id || null}
+        candidateName={
+          offerTarget?.candidateId?.fullName ||
+          offerTarget?.candidateId?.name ||
+          "Candidate"
+        }
+        jobTitle={offerTarget?.jobId?.title || "Job Opening"}
+        onClose={() => setOfferTarget(null)}
+        onOfferUpdated={() => {
+          setFeedback({
+            type: "success",
+            message: "Offer updated successfully",
+          });
+          loadData(true);
+        }}
       />
     </div>
   );

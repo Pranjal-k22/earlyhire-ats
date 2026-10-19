@@ -4,7 +4,15 @@ export interface INotification {
   recipientUserId: mongoose.Types.ObjectId;
   title: string;
   message: string;
-  type: "application_status" | "ats_ready" | "interview_scheduled" | "feedback_released" | "system";
+  type:
+    | "application_status"
+    | "ats_ready"
+    | "interview_scheduled"
+    | "feedback_released"
+    | "offer_extended"
+    | "offer_accepted"
+    | "offer_declined"
+    | "system";
   link?: string | null;
   metadata?: Record<string, unknown>;
   isRead: boolean;
@@ -39,7 +47,16 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
     type: {
       type: String,
       required: true,
-      enum: ["application_status", "ats_ready", "interview_scheduled", "feedback_released", "system"],
+      enum: [
+        "application_status",
+        "ats_ready",
+        "interview_scheduled",
+        "feedback_released",
+        "offer_extended",
+        "offer_accepted",
+        "offer_declined",
+        "system",
+      ],
       index: true,
     },
     link: {

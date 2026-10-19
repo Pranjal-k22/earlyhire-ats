@@ -127,3 +127,66 @@ export interface ApplicationHistoryResponse {
     history: InterviewStageHistoryItem[];
   };
 }
+
+export interface CandidateComparison {
+  applicationId: string;
+  currentStage: HiringStage;
+  candidate: {
+    id: string;
+    name: string;
+    fullName?: string;
+    email: string;
+    currentTitle?: string;
+    skills?: string[];
+    experienceYears?: number;
+  };
+  job: {
+    id: string;
+    title: string;
+    department?: string;
+    location?: string;
+    requirements?: string[];
+  };
+  scoring: {
+    formula: string;
+    weights: { ats: number; interview: number };
+    compositeScore: number | null;
+    evaluationStatus: "complete" | "pending_interview_evaluation" | "pending_ats_screening";
+    isComplete: boolean;
+  };
+  atsEvaluation: {
+    score: number | null;
+    breakdown?: Record<string, number> | null;
+    matchedSkills: string[];
+    missingCriteria: string[];
+    hasAtsScore: boolean;
+  };
+  interviewEvaluation: {
+    normalizedScore: number | null;
+    rawAverageRating: number | null;
+    feedbackCount: number;
+    hasInterviewScore: boolean;
+    feedbacks: Array<{
+      id: string;
+      interviewerName: string;
+      ratings: {
+        technicalRating: number;
+        communicationRating: number;
+        problemSolvingRating: number;
+        cultureAndValuesRating: number;
+        overallRating: number;
+      };
+      recommendation: string;
+      strengths?: string;
+      concerns?: string;
+      internalNotes?: string;
+      submittedAt: string;
+    }>;
+  };
+}
+
+export interface CandidateComparisonResponse {
+  success: boolean;
+  data: CandidateComparison;
+}
+

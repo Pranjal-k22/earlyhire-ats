@@ -7,6 +7,7 @@ import {
   transitionStage,
   getApplicationHistory,
   updateApplication,
+  getApplicationComparison,
 } from "../controllers/application.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -21,6 +22,7 @@ router.post("/apply", applyForJob);
 // Application Read Endpoints (All authenticated roles)
 router.get("/", getApplications);
 router.get("/:id", getApplicationById);
+router.get("/:id/comparison", getApplicationComparison);
 router.get("/:id/history", getApplicationHistory);
 router.get("/:id/stage-history", getApplicationHistory);
 

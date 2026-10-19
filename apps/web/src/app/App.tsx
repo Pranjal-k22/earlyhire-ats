@@ -144,6 +144,7 @@ export const App: React.FC<AppProps> = ({
 
   // Responsive Mobile Nav State
   const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
+  const [selectedPipelineJobId, setSelectedPipelineJobId] = useState<string | undefined>(undefined);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -724,11 +725,20 @@ export const App: React.FC<AppProps> = ({
               </div>
             </div>
           ) : activeTab === "jobs" ? (
-            <JobsView isCandidate={isCandidate} />
+            <JobsView
+              isCandidate={isCandidate}
+              onOpenPipeline={(jobId) => {
+                setSelectedPipelineJobId(jobId);
+                setActiveTab("pipeline");
+              }}
+            />
           ) : activeTab === "candidates" ? (
             <CandidatesView />
           ) : activeTab === "pipeline" ? (
-            <PipelineView />
+            <PipelineView
+              initialJobId={selectedPipelineJobId}
+              onClearJob={() => setSelectedPipelineJobId(undefined)}
+            />
           ) : activeTab === "candidate" ? (
             <CandidatePortalView />
           ) : activeTab === "platform" ? (

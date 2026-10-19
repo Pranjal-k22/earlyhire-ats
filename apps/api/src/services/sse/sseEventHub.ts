@@ -13,11 +13,17 @@ export interface RealtimeAnalyticsEvent {
     | "ats:completed"
     | "interview:scheduled"
     | "interview:updated"
+    | "offer:created"
+    | "offer:approved"
+    | "offer:extended"
+    | "offer:responded"
     | "user:updated";
   entity?: string;
   entityId?: string;
+  applicationId?: string;
   candidateUserId?: string;
   jobId?: string;
+  response?: string;
   targetRoles?: string[];
   timestamp: string;
 }

@@ -12,6 +12,8 @@ import {
   MessageSquare,
   FileText,
   Download,
+  Award,
+  FileCheck,
 } from "lucide-react";
 import { Application, HiringStage } from "../../types/application";
 import { StageBadge } from "./StageBadge";
@@ -25,6 +27,8 @@ interface ApplicationCardProps {
   onOpenAtsReport?: (app: Application) => void;
   onSchedule?: (app: Application) => void;
   onFeedback?: (app: Application) => void;
+  onCompare?: (app: Application) => void;
+  onOffer?: (app: Application) => void;
 }
 
 const NEXT_STAGE_MAP: Partial<Record<HiringStage, { next: HiringStage; label: string }>> = {
@@ -43,6 +47,8 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   onOpenAtsReport,
   onSchedule,
   onFeedback,
+  onCompare,
+  onOffer,
 }) => {
   const [isAdvancing, setIsAdvancing] = useState(false);
 
@@ -215,6 +221,18 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
         </div>
 
         <div className="flex items-center gap-1 ml-auto">
+          {onCompare && (
+            <button
+              type="button"
+              onClick={() => onCompare(application)}
+              className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-medium transition-colors"
+              title="Candidate Comparison & Decision Rubric"
+            >
+              <Award className="w-3 h-3 text-indigo-600" />
+              <span>Compare</span>
+            </button>
+          )}
+
           {currentStage === "Interview" && onSchedule && (
             <button
               type="button"
@@ -236,6 +254,18 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             >
               <MessageSquare className="w-3 h-3 text-amber-600" />
               <span>Feedback</span>
+            </button>
+          )}
+
+          {(currentStage === "Interview" || currentStage === "Offer") && onOffer && (
+            <button
+              type="button"
+              onClick={() => onOffer(application)}
+              className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md font-medium transition-colors"
+              title="Manage Job Offer"
+            >
+              <FileCheck className="w-3 h-3 text-emerald-600" />
+              <span>Offer</span>
             </button>
           )}
         </div>

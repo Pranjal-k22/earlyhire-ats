@@ -34,6 +34,8 @@ import { fetchJobs } from "../../api/jobApi";
 import { applyForJobApi, fetchApplications } from "../../api/applicationApi";
 import { Job } from "../../types/job";
 import { Application } from "../../types/application";
+import { fetchMyOffers, respondToOffer } from "../../api/offerApi";
+import { Offer } from "../../types/offer";
 import { useRealtimeAnalytics } from "../dashboard/useRealtimeAnalytics";
 
 // Segmented Circular Radial Gauge matching Jobflow reference
@@ -84,13 +86,18 @@ const RadialSegmentedGauge: React.FC<{ score: number }> = ({ score }) => {
 };
 
 export const CandidatePortalView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "profile" | "resumes" | "ats" | "interviews">("dashboard");
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "profile" | "resumes" | "ats" | "interviews" | "offers"
+  >("dashboard");
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [analyses, setAnalyses] = useState<AtsReport[]>([]);
   const [interviews, setInterviews] = useState<InterviewItem[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
+  const [candidateOfferNotes, setCandidateOfferNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -121,13 +128,14 @@ export const CandidatePortalView: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [profileRes, resumesRes, analysesRes, interviewsRes, jobsRes, applicationsRes] = await Promise.all([
+      const [profileRes, resumesRes, analysesRes, interviewsRes, jobsRes, applicationsRes, offersRes] = await Promise.all([
         fetchProfile().catch(() => null),
         fetchMyResumes().catch(() => ({ success: true, data: { resumes: [] } })),
         fetchMyAnalyses().catch(() => ({ success: true, data: { analyses: [] } })),
         fetchMyInterviews().catch(() => ({ success: true, data: { interviews: [] } })),
         fetchJobs({ status: "Open" }).catch(() => ({ data: [] })),
         fetchApplications({ limit: 50 }).catch(() => ({ success: true, data: { applications: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 1 } } })),
+        fetchMyOffers().catch(() => ({ success: true, data: [] })),
       ]);
 
       if (profileRes?.data?.user) {
@@ -143,6 +151,7 @@ export const CandidatePortalView: React.FC = () => {
       setInterviews(interviewsRes.data.interviews || []);
       setJobs(jobsRes.data || []);
       setApplications(applicationsRes.data.applications || []);
+      setOffers(Array.isArray(offersRes?.data) ? offersRes.data : []);
 
       if (analysesRes.data.analyses?.length > 0) {
         setCurrentAnalysis((prev) => prev || analysesRes.data.analyses[0]);
@@ -175,6 +184,26 @@ export const CandidatePortalView: React.FC = () => {
   const showNotification = (text: string, type: "success" | "error" = "success") => {
     setMessage({ text, type });
     setTimeout(() => setMessage(null), 5000);
+  };
+
+  const handleRespondToOffer = async (offerId: string, response: "Accepted" | "Declined") => {
+    try {
+      setActionLoading(true);
+      setRespondingOfferId(offerId);
+      const notes = candidateOfferNotes[offerId] || undefined;
+      await respondToOffer(offerId, { response, notes });
+      showNotification(
+        response === "Accepted"
+          ? "Congratulations! You accepted the offer. Your application status is now Hired!"
+          : "You have declined the offer."
+      );
+      await loadData();
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : "Failed to respond to offer", "error");
+    } finally {
+      setActionLoading(false);
+      setRespondingOfferId(null);
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -397,6 +426,12 @@ export const CandidatePortalView: React.FC = () => {
           { id: "resumes", label: "My Resumes", icon: FileText, badge: resumes.length },
           { id: "ats", label: "AI ATS Analyzer", icon: Sparkles },
           { id: "interviews", label: "Interviews & Meet", icon: Calendar, badge: interviews.length },
+          {
+            id: "offers",
+            label: "Job Offers",
+            icon: Award,
+            badge: offers.filter((o) => o.status === "Extended").length,
+          },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -446,6 +481,29 @@ export const CandidatePortalView: React.FC = () => {
 
         return (
           <div className="space-y-6">
+            {/* Active Job Offers Notification Banner */}
+            {offers.some((o) => o.status === "Extended") && (
+              <div className="bg-gradient-to-r from-amber-500 via-emerald-600 to-teal-600 text-white p-5 rounded-2xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider">
+                    <Award className="w-3.5 h-3.5" />
+                    <span>Official Offer Waiting</span>
+                  </div>
+                  <h3 className="text-lg font-bold">You have an active job offer to review!</h3>
+                  <p className="text-xs text-white/90">
+                    Review compensation, proposed start date, terms, and submit your formal acceptance.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("offers")}
+                  className="px-5 py-2.5 bg-white text-slate-900 hover:bg-slate-100 rounded-xl font-bold text-xs shadow-xs transition-colors shrink-0 cursor-pointer"
+                >
+                  View & Respond to Offer →
+                </button>
+              </div>
+            )}
+
             {/* Top Grid: 4 Metric Cards + Schedule Widget */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               {/* Left 4-grid Stat Cards */}
@@ -1638,6 +1696,200 @@ export const CandidatePortalView: React.FC = () => {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 5: Job Offers & Accept/Decline */}
+      {activeTab === "offers" && (
+        <div className="glass-card p-6 sm:p-8 rounded-b-2xl border-t-0 shadow-sm space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+              <Award className="w-5 h-5 text-indigo-600" />
+              Official Employment Offers ({offers.length})
+            </h3>
+          </div>
+
+          {offers.length === 0 ? (
+            <div className="text-center py-12 border rounded-2xl border-purple-100/60 bg-white/40 text-slate-400">
+              <Award className="w-12 h-12 mx-auto mb-2 text-indigo-300" />
+              <p className="text-sm font-medium">No employment offers extended yet.</p>
+              <p className="text-xs text-slate-400 mt-1">
+                When recruiters and hiring managers approve and extend an offer, it will appear here for your review and formal response.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {offers.map((offer) => {
+                const isExtended = offer.status === "Extended";
+                const isAccepted = offer.status === "Accepted";
+                const isDeclined = offer.status === "Declined";
+                const isResponding = respondingOfferId === offer.id;
+
+                return (
+                  <div
+                    key={offer.id}
+                    className="p-6 rounded-2xl border border-slate-200/90 bg-white shadow-sm space-y-5 transition-all"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                              isExtended
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : isAccepted
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : isDeclined
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                            }`}
+                          >
+                            {offer.status}
+                          </span>
+                          <span className="text-xs text-slate-500 font-medium">
+                            {offer.employmentType} • {offer.location}
+                          </span>
+                        </div>
+                        <h4 className="text-xl font-bold text-slate-900 mt-1">{offer.title}</h4>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-2xl font-black text-slate-900">
+                          {offer.currency === "INR"
+                            ? `₹${offer.salary.toLocaleString("en-IN")}`
+                            : `${offer.currency} ${offer.salary.toLocaleString()}`}
+                        </div>
+                        <div className="text-xs text-slate-500 font-medium">Annual Compensation</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-slate-400 block font-semibold uppercase text-[10px]">
+                          Proposed Start Date
+                        </span>
+                        <span className="font-bold text-slate-800 text-sm mt-0.5 block">
+                          {offer.startDate
+                            ? new Date(offer.startDate).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "Flexible / To Be Confirmed"}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-slate-400 block font-semibold uppercase text-[10px]">
+                          Offer Expiry
+                        </span>
+                        <span className="font-bold text-slate-800 text-sm mt-0.5 block">
+                          {offer.expiryDate
+                            ? new Date(offer.expiryDate).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "Standard 7-Day Window"}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-slate-400 block font-semibold uppercase text-[10px]">
+                          Extended On
+                        </span>
+                        <span className="font-bold text-slate-800 text-sm mt-0.5 block">
+                          {offer.createdAt
+                            ? new Date(offer.createdAt).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "Recently"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {offer.notes && (
+                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                          Recruitment Team Notes & Terms:
+                        </span>
+                        <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                          {offer.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {isExtended && (
+                      <div className="pt-2 border-t border-slate-100 space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Optional Candidate Response Notes / Feedback:
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Add any message or question for the hiring team..."
+                            value={candidateOfferNotes[offer.id] || ""}
+                            onChange={(e) =>
+                              setCandidateOfferNotes({
+                                ...candidateOfferNotes,
+                                [offer.id]: e.target.value,
+                              })
+                            }
+                            className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRespondToOffer(offer.id, "Declined")}
+                            disabled={isResponding || actionLoading}
+                            className="px-4 py-2 border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                          >
+                            Decline Offer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRespondToOffer(offer.id, "Accepted")}
+                            disabled={isResponding || actionLoading}
+                            className="px-6 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>{isResponding ? "Accepting..." : "Accept Offer"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {isAccepted && (
+                      <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>
+                            <strong>Offer Formally Accepted!</strong> You have joined the team. Your recruitment pipeline has transitioned to <strong>Hired</strong>.
+                          </span>
+                        </div>
+                        {offer.respondedAt && (
+                          <span className="text-[11px] text-emerald-700 font-medium">
+                            {new Date(offer.respondedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {isDeclined && (
+                      <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-800">
+                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        <span>You have declined this job offer.</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

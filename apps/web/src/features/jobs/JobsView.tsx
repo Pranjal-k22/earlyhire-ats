@@ -14,6 +14,11 @@ import {
   FolderOpen,
   Send,
   CheckCircle2,
+  LayoutGrid,
+  List,
+  Layers,
+  ArrowRight,
+  Users,
 } from "lucide-react";
 import { Job, JobFormData, JobStatus } from "../../types/job";
 import { fetchJobs, createJob, updateJob, archiveJob } from "../../api/jobApi";
@@ -25,15 +30,18 @@ import { JobDetailModal } from "./JobDetailModal";
 interface JobsViewProps {
   isCandidate?: boolean;
   onApplyJob?: (job: Job) => void;
+  onOpenPipeline?: (jobId: string) => void;
 }
 
 export const JobsView: React.FC<JobsViewProps> = ({
   isCandidate = false,
   onApplyJob,
+  onOpenPipeline,
 }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Filters & Pagination
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -275,6 +283,38 @@ export const JobsView: React.FC<JobsViewProps> = ({
               Clear Filters
             </button>
           )}
+
+          {/* View Mode Switcher (Grid / List for Recruiters) */}
+          {!isCandidate && (
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0 ml-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === "grid"
+                    ? "bg-white text-slate-900 shadow-2xs font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === "list"
+                    ? "bg-white text-slate-900 shadow-2xs font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+                title="List View"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">List</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -359,141 +399,364 @@ export const JobsView: React.FC<JobsViewProps> = ({
         </div>
       )}
 
-      {/* Populated Job Cards Grid */}
+      {/* Populated Job Cards Grid or Table List */}
       {!loading && !error && jobs.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {jobs.map((job) => (
-            <div
-              key={job.id}
-              className="bg-white p-5 rounded-xl border border-slate-200 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group"
-            >
-              <div>
-                {/* Top Status & Department */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                    {job.department}
-                  </span>
-                  <JobStatusBadge status={job.status} size="sm" />
-                </div>
+        viewMode === "list" && !isCandidate ? (
+          /* List / Table View for Recruiters */
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                    <th className="px-5 py-3.5">Job Opening</th>
+                    <th className="px-4 py-3.5">Location & Type</th>
+                    <th className="px-4 py-3.5">Owner / Recruiter</th>
+                    <th className="px-4 py-3.5">Status</th>
+                    <th className="px-4 py-3.5 text-center">Pipeline Breakdown</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {jobs.map((job) => {
+                    const counts = job.pipelineCounts || {
+                      total: 0,
+                      Applied: 0,
+                      Screening: 0,
+                      Interview: 0,
+                      Offer: 0,
+                      Hired: 0,
+                      Rejected: 0,
+                    };
 
-                {/* Job Title */}
-                <h3
-                  onClick={() => handleOpenDetailModal(job)}
-                  className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors cursor-pointer line-clamp-1"
-                >
-                  {job.title}
-                </h3>
+                    const ownerName =
+                      typeof job.ownerId === "object" && job.ownerId
+                        ? job.ownerId.name
+                        : "Assigned Recruiter";
 
-                {/* Location & Employment */}
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-2">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{job.location}</span>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{job.employmentType}</span>
-                  </span>
-                </div>
-
-                {/* Description Excerpt */}
-                <p className="text-xs text-slate-600 mt-3 line-clamp-2 leading-relaxed">
-                  {job.description}
-                </p>
-
-                {/* Requirements Chips */}
-                {job.requirements && job.requirements.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {job.requirements.slice(0, 3).map((req, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 text-[11px] bg-slate-50 text-slate-600 border border-slate-100 rounded-md font-medium"
+                    return (
+                      <tr
+                        key={job.id}
+                        className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                        onClick={() => {
+                          if (onOpenPipeline) onOpenPipeline(job.id);
+                        }}
                       >
-                        {req}
-                      </span>
-                    ))}
-                    {job.requirements.length > 3 && (
-                      <span className="px-1.5 py-0.5 text-[11px] text-slate-400 font-medium">
-                        +{job.requirements.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors text-sm">
+                            {job.title}
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span className="font-semibold text-slate-700">{job.department}</span>
+                            <span>•</span>
+                            <span>{job.experienceMin}+ yrs exp</span>
+                          </div>
+                        </td>
 
-              {/* Bottom Actions & Meta */}
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{new Date(job.openedAt).toLocaleDateString()}</span>
-                </span>
+                        <td className="px-4 py-4 text-slate-600">
+                          <div className="flex items-center gap-1.5 font-medium">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>{job.location}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                            {job.employmentType}
+                          </div>
+                        </td>
 
-                {isCandidate ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      data-testid={`view-jd-btn-${job.id}`}
-                      onClick={() => handleOpenDetailModal(job)}
-                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                      title="View Job Description"
-                      aria-label="View Job Description"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      <span>View JD</span>
-                    </button>
-                    {job.status === "Open" ? (
-                      <button
-                        type="button"
-                        data-testid={`apply-job-btn-${job.id}`}
-                        onClick={() => handleApplyClick(job)}
-                        className="px-3.5 py-1.5 text-xs font-bold text-white gradient-btn-primary rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Apply</span>
-                      </button>
-                    ) : (
-                      <span className="text-[11px] font-medium text-slate-400 px-2 py-1 bg-slate-50 rounded-md">
-                        Closed
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenDetailModal(job)}
-                      className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
-                      title="View Details"
-                      aria-label="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(job)}
-                      className="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all"
-                      title="Edit Job"
-                      aria-label="Edit Job"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    {job.status !== "Archived" && (
-                      <button
-                        type="button"
-                        onClick={() => handleArchiveJob(job)}
-                        className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                        title="Archive Job"
-                        aria-label="Archive Job"
-                      >
-                        <Archive className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+                        <td className="px-4 py-4 text-slate-700 font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-indigo-500" />
+                            <span>{ownerName}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {new Date(job.openedAt).toLocaleDateString()}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <JobStatusBadge status={job.status} size="sm" />
+                        </td>
+
+                        <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1.5 text-[10px]">
+                            <span
+                              className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-bold"
+                              title="Applied"
+                            >
+                              App: {counts.Applied}
+                            </span>
+                            <span
+                              className="px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-100 rounded-md font-bold"
+                              title="Screening"
+                            >
+                              Screen: {counts.Screening}
+                            </span>
+                            <span
+                              className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md font-bold"
+                              title="Interview"
+                            >
+                              Intv: {counts.Interview}
+                            </span>
+                            <span
+                              className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-md font-bold"
+                              title="Offer"
+                            >
+                              Offer: {counts.Offer}
+                            </span>
+                            <span
+                              className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md font-bold"
+                              title="Hired"
+                            >
+                              Hire: {counts.Hired}
+                            </span>
+                            <span className="font-extrabold text-slate-800 ml-1">
+                              ({counts.total})
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onOpenPipeline) {
+                                  onOpenPipeline(job.id);
+                                } else {
+                                  window.location.hash = `#pipeline?jobId=${job.id}`;
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 text-xs cursor-pointer"
+                              title="Open dedicated job pipeline"
+                            >
+                              <Layers className="w-3.5 h-3.5" />
+                              <span>Pipeline</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetailModal(job)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(job)}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Job"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            {job.status !== "Archived" && (
+                              <button
+                                type="button"
+                                onClick={() => handleArchiveJob(job)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Archive Job"
+                              >
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          /* Grid View (Default) */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {jobs.map((job) => {
+              const counts = job.pipelineCounts || {
+                total: 0,
+                Applied: 0,
+                Screening: 0,
+                Interview: 0,
+                Offer: 0,
+                Hired: 0,
+                Rejected: 0,
+              };
+
+              return (
+                <div
+                  key={job.id}
+                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    {/* Top Status & Department */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-600">
+                        {job.department}
+                      </span>
+                      <JobStatusBadge status={job.status} size="sm" />
+                    </div>
+
+                    {/* Job Title */}
+                    <h3
+                      onClick={() => handleOpenDetailModal(job)}
+                      className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors cursor-pointer line-clamp-1"
+                    >
+                      {job.title}
+                    </h3>
+
+                    {/* Location & Employment */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-2">
+                      <span className="flex items-center gap-1 font-medium">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{job.location}</span>
+                      </span>
+                      <span className="flex items-center gap-1 font-medium">
+                        <Briefcase className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{job.employmentType}</span>
+                      </span>
+                    </div>
+
+                    {/* Description Excerpt */}
+                    <p className="text-xs text-slate-600 mt-3 line-clamp-2 leading-relaxed">
+                      {job.description}
+                    </p>
+
+                    {/* Requirements Chips */}
+                    {job.requirements && job.requirements.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {job.requirements.slice(0, 3).map((req, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 text-[11px] bg-slate-50 text-slate-600 border border-slate-100 rounded-md font-medium"
+                          >
+                            {req}
+                          </span>
+                        ))}
+                        {job.requirements.length > 3 && (
+                          <span className="px-1.5 py-0.5 text-[11px] text-slate-400 font-medium">
+                            +{job.requirements.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Pipeline Stage Counts Strip for Recruiters */}
+                    {!isCandidate && (
+                      <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-5 gap-1 text-center text-[10px]">
+                        <div className="p-1.5 bg-slate-50 border border-slate-100 rounded-lg">
+                          <span className="text-slate-400 block font-medium">Applied</span>
+                          <span className="font-extrabold text-slate-800">{counts.Applied}</span>
+                        </div>
+                        <div className="p-1.5 bg-sky-50 border border-sky-100 rounded-lg">
+                          <span className="text-sky-600 block font-medium">Screen</span>
+                          <span className="font-extrabold text-sky-800">{counts.Screening}</span>
+                        </div>
+                        <div className="p-1.5 bg-indigo-50 border border-indigo-100 rounded-lg">
+                          <span className="text-indigo-600 block font-medium">Intv</span>
+                          <span className="font-extrabold text-indigo-800">{counts.Interview}</span>
+                        </div>
+                        <div className="p-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+                          <span className="text-amber-600 block font-medium">Offer</span>
+                          <span className="font-extrabold text-amber-800">{counts.Offer}</span>
+                        </div>
+                        <div className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg">
+                          <span className="text-emerald-600 block font-medium">Hired</span>
+                          <span className="font-extrabold text-emerald-800">{counts.Hired}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions & Meta */}
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                    <span className="flex items-center gap-1 font-medium">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{new Date(job.openedAt).toLocaleDateString()}</span>
+                    </span>
+
+                    {isCandidate ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          data-testid={`view-jd-btn-${job.id}`}
+                          onClick={() => handleOpenDetailModal(job)}
+                          className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="View Job Description"
+                          aria-label="View Job Description"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-slate-500" />
+                          <span>View JD</span>
+                        </button>
+                        {job.status === "Open" ? (
+                          <button
+                            type="button"
+                            data-testid={`apply-job-btn-${job.id}`}
+                            onClick={() => handleApplyClick(job)}
+                            className="px-3.5 py-1.5 text-xs font-bold text-white gradient-btn-primary rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Apply</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] font-medium text-slate-400 px-2 py-1 bg-slate-50 rounded-md">
+                            Closed
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenPipeline) {
+                              onOpenPipeline(job.id);
+                            } else {
+                              window.location.hash = `#pipeline?jobId=${job.id}`;
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                          title="Open dedicated job pipeline"
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                          <span>Pipeline</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetailModal(job)}
+                          className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+                          title="View Details"
+                          aria-label="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(job)}
+                          className="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-all cursor-pointer"
+                          title="Edit Job"
+                          aria-label="Edit Job"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {job.status !== "Archived" && (
+                          <button
+                            type="button"
+                            onClick={() => handleArchiveJob(job)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                            title="Archive Job"
+                            aria-label="Archive Job"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* Pagination Controls */}
