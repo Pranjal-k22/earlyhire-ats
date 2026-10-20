@@ -124,7 +124,7 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
       // company missing
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
     expect(res.body.success).toBe(false);
   });
 
@@ -154,7 +154,7 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
       role: "admin",
     });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
     expect(res.body.success).toBe(false);
 
     const forger = await User.findOne({ email: "forger@admin.corp" });
@@ -207,7 +207,7 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
     const adminUser = await User.create({
       name: "Admin User",
       email: "admin.super@earlyhire.corp",
-      password: "AdminSecretPassword123!",
+      passwordHash: "$2a$12$e80yq7K2K2y9N7Z...",
       role: "platform_manager",
       approvalStatus: "approved",
     });
@@ -223,7 +223,7 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
     const recruiter = await User.create({
       name: "Pending Recruiter To Approve",
       email: "to.approve@hiring.corp",
-      password: "RecruiterPass123!",
+      passwordHash: "$2a$12$e80yq7K2K2y9N7Z...",
       company: "Tech Recruiting",
       role: "hiring_team",
       approvalStatus: "pending",
@@ -263,7 +263,7 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
     const candidate = await User.create({
       name: "Candidate Boundary User",
       email: "boundary.cand@example.com",
-      password: "CandidatePass123!",
+      passwordHash: "$2a$12$e80yq7K2K2y9N7Z...",
       role: "candidate",
       approvalStatus: "approved",
     });
@@ -287,7 +287,7 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
     const recruiter = await User.create({
       name: "Session Recruiter",
       email: "session.recruiter@talent.corp",
-      password: "RecruiterPass123!",
+      passwordHash: "$2a$12$e80yq7K2K2y9N7Z...",
       company: "Modern Talent Ltd",
       department: "Tech Recruiting",
       role: "hiring_team",
@@ -334,6 +334,6 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
 
     expect(duplicateRes.status).toBe(409);
     expect(duplicateRes.body.success).toBe(false);
-    expect(duplicateRes.body.error.message).toMatch(/already registered/i);
+    expect(duplicateRes.body.error.message).toMatch(/already exists/i);
   });
 });
