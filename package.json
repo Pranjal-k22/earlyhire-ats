@@ -19,6 +19,9 @@
     "test": "npm run test --workspaces",
     "bootstrap:platform-manager": "npm run bootstrap:platform-manager --workspace=apps/api --",
     "seed:demo": "npm run seed:demo --workspace=apps/api --",
+    "migrate:roles": "npm run migrate:roles --workspace=apps/api --",
+    "test:screening-e2e": "npm run test:screening-e2e --workspace=apps/api --",
+    "test:r2-smoke": "npm run test:r2-smoke --workspace=apps/api --",
     "ci": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "keywords": [

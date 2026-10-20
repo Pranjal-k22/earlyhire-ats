@@ -61,8 +61,10 @@ export function isNonProductionDatabase(dbName?: string | null): boolean {
   return (
     normalized === "earlyai_ats_dev" ||
     normalized === "earlyai_ats_test" ||
+    normalized === "earlyai_ats_staging" ||
     normalized.endsWith("_dev") ||
     normalized.endsWith("_test") ||
+    normalized.endsWith("_staging") ||
     normalized.includes("localhost")
   );
 }

@@ -32,11 +32,13 @@ describe("Demo Dataset Seeder & Safeguards (seedDemoData.ts)", () => {
       expect(isNonProductionDatabase("")).toBe(false);
     });
 
-    it("approves isolated development and test database targets", () => {
+    it("approves isolated development, test, and staging database targets", () => {
       expect(isNonProductionDatabase("earlyai_ats_dev")).toBe(true);
       expect(isNonProductionDatabase("earlyai_ats_test")).toBe(true);
+      expect(isNonProductionDatabase("earlyai_ats_staging")).toBe(true);
       expect(isNonProductionDatabase("my_feature_dev")).toBe(true);
       expect(isNonProductionDatabase("pipeline_test")).toBe(true);
+      expect(isNonProductionDatabase("release_staging")).toBe(true);
     });
 
     it("throws critical safety error when invoked against simulated production database", async () => {

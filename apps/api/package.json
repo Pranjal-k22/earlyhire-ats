@@ -12,7 +12,9 @@
     "test": "vitest run --fileParallelism=false",
     "test:r2-smoke": "tsx src/scripts/liveR2SmokeTest.ts",
     "bootstrap:platform-manager": "tsx src/scripts/bootstrapPlatformManager.ts",
-    "seed:demo": "tsx src/scripts/seedDemoData.ts"
+    "seed:demo": "tsx src/scripts/seedDemoData.ts",
+    "migrate:roles": "tsx src/scripts/migrateRoles.ts",
+    "test:screening-e2e": "tsx src/scripts/verifyScreeningE2E.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",
