@@ -32,12 +32,20 @@ export const normalizeRole = (role: UserRole | string): CanonicalRole => {
   }
 };
 
+export const USER_APPROVAL_STATUSES = ["pending", "approved", "rejected"] as const;
+export type UserApprovalStatus = (typeof USER_APPROVAL_STATUSES)[number];
+
 export interface IUser {
   name: string;
   email: string;
   passwordHash: string;
   role: UserRole;
   isActive: boolean;
+  approvalStatus: UserApprovalStatus;
+  company?: string;
+  department?: string;
+  approvedAt?: Date | null;
+  approvedBy?: mongoose.Types.ObjectId | null;
   headline?: string;
   phone?: string;
   bio?: string;
@@ -93,6 +101,35 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
       type: Boolean,
       default: true,
     },
+    approvalStatus: {
+      type: String,
+      enum: {
+        values: USER_APPROVAL_STATUSES,
+        message: "{VALUE} is not a supported approval status",
+      },
+      default: "approved",
+    },
+    company: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Company name cannot exceed 100 characters"],
+      default: "",
+    },
+    department: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Department cannot exceed 100 characters"],
+      default: "",
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     headline: {
       type: String,
       trim: true,
@@ -137,6 +174,7 @@ const userSchema = new Schema<IUserDocument, IUserModel>(
       transform(_doc, ret: Record<string, unknown>) {
         ret.id = (ret._id as { toString(): string })?.toString();
         ret.canonicalRole = normalizeRole(ret.role as UserRole);
+        ret.approvalStatus = ret.approvalStatus || "approved";
         delete ret._id;
         delete ret.__v;
         delete ret.passwordHash;

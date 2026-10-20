@@ -32,6 +32,30 @@ export const signupSchema = z.object({
   role: z.string().optional(),
 });
 
+export const recruiterSignupSchema = z.object({
+  name: z
+    .string({ required_error: "Full name is required" })
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name cannot exceed 100 characters"),
+  email: z
+    .string({ required_error: "Work email is required" })
+    .trim()
+    .toLowerCase()
+    .email("Please provide a valid work email address"),
+  password: passwordSchema,
+  company: z
+    .string({ required_error: "Company / organization name is required" })
+    .trim()
+    .min(2, "Company name must be at least 2 characters")
+    .max(100, "Company name cannot exceed 100 characters"),
+  department: z.string().trim().max(100).optional(),
+  headline: z.string().trim().max(150).optional(),
+  phone: z.string().trim().max(30).optional(),
+  inviteCode: z.string().trim().optional(),
+  role: z.enum(["recruiter", "hiring_team"]).optional().default("recruiter"),
+});
+
 export const loginSchema = z.object({
   email: z
     .string({ required_error: "Email is required" })
@@ -42,4 +66,5 @@ export const loginSchema = z.object({
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;
+export type RecruiterSignupInput = z.infer<typeof recruiterSignupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

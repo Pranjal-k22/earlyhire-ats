@@ -61,6 +61,21 @@ export const requireRole = (...allowedRoles: (UserRole | CanonicalRole)[]) => {
     const userExactRole = req.user.role;
     const userCanonicalRole = normalizeRole(userExactRole);
 
+    // Enforce approval status: Pending or rejected recruiters cannot perform privileged recruiter operations
+    const requiresPrivilege = allowedRoles.some((r) => r !== "candidate");
+    if (requiresPrivilege) {
+      if (req.user.approvalStatus === "pending") {
+        return next(
+          new AppError("Recruiter account approval required. Your account is pending administrator approval.", 403, "FORBIDDEN")
+        );
+      }
+      if (req.user.approvalStatus === "rejected") {
+        return next(
+          new AppError("Your account registration was not approved. Please contact an administrator.", 403, "FORBIDDEN")
+        );
+      }
+    }
+
     const isAuthorized = allowedRoles.some((allowed) => {
       // 1. Direct exact role match
       if (allowed === userExactRole) return true;
@@ -125,6 +140,10 @@ export const requireSelfOrRole = (
 
     const userExactRole = req.user.role;
     const userCanonicalRole = normalizeRole(userExactRole);
+
+    if (req.user.approvalStatus === "pending" || req.user.approvalStatus === "rejected") {
+      return next(new AppError("You do not have permission to access or modify this resource", 403, "FORBIDDEN"));
+    }
 
     const isPrivileged = privilegedRoles.some((role) => {
       if (role === userExactRole) return true;

@@ -1,4 +1,4 @@
-import { AuthResponse, LoginPayload, SignupPayload } from "../types/auth";
+import { AuthResponse, LoginPayload, SignupPayload, RecruiterSignupPayload } from "../types/auth";
 import { API_BASE } from "./baseUrl";
 import { parseApiResponse } from "./clientHelper";
 
@@ -25,6 +25,20 @@ export const signup = async (payload: SignupPayload): Promise<AuthResponse> => {
   });
 
   return parseApiResponse<AuthResponse>(res, "Signup failed");
+};
+
+export const signupRecruiter = async (payload: RecruiterSignupPayload): Promise<AuthResponse> => {
+  const res = await fetch(`${API_BASE}/api/v1/auth/signup/recruiter`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseApiResponse<AuthResponse>(res, "Recruiter registration failed");
 };
 
 export const login = async (payload: LoginPayload): Promise<AuthResponse> => {

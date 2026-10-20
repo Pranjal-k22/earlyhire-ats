@@ -16,7 +16,7 @@ import {
   HelpCircle,
   Briefcase,
 } from "lucide-react";
-import { login, signup } from "../../api/authApi";
+import { login, signup, signupRecruiter } from "../../api/authApi";
 import { User } from "../../types/auth";
 
 const loginSchema = z.object({
@@ -31,11 +31,25 @@ const signupSchema = z.object({
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     "Password must contain an uppercase letter, lowercase letter, and number"
   ),
-  role: z.literal("candidate"),
+  role: z.literal("candidate").default("candidate"),
+});
+
+const recruiterSignupSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80, "Name cannot exceed 80 characters"),
+  email: z.string().trim().email("Please enter a valid work email address"),
+  company: z.string().trim().min(2, "Company name must be at least 2 characters").max(100, "Company cannot exceed 100 characters"),
+  department: z.string().trim().max(100).optional(),
+  phone: z.string().trim().max(30).optional(),
+  inviteCode: z.string().trim().optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+    "Password must contain an uppercase letter, lowercase letter, and number"
+  ),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
+type RecruiterSignupFormValues = z.infer<typeof recruiterSignupSchema>;
 
 interface Props {
   isOpen: boolean;
@@ -109,7 +123,7 @@ export const AuthModal: React.FC<Props> = ({
     defaultValues: { email: "", password: "" },
   });
 
-  // Signup Form
+  // Candidate Signup Form
   const {
     register: registerSignup,
     handleSubmit: handleSignupSubmit,
@@ -118,6 +132,25 @@ export const AuthModal: React.FC<Props> = ({
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", password: "", role: "candidate" },
+  });
+
+  // Recruiter Signup Form
+  const {
+    register: registerRecruiterSignup,
+    handleSubmit: handleRecruiterSignupSubmit,
+    reset: resetRecruiterSignup,
+    formState: { errors: recruiterSignupErrors, isSubmitting: isRecruiterSigningUp },
+  } = useForm<RecruiterSignupFormValues>({
+    resolver: zodResolver(recruiterSignupSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      company: "",
+      department: "",
+      phone: "",
+      inviteCode: "",
+    },
   });
 
   const onLogin = async (data: LoginFormValues) => {
@@ -143,7 +176,7 @@ export const AuthModal: React.FC<Props> = ({
         name: data.name,
         email: data.email,
         password: data.password,
-        role: data.role,
+        role: "candidate",
       });
       resetSignup();
       onSuccess(res.data.user);
@@ -153,9 +186,31 @@ export const AuthModal: React.FC<Props> = ({
     }
   };
 
+  const onRecruiterSignup = async (data: RecruiterSignupFormValues) => {
+    setServerError(null);
+    setPortalMismatchMessage(null);
+    try {
+      const res = await signupRecruiter({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        company: data.company,
+        department: data.department,
+        phone: data.phone,
+        inviteCode: data.inviteCode,
+        role: "recruiter",
+      });
+      resetRecruiterSignup();
+      onSuccess(res.data.user);
+      onClose();
+    } catch (err: unknown) {
+      setServerError(err instanceof Error ? err.message : "Failed to create recruiter account");
+    }
+  };
+
   if (!isOpen) return null;
 
-  const isSubmitting = isLoggingIn || isSigningUp;
+  const isSubmitting = isLoggingIn || isSigningUp || isRecruiterSigningUp;
 
   return (
     <div

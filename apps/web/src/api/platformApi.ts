@@ -9,6 +9,9 @@ export interface PlatformUser {
   canonicalRole: string;
   isActive: boolean;
   headline?: string;
+  company?: string;
+  department?: string;
+  approvalStatus?: "pending" | "approved" | "rejected";
   createdAt: string;
 }
 
@@ -76,6 +79,20 @@ export const updatePlatformUserRole = async (
   });
 
   return parseApiResponse<{ success: boolean; data: { user: PlatformUser } }>(res, "Failed to update user role");
+};
+
+export const updatePlatformUserApproval = async (
+  userId: string,
+  approvalStatus: "approved" | "rejected" | "pending"
+): Promise<{ success: boolean; data: { user: PlatformUser } }> => {
+  const res = await fetch(`${API_BASE}/api/v1/platform/users/${userId}/approval`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ approvalStatus }),
+  });
+
+  return parseApiResponse<{ success: boolean; data: { user: PlatformUser } }>(res, "Failed to update user approval status");
 };
 
 export const fetchAIUsageMetrics = async (): Promise<{

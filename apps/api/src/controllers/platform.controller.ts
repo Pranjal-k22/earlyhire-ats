@@ -72,6 +72,53 @@ export const updatePlatformUserRole = async (req: Request, res: Response, next: 
     }
 
     targetUser.role = validated.role;
+    if (targetUser.approvalStatus === "pending" && (validated.role === "hiring_team" || validated.role === "recruiter")) {
+      targetUser.approvalStatus = "approved";
+      targetUser.approvedAt = new Date();
+      targetUser.approvedBy = req.user?._id;
+    }
+    await targetUser.save();
+
+    sseEventHub.broadcast({
+      type: "user:updated",
+      entity: "user",
+      entityId: targetUser.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: targetUser.toJSON(),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateApprovalSchema = z.object({
+  approvalStatus: z.enum(["pending", "approved", "rejected"]),
+});
+
+/**
+ * Updates a user's approval status (Platform Manager only).
+ */
+export const updatePlatformUserApproval = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const validated = updateApprovalSchema.parse(req.body);
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return next(new AppError("User not found", 404, "USER_NOT_FOUND"));
+    }
+
+    targetUser.approvalStatus = validated.approvalStatus;
+    if (validated.approvalStatus === "approved") {
+      targetUser.approvedAt = new Date();
+      targetUser.approvedBy = req.user?._id;
+    }
     await targetUser.save();
 
     sseEventHub.broadcast({

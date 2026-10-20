@@ -53,6 +53,7 @@ const envSchema = z
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().default("EarlyAI ATS <no-reply@earlyhire.ai>"),
+    RECRUITER_INVITE_CODE: z.string().optional().default("EARLY_RECRUITER_INVITE"),
   })
   .transform((data) => {
     if (data.NODE_ENV === "test" || isTestMode) {

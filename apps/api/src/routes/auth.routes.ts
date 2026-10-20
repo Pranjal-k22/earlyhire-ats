@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signup, login, logout, getMe } from "../controllers/auth.controller.js";
+import { signup, signupRecruiter, login, logout, getMe } from "../controllers/auth.controller.js";
 import {
   initiateGoogleAuth,
   googleAuthCallback,
@@ -13,6 +13,8 @@ const router = Router();
 
 // Standard Authentication Routes
 router.post("/signup", authLimiter, signup);
+router.post("/signup/recruiter", authLimiter, signupRecruiter);
+router.post("/register-recruiter", authLimiter, signupRecruiter);
 router.post("/login", authLimiter, login);
 router.post("/logout", logout);
 router.get("/me", requireAuth, getMe);

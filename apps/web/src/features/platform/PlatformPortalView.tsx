@@ -33,6 +33,7 @@ import {
 import {
   fetchPlatformUsers,
   updatePlatformUserRole,
+  updatePlatformUserApproval,
   fetchAIUsageMetrics,
   fetchSystemIntegrationsHealth,
   PlatformUser,
@@ -108,6 +109,25 @@ export const PlatformPortalView: React.FC = () => {
     } catch (err) {
       setMessage({
         text: err instanceof Error ? err.message : "Failed to update role",
+        type: "error",
+      });
+      setTimeout(() => setMessage(null), 4000);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApproveRecruiter = async (userId: string) => {
+    try {
+      setActionLoading(true);
+      const res = await updatePlatformUserApproval(userId, "approved");
+      setUsers((prev) => prev.map((u) => (u.id === userId ? res.data.user : u)));
+      setMessage({ text: `Approved recruiter ${res.data.user.name}`, type: "success" });
+      setTimeout(() => setMessage(null), 4000);
+      loadData();
+    } catch (err) {
+      setMessage({
+        text: err instanceof Error ? err.message : "Failed to approve recruiter",
         type: "error",
       });
       setTimeout(() => setMessage(null), 4000);
@@ -609,7 +629,10 @@ export const PlatformPortalView: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">{description}</td>
+                      <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                        {user.company ? <span className="font-semibold text-purple-700 block">{user.company}</span> : null}
+                        <span>{description}</span>
+                      </td>
                       <td className="py-3.5 px-4 text-slate-500">
                         {new Date(user.createdAt).toLocaleDateString("en-US", {
                           month: "short",
@@ -618,10 +641,28 @@ export const PlatformPortalView: React.FC = () => {
                         })}
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Active
-                        </span>
+                        {user.approvalStatus === "pending" ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Pending Approval
+                            </span>
+                            <button
+                              type="button"
+                              disabled={actionLoading}
+                              onClick={() => handleApproveRecruiter(user.id)}
+                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-[10px] font-bold transition-colors shadow-2xs"
+                              title="Grant active recruiter permissions"
+                            >
+                              Approve
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Active
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <select

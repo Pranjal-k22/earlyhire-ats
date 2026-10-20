@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   listPlatformUsers,
   updatePlatformUserRole,
+  updatePlatformUserApproval,
   getAIUsageMetrics,
   getSystemIntegrationsHealth,
 } from "../controllers/platform.controller.js";
@@ -15,6 +16,7 @@ router.use(requireRole("platform_manager"));
 
 router.get("/users", listPlatformUsers);
 router.patch("/users/:userId/role", updatePlatformUserRole);
+router.patch("/users/:userId/approval", updatePlatformUserApproval);
 router.get("/ai-metrics", getAIUsageMetrics);
 router.get("/health", getSystemIntegrationsHealth);
 
