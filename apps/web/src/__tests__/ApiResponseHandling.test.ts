@@ -90,4 +90,23 @@ describe("API Client Response Parsing & Error Handling (Regression Tests)", () =
       "Service is overloaded, please retry shortly"
     );
   });
+
+  it("7. Ensures 5xx fallback messages do not leak hardcoded localhost URLs", async () => {
+    const mock503 = new Response("", {
+      status: 503,
+      headers: { "Content-Type": "text/plain" },
+    });
+
+    try {
+      await parseApiResponse(mock503, "Request failed");
+      expect.unreachable("Should have thrown ApiError");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(ApiError);
+      const apiErr = err as ApiError;
+      expect(apiErr.message).toContain("API service is temporarily unavailable (HTTP 503)");
+      expect(apiErr.message).not.toContain("localhost");
+      expect(apiErr.message).not.toContain("5000");
+    }
+  });
 });
+

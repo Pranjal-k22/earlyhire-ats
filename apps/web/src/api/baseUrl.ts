@@ -5,10 +5,10 @@
  * Returns empty string by default so relative requests ("/api/v1/...") work seamlessly
  * in local development (Vite proxy) and with Vercel rewrites.
  */
-export const getApiBase = (): string => {
-  const rawUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+export const getApiBase = (overrideUrl?: string): string => {
+  const rawUrl = (overrideUrl !== undefined ? overrideUrl : (import.meta.env.VITE_API_URL as string | undefined))?.trim();
   if (!rawUrl) return "";
-  return rawUrl.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "");
+  return rawUrl.replace(/\/api(\/v1)?\/?$/, "").replace(/\/+$/, "");
 };
 
 export const API_BASE = getApiBase();

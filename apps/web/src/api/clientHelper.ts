@@ -68,7 +68,7 @@ export async function parseApiResponse<T>(
       body?.error?.message ||
       body?.message ||
       (res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504
-        ? `API service is temporarily unavailable (HTTP ${res.status}). Please ensure the backend server is running on http://localhost:5000.`
+        ? `API service is temporarily unavailable (HTTP ${res.status}). Please verify backend service health and connectivity.`
         : `${fallbackMessage} (HTTP ${res.status || "unknown"})`);
 
     const code = body?.error?.code || body?.code;
