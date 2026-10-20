@@ -8,6 +8,7 @@ export interface User {
   canonicalRole?: "candidate" | "hiring_team" | "platform_manager";
   company?: string;
   department?: string;
+  phone?: string;
   approvalStatus?: UserApprovalStatus;
 }
 
