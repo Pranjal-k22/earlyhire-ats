@@ -133,11 +133,18 @@ const envSchema = z
     }
   });
 
-const parsed = envSchema.safeParse(process.env);
+export type Env = z.output<typeof envSchema>;
 
-if (!parsed.success) {
-  console.error("❌ Invalid environment variables:", JSON.stringify(parsed.error.format(), null, 2));
-  process.exit(1);
-}
+const loadEnv = (): Env => {
+  const parsed = envSchema.safeParse(process.env);
 
-export const env = parsed.data;
+  if (!parsed.success) {
+    const errorFormatted = JSON.stringify(parsed.error.format(), null, 2);
+    console.error("❌ Invalid environment variables:", errorFormatted);
+    throw new Error(`Invalid environment variables:\n${errorFormatted}`);
+  }
+
+  return parsed.data;
+};
+
+export const env: Env = loadEnv();
