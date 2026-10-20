@@ -181,6 +181,21 @@ export async function bootstrapPlatformManager(options: BootstrapOptions): Promi
 
     if (existingUser) {
       if (existingUser.role === "platform_manager") {
+        if (isExecute) {
+          let updated = false;
+          if (password) {
+            existingUser.passwordHash = await User.hashPassword(password);
+            updated = true;
+          }
+          if (normalizedName && existingUser.name !== normalizedName) {
+            existingUser.name = normalizedName;
+            updated = true;
+          }
+          if (updated) {
+            await existingUser.save();
+            console.log(`✅ Existing platform_manager ${normalizedEmail} credentials/name updated.`);
+          }
+        }
         console.log(`ℹ️ Account ${normalizedEmail} already exists and is already a platform_manager.`);
         return {
           status: "ALREADY_PLATFORM_MANAGER",
@@ -201,6 +216,12 @@ export async function bootstrapPlatformManager(options: BootstrapOptions): Promi
 
       if (isExecute) {
         existingUser.role = "platform_manager";
+        if (password) {
+          existingUser.passwordHash = await User.hashPassword(password);
+        }
+        if (normalizedName) {
+          existingUser.name = normalizedName;
+        }
         await existingUser.save();
         console.log(`✅ User ${normalizedEmail} successfully upgraded to platform_manager.`);
         return {
