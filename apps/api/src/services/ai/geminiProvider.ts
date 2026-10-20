@@ -9,7 +9,7 @@ export class GeminiProvider implements IAIProvider {
 
   constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || env.GEMINI_API_KEY;
-    this.defaultModel = model || env.GEMINI_MODEL || "gemini-2.5-flash";
+    this.defaultModel = model || env.GEMINI_MODEL || "gemini-flash-latest";
   }
 
   public isAvailable(): boolean {
@@ -24,7 +24,7 @@ export class GeminiProvider implements IAIProvider {
     }
 
     const startTime = Date.now();
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.defaultModel}:generateContent`;
+    let activeModel = this.defaultModel;
 
     const requestBody = {
       systemInstruction: options.systemInstruction
@@ -47,6 +47,8 @@ export class GeminiProvider implements IAIProvider {
     let lastError: Error | null = null;
 
     while (retries >= 0) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent`;
+
       try {
         const response = await fetch(endpoint, {
           method: "POST",
@@ -68,6 +70,17 @@ export class GeminiProvider implements IAIProvider {
 
         if (!response.ok) {
           const errText = await response.text();
+          // If model is deprecated (404) or unavailable (503), fallback to gemini-flash-latest
+          if (
+            (response.status === 404 || response.status === 503 || errText.includes("no longer available")) &&
+            activeModel !== "gemini-flash-latest"
+          ) {
+            console.warn(`[GeminiProvider] Model ${activeModel} unavailable (${response.status}), falling back to gemini-flash-latest`);
+            activeModel = "gemini-flash-latest";
+            retries--;
+            continue;
+          }
+
           throw new AppError(
             `Gemini API error (${response.status}): ${errText.slice(0, 200)}`,
             502,
@@ -106,7 +119,7 @@ export class GeminiProvider implements IAIProvider {
           data: parsedData,
           rawText,
           provider: this.name,
-          model: this.defaultModel,
+          model: activeModel,
           inputTokens: json.usageMetadata?.promptTokenCount || Math.round(options.prompt.length / 4),
           outputTokens: json.usageMetadata?.candidatesTokenCount || Math.round(rawText.length / 4),
           latencyMs,

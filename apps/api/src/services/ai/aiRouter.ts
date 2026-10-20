@@ -22,6 +22,7 @@ import {
 } from "./promptTemplates.js";
 import { AIUsageRecord } from "../../models/aiUsage.model.js";
 import { env } from "../../config/env.js";
+import mongoose from "mongoose";
 
 export class AIRouter {
   private primaryProvider: IAIProvider;
@@ -32,25 +33,27 @@ export class AIRouter {
     this.heuristicProvider = new FallbackProvider();
 
     // Configure primary provider
-    if (env.AI_PROVIDER === "ollama") {
-      this.primaryProvider = new OllamaProvider();
-    } else if (env.AI_PROVIDER === "groq") {
+    if (env.AI_PROVIDER === "groq") {
       this.primaryProvider = new GroqProvider();
+    } else if (env.AI_PROVIDER === "gemini") {
+      this.primaryProvider = new GeminiProvider();
     } else if (env.AI_PROVIDER === "mock") {
       this.primaryProvider = this.heuristicProvider;
+    } else if (env.AI_PROVIDER === "ollama") {
+      this.primaryProvider = new OllamaProvider();
     } else {
-      this.primaryProvider = new GeminiProvider();
+      this.primaryProvider = new GroqProvider();
     }
 
     // Configure secondary fallback provider
-    if (env.AI_FALLBACK_PROVIDER === "ollama") {
-      this.fallbackProvider = new OllamaProvider();
-    } else if (env.AI_FALLBACK_PROVIDER === "gemini") {
+    if (env.AI_FALLBACK_PROVIDER === "gemini") {
       this.fallbackProvider = new GeminiProvider();
     } else if (env.AI_FALLBACK_PROVIDER === "groq") {
       this.fallbackProvider = new GroqProvider();
     } else if (env.AI_FALLBACK_PROVIDER === "mock") {
       this.fallbackProvider = this.heuristicProvider;
+    } else if (env.AI_FALLBACK_PROVIDER === "ollama") {
+      this.fallbackProvider = new OllamaProvider();
     } else {
       this.fallbackProvider = null;
     }
@@ -69,22 +72,46 @@ export class AIRouter {
     let lastError: Error | null = null;
     const providersToTry: IAIProvider[] = [];
 
-    if (this.primaryProvider && this.primaryProvider.isAvailable()) {
-      providersToTry.push(this.primaryProvider);
-    }
-    if (
-      this.fallbackProvider &&
-      this.fallbackProvider.isAvailable() &&
-      this.fallbackProvider !== this.primaryProvider
-    ) {
-      providersToTry.push(this.fallbackProvider);
-    }
-    // Always guarantee heuristic fallback provider is present so recruitment operations never fail when local/cloud AI is offline
-    if (!providersToTry.includes(this.heuristicProvider)) {
-      providersToTry.push(this.heuristicProvider);
+    if (operation === "ats_analysis") {
+      // ATS score checking must strictly be done by Groq or Gemini, NEVER Ollama
+      const groq = new GroqProvider();
+      const gemini = new GeminiProvider();
+
+      const candidateProviders =
+        env.AI_PROVIDER === "gemini"
+          ? [gemini, groq]
+          : [groq, gemini];
+
+      for (const p of candidateProviders) {
+        if (p.isAvailable() && !providersToTry.some((existing) => existing.name === p.name)) {
+          providersToTry.push(p);
+        }
+      }
+    } else {
+      if (this.primaryProvider && this.primaryProvider.isAvailable()) {
+        providersToTry.push(this.primaryProvider);
+      }
+      if (
+        this.fallbackProvider &&
+        this.fallbackProvider.isAvailable() &&
+        this.fallbackProvider !== this.primaryProvider
+      ) {
+        providersToTry.push(this.fallbackProvider);
+      }
     }
 
-    for (const provider of providersToTry) {
+    // Explicit safeguard: Ensure Ollama is NEVER included for ATS score checking
+    const filteredProviders =
+      operation === "ats_analysis"
+        ? providersToTry.filter((p) => p.name !== "ollama")
+        : providersToTry;
+
+    // Always guarantee heuristic fallback provider is present so recruitment operations never fail when external AI is offline
+    if (!filteredProviders.includes(this.heuristicProvider)) {
+      filteredProviders.push(this.heuristicProvider);
+    }
+
+    for (const provider of filteredProviders) {
       try {
         const response = await provider.generateStructuredOutput<T>({
           prompt,
@@ -92,20 +119,23 @@ export class AIRouter {
           schemaDescription,
         });
 
-        // Record usage metric
-        try {
-          await AIUsageRecord.create({
-            provider: response.provider,
-            model: response.model,
-            operation,
-            inputTokens: response.inputTokens,
-            outputTokens: response.outputTokens,
-            latencyMs: response.latencyMs,
-            success: true,
-            userId: userId || null,
-          });
-        } catch (err) {
-          console.warn("[AIUsage] Logging error:", err);
+        // Record usage metric if database is connected
+        const validUserId = userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null;
+        if (mongoose.connection.readyState === 1) {
+          try {
+            await AIUsageRecord.create({
+              provider: response.provider,
+              model: response.model,
+              operation,
+              inputTokens: response.inputTokens,
+              outputTokens: response.outputTokens,
+              latencyMs: response.latencyMs,
+              success: true,
+              userId: validUserId,
+            });
+          } catch (err) {
+            console.warn("[AIUsage] Logging error:", err);
+          }
         }
 
         return response;
@@ -113,20 +143,23 @@ export class AIRouter {
         lastError = err instanceof Error ? err : new Error(String(err));
         console.warn(`[AIRouter] Provider ${provider.name} failed for ${operation}:`, lastError.message);
 
-        try {
-          await AIUsageRecord.create({
-            provider: provider.name,
-            model: provider.defaultModel,
-            operation,
-            inputTokens: 0,
-            outputTokens: 0,
-            latencyMs: 0,
-            success: false,
-            errorMessage: lastError.message,
-            userId: userId || null,
-          });
-        } catch {
-          // ignore
+        if (mongoose.connection.readyState === 1) {
+          try {
+            const validUserId = userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null;
+            await AIUsageRecord.create({
+              provider: provider.name,
+              model: provider.defaultModel,
+              operation,
+              inputTokens: 0,
+              outputTokens: 0,
+              latencyMs: 0,
+              success: false,
+              errorMessage: lastError.message,
+              userId: validUserId,
+            });
+          } catch {
+            // ignore
+          }
         }
       }
     }

@@ -284,12 +284,16 @@ export const CandidatePortalView: React.FC = () => {
           )
         );
       }
-      showNotification("ATS match score calculated successfully with local AI!");
+      showNotification("ATS match score calculated successfully with Groq / Gemini AI!");
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "Failed to run analysis";
-      if (errMsg.toLowerCase().includes("ollama") || errMsg.toLowerCase().includes("unreachable")) {
+      if (
+        errMsg.toLowerCase().includes("unreachable") ||
+        errMsg.toLowerCase().includes("rate limit") ||
+        errMsg.toLowerCase().includes("quota")
+      ) {
         showNotification(
-          "Local AI service (Ollama) cannot be reached. Please ensure Ollama is running locally ('ollama serve').",
+          "AI scoring service (Groq / Gemini) could not complete evaluation right now. Please check API keys or connection.",
           "error"
         );
       } else {
@@ -1267,7 +1271,7 @@ export const CandidatePortalView: React.FC = () => {
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-purple-600" />
                     <span className="text-sm font-semibold text-purple-900">Analysis in progress</span>
-                    <span className="text-xs text-purple-600 hidden md:inline">— Evaluating resume against job criteria using local Ollama model...</span>
+                    <span className="text-xs text-purple-600 hidden md:inline">— Evaluating resume against job criteria using Groq / Gemini AI...</span>
                   </>
                 ) : !selectedResume ? (
                   <>
@@ -1949,7 +1953,7 @@ export const CandidatePortalView: React.FC = () => {
                   </div>
                 )}
                 <div className="text-[11px] text-slate-400 pt-1">
-                  Rubric: {currentAnalysis?.rubricVersion || "v2.0-deterministic-hybrid"} • Provider: {currentAnalysis?.provider || "Ollama / Deterministic"}
+                  Rubric: {currentAnalysis?.rubricVersion || "v2.0-deterministic-hybrid"} • Provider: {currentAnalysis?.provider ? (currentAnalysis.provider === "groq" ? "Groq Cloud AI" : currentAnalysis.provider === "gemini" ? "Google Gemini" : currentAnalysis.provider === "deterministic_engine" ? "Deterministic Rule Engine" : currentAnalysis.provider) : "Groq / Gemini AI"}
                 </div>
               </div>
 

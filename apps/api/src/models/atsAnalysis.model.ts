@@ -8,6 +8,7 @@ export type AnalysisStatus =
   | "dual_complete"
   | "partial_ollama"
   | "partial_gemini"
+  | "partial_groq"
   | "needs_review"
   | "failed";
 export type ConfidenceLevel = "low" | "medium" | "high";
@@ -203,6 +204,7 @@ const atsAnalysisSchema = new Schema<IAtsAnalysisDocument, IAtsAnalysisModel>(
           "dual_complete",
           "partial_ollama",
           "partial_gemini",
+          "partial_groq",
           "needs_review",
           "failed",
         ],

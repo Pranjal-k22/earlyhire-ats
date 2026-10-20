@@ -379,7 +379,8 @@ export const applyForJob = async (
       resumeId: resume._id,
       jobId: job._id,
       rubricVersion: "v2.0-deterministic-hybrid",
-      status: { $in: ["completed", "dual_complete", "partial_ollama", "partial_gemini"] },
+      provider: { $nin: ["deterministic_engine", "ollama"] },
+      status: { $in: ["completed", "dual_complete", "partial_gemini", "partial_groq"] },
     });
 
     if (!analysis) {
@@ -404,6 +405,7 @@ export const applyForJob = async (
             | "dual_complete"
             | "partial_ollama"
             | "partial_gemini"
+            | "partial_groq"
             | "completed"
             | "in_progress"
             | "pending"

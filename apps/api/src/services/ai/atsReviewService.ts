@@ -32,8 +32,8 @@ export class AtsReviewService {
         jobId,
         promptVersion: this.promptVersion,
         rubricVersion: this.rubricVersion,
-        provider: { $ne: "deterministic_engine" },
-        status: { $in: ["completed", "dual_complete", "partial_ollama", "partial_gemini"] },
+        provider: { $nin: ["deterministic_engine", "ollama"] },
+        status: { $in: ["completed", "dual_complete", "partial_gemini", "partial_groq"] },
       });
 
       if (existing) {

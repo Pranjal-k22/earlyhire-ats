@@ -117,7 +117,7 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
               } else if (status === "failed") {
                 label = "ATS unavailable";
                 badgeClass = "bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200";
-              } else if (status === "partial_ollama" || status === "partial_gemini") {
+              } else if (status === "partial_groq" || status === "partial_gemini" || status === "partial_ollama") {
                 label = `ATS ${application.atsSnapshot.overallScore}/100`;
                 badgeSuffix = "partial";
                 badgeClass = "bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100";

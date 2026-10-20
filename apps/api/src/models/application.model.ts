@@ -16,6 +16,7 @@ export interface IAtsSnapshot {
     | "dual_complete"
     | "partial_ollama"
     | "partial_gemini"
+    | "partial_groq"
     | "completed"
     | "in_progress"
     | "processing"

@@ -27,6 +27,7 @@ export interface AtsReport {
     | "dual_complete"
     | "partial_ollama"
     | "partial_gemini"
+    | "partial_groq"
     | "failed";
   promptVersion?: string;
   rubricVersion?: string;
