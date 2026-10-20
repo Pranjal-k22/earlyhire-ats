@@ -19,8 +19,9 @@ import {
   ArrowLeft,
   Info,
   HelpCircle,
+  Briefcase,
 } from "lucide-react";
-import { login, signup } from "../../api/authApi";
+import { login, signup, signupRecruiter } from "../../api/authApi";
 import { User } from "../../types/auth";
 import { normalizeRole, CanonicalRole } from "../../types/role";
 
@@ -42,8 +43,22 @@ const signupSchema = z.object({
   role: z.literal("candidate"),
 });
 
+const recruiterSignupSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80, "Name cannot exceed 80 characters"),
+  email: z.string().trim().email("Please enter a valid work email address"),
+  company: z.string().trim().min(2, "Company name must be at least 2 characters").max(100, "Company cannot exceed 100 characters"),
+  department: z.string().trim().max(100).optional().or(z.literal("")),
+  phone: z.string().trim().max(30).optional().or(z.literal("")),
+  inviteCode: z.string().trim().optional().or(z.literal("")),
+  password: z.string().min(8, "Password must be at least 8 characters").regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+    "Password must contain an uppercase letter, lowercase letter, and number"
+  ),
+});
+
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
+type RecruiterSignupFormValues = z.infer<typeof recruiterSignupSchema>;
 
 interface AuthPortalViewProps {
   initialPortal?: AuthPortalRole;
@@ -100,8 +115,8 @@ export const AuthPortalView: React.FC<AuthPortalViewProps> = ({
     setPortal(newPortal);
     setServerError(null);
     setPortalMismatchMessage(null);
-    // Only candidate supports public registration
-    if (newPortal !== "candidate" && mode === "signup") {
+    // Platform administration requires direct provisioning
+    if (newPortal === "admin" && mode === "signup") {
       setMode("login");
     }
     if (onSwitchPortal) {
@@ -130,7 +145,25 @@ export const AuthPortalView: React.FC<AuthPortalViewProps> = ({
     defaultValues: { name: "", email: "", password: "", role: "candidate" },
   });
 
-  const isSubmitting = isLoggingIn || isSigningUp;
+  const {
+    register: registerRecruiterSignup,
+    handleSubmit: handleRecruiterSignupSubmit,
+    reset: resetRecruiterSignup,
+    formState: { errors: recruiterSignupErrors, isSubmitting: isRecruiterSigningUp },
+  } = useForm<RecruiterSignupFormValues>({
+    resolver: zodResolver(recruiterSignupSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      company: "",
+      department: "",
+      phone: "",
+      inviteCode: "",
+      password: "",
+    },
+  });
+
+  const isSubmitting = isLoggingIn || isSigningUp || isRecruiterSigningUp;
 
   // On Login Submit with Portal Mismatch Enforcement (Phase 3.A, 3.B, 3.C)
   const onLogin = async (data: LoginFormValues) => {
@@ -214,6 +247,29 @@ export const AuthPortalView: React.FC<AuthPortalViewProps> = ({
       if (onCloseModal) onCloseModal();
     } catch (err: unknown) {
       setServerError(err instanceof Error ? err.message : "Failed to create candidate account");
+    }
+  };
+
+  // On Recruiter Signup Submit
+  const onRecruiterSignup = async (data: RecruiterSignupFormValues) => {
+    setServerError(null);
+    setPortalMismatchMessage(null);
+    try {
+      const res = await signupRecruiter({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        company: data.company,
+        department: data.department,
+        phone: data.phone,
+        inviteCode: data.inviteCode,
+        role: "recruiter",
+      });
+      resetRecruiterSignup();
+      onSuccess(res.data.user);
+      if (onCloseModal) onCloseModal();
+    } catch (err: unknown) {
+      setServerError(err instanceof Error ? err.message : "Failed to create recruiter account");
     }
   };
 

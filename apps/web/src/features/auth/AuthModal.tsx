@@ -31,16 +31,16 @@ const signupSchema = z.object({
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     "Password must contain an uppercase letter, lowercase letter, and number"
   ),
-  role: z.literal("candidate").default("candidate"),
+  role: z.literal("candidate"),
 });
 
 const recruiterSignupSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80, "Name cannot exceed 80 characters"),
   email: z.string().trim().email("Please enter a valid work email address"),
   company: z.string().trim().min(2, "Company name must be at least 2 characters").max(100, "Company cannot exceed 100 characters"),
-  department: z.string().trim().max(100).optional(),
-  phone: z.string().trim().max(30).optional(),
-  inviteCode: z.string().trim().optional(),
+  department: z.string().trim().max(100).optional().or(z.literal("")),
+  phone: z.string().trim().max(30).optional().or(z.literal("")),
+  inviteCode: z.string().trim().optional().or(z.literal("")),
   password: z.string().min(8, "Password must be at least 8 characters").regex(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     "Password must contain an uppercase letter, lowercase letter, and number"
@@ -232,13 +232,21 @@ export const AuthModal: React.FC<Props> = ({
               </div>
               <div>
                 <h2 id="auth-modal-title" className="text-base font-bold text-slate-900">
-                  {mode === "login" ? "Sign In to EarlyAI ATS" : "Create Candidate Account"}
+                  {mode === "login"
+                    ? portalRole === "recruiter"
+                      ? "Sign In to Recruiter Workspace"
+                      : "Sign In to EarlyAI ATS"
+                    : portalRole === "recruiter"
+                    ? "Create Recruiter Account"
+                    : "Create Candidate Account"}
                 </h2>
                 <p className="text-xs text-slate-500">
                   {mode === "login"
                     ? portalRole === "candidate"
                       ? "Welcome back! Enter credentials to access your Candidate portal."
                       : "Welcome back! Enter credentials to access ATS recruiter workspace."
+                    : portalRole === "recruiter"
+                    ? "Register your organization to manage requisitions, pipelines, and AI scoring."
                     : "Register to manage profile, upload resumes, and view AI ATS scores."}
                 </p>
               </div>
@@ -506,7 +514,214 @@ export const AuthModal: React.FC<Props> = ({
                 )}
               </div>
             </form>
+          ) : portalRole === "recruiter" ? (
+            /* Recruiter Signup Form */
+            <form onSubmit={handleRecruiterSignupSubmit(onRecruiterSignup)} className="space-y-3.5" noValidate>
+              <div>
+                <label
+                  htmlFor="recruiter-name"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    id="recruiter-name"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Sarah Recruiter"
+                    {...registerRecruiterSignup("name")}
+                    className={`w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                      recruiterSignupErrors.name
+                        ? "border-rose-300 focus:ring-rose-500"
+                        : "border-slate-200 focus:ring-purple-600"
+                    }`}
+                  />
+                </div>
+                {recruiterSignupErrors.name && (
+                  <p className="text-xs text-rose-600 mt-1 font-medium">
+                    {recruiterSignupErrors.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="recruiter-email"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
+                  Work Email <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    id="recruiter-email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="recruiter@company.com"
+                    {...registerRecruiterSignup("email")}
+                    className={`w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                      recruiterSignupErrors.email
+                        ? "border-rose-300 focus:ring-rose-500"
+                        : "border-slate-200 focus:ring-purple-600"
+                    }`}
+                  />
+                </div>
+                {recruiterSignupErrors.email && (
+                  <p className="text-xs text-rose-600 mt-1 font-medium">
+                    {recruiterSignupErrors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="recruiter-company"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
+                  >
+                    Company Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="recruiter-company"
+                    type="text"
+                    placeholder="Acme Corp"
+                    {...registerRecruiterSignup("company")}
+                    className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                      recruiterSignupErrors.company
+                        ? "border-rose-300 focus:ring-rose-500"
+                        : "border-slate-200 focus:ring-purple-600"
+                    }`}
+                  />
+                  {recruiterSignupErrors.company && (
+                    <p className="text-[11px] text-rose-600 mt-0.5 font-medium">
+                      {recruiterSignupErrors.company.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="recruiter-department"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
+                  >
+                    Department
+                  </label>
+                  <input
+                    id="recruiter-department"
+                    type="text"
+                    placeholder="Talent Acquisition"
+                    {...registerRecruiterSignup("department")}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="recruiter-phone"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
+                  >
+                    Work Phone
+                  </label>
+                  <input
+                    id="recruiter-phone"
+                    type="tel"
+                    placeholder="+1 (555) 012-3456"
+                    {...registerRecruiterSignup("phone")}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="recruiter-invite-code"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
+                  >
+                    Invite Code
+                  </label>
+                  <input
+                    id="recruiter-invite-code"
+                    type="text"
+                    placeholder="Optional invite code"
+                    {...registerRecruiterSignup("inviteCode")}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="recruiter-password"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
+                >
+                  Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    id="recruiter-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="At least 8 chars with upper, lower, & digit"
+                    {...registerRecruiterSignup("password")}
+                    className={`w-full pl-9 pr-10 py-2 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+                      recruiterSignupErrors.password
+                        ? "border-rose-300 focus:ring-rose-500"
+                        : "border-slate-200 focus:ring-purple-600"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md"
+                    aria-label="Toggle visibility"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {recruiterSignupErrors.password && (
+                  <p className="text-xs text-rose-600 mt-1 font-medium">
+                    {recruiterSignupErrors.password.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-3 bg-purple-50/70 border border-purple-200/60 rounded-xl text-xs text-purple-900 flex items-start gap-2.5">
+                <Briefcase className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-purple-900">Hiring Team Authorization Policy</p>
+                  <p className="text-[11px] text-purple-700/90 mt-0.5 leading-relaxed">
+                    New recruiter accounts require an administrator invitation code or administrator approval before candidate data and interview operations are unlocked.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  data-testid="signup-submit-button"
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 px-4 gradient-btn-primary text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isRecruiterSigningUp ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Registering Recruiter...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      <span>Register Recruiter Account</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           ) : (
+            /* Candidate Signup Form */
             <form onSubmit={handleSignupSubmit(onSignup)} className="space-y-4" noValidate>
               <div>
                 <label
@@ -551,7 +766,7 @@ export const AuthModal: React.FC<Props> = ({
                   htmlFor="signup-email"
                   className="block text-xs font-semibold text-slate-700 mb-1"
                 >
-                  Work Email <span className="text-rose-500">*</span>
+                  Candidate / Work Email <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -559,7 +774,7 @@ export const AuthModal: React.FC<Props> = ({
                     id="signup-email"
                     type="email"
                     autoComplete="email"
-                    placeholder="recruiter@company.com"
+                    placeholder="candidate@example.com"
                     {...registerSignup("email")}
                     className={`w-full pl-9 pr-3.5 py-2 text-sm bg-slate-50 border rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
                       signupErrors.email
@@ -623,7 +838,7 @@ export const AuthModal: React.FC<Props> = ({
                 <div>
                   <p className="font-semibold text-purple-900">Candidate Portal Account</p>
                   <p className="text-[11px] text-purple-700/90 mt-0.5 leading-relaxed">
-                    Public registration creates candidate accounts for profile self-service and AI ATS analysis. Hiring-team and platform-manager accounts are provisioned by administrators.
+                    Public registration creates candidate accounts for profile self-service and AI ATS analysis.
                   </p>
                 </div>
               </div>
@@ -643,7 +858,7 @@ export const AuthModal: React.FC<Props> = ({
                   ) : (
                     <>
                       <UserPlus className="w-4 h-4" />
-                      <span>Create Account</span>
+                      <span>Create Candidate Account</span>
                     </>
                   )}
                 </button>
@@ -675,13 +890,12 @@ export const AuthModal: React.FC<Props> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          setPortalRole("candidate");
                           setMode("signup");
                           setServerError(null);
                         }}
                         className="text-[#315CFF] hover:text-purple-700 font-semibold underline underline-offset-2"
                       >
-                        Register as candidate
+                        Register as recruiter
                       </button>
                     </>
                   )}
