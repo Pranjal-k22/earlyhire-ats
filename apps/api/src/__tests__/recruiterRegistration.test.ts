@@ -8,7 +8,7 @@ import { connectDB, disconnectDB } from "../config/db.js";
 import { User } from "../models/user.model.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { errorHandler } from "../middleware/errorHandler.js";
-import { AUTH_COOKIE_NAME, generateToken } from "../utils/jwt.js";
+import { AUTH_COOKIE_NAME, signToken } from "../utils/jwt.js";
 import { env } from "../config/env.js";
 
 const TEST_DB_URI = "mongodb://localhost:27017/earlyai_ats_test";
@@ -212,9 +212,8 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
       approvalStatus: "approved",
     });
 
-    const adminToken = generateToken({
-      userId: adminUser.id,
-      email: adminUser.email,
+    const adminToken = signToken({
+      id: adminUser.id,
       role: adminUser.role,
     });
     const adminCookie = `${AUTH_COOKIE_NAME}=${adminToken}`;
@@ -244,9 +243,8 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
     expect(updatedRecruiter?.approvalStatus).toBe("approved");
 
     // 5. Now the recruiter can access protected recruiter endpoint
-    const recruiterToken = generateToken({
-      userId: recruiter.id,
-      email: recruiter.email,
+    const recruiterToken = signToken({
+      id: recruiter.id,
       role: recruiter.role,
     });
     const recruiterCookie = `${AUTH_COOKIE_NAME}=${recruiterToken}`;
@@ -268,9 +266,8 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
       approvalStatus: "approved",
     });
 
-    const token = generateToken({
-      userId: candidate.id,
-      email: candidate.email,
+    const token = signToken({
+      id: candidate.id,
       role: candidate.role,
     });
     const cookie = `${AUTH_COOKIE_NAME}=${token}`;
@@ -294,9 +291,8 @@ describe("EarlyAI ATS — Recruiter Registration, Role Persistence & RBAC Suite"
       approvalStatus: "pending",
     });
 
-    const token = generateToken({
-      userId: recruiter.id,
-      email: recruiter.email,
+    const token = signToken({
+      id: recruiter.id,
       role: recruiter.role,
     });
     const cookie = `${AUTH_COOKIE_NAME}=${token}`;
