@@ -307,6 +307,7 @@ export const App: React.FC<AppProps> = ({
   const isCandidate = userRole === "candidate";
   const isPlatformManager = userRole === "platform_manager" || currentUser?.role === "admin";
   const isHiringTeam = userRole === "hiring_team" || isPlatformManager;
+  const isPendingRecruiter = Boolean(currentUser && !isCandidate && currentUser.approvalStatus === "pending");
 
   // Dedicated Auth Portal View (Phases 2 & 3)
   if (activeTab === "auth") {
@@ -363,6 +364,10 @@ export const App: React.FC<AppProps> = ({
         { id: "candidate" as AppTab, label: "My ATS Portal", icon: Sparkles },
         { id: "jobs" as AppTab, label: "Explore Jobs", icon: Briefcase },
       ]
+    : isPendingRecruiter
+    ? [
+        { id: "overview" as AppTab, label: "Account Status", icon: LayoutDashboard },
+      ]
     : [
         { id: "overview" as AppTab, label: "Dashboard", icon: LayoutDashboard },
         { id: "candidates" as AppTab, label: "Candidates", icon: Users },
@@ -381,6 +386,14 @@ export const App: React.FC<AppProps> = ({
         return { allowed: true };
       }
       return { allowed: false, reason: "Authentication required to access this workspace." };
+    }
+
+    if (isPendingRecruiter) {
+      if (tab === "overview") return { allowed: true };
+      return {
+        allowed: false,
+        reason: "Your recruiter account is pending administrator approval before you can access candidate pipelines and requisitions.",
+      };
     }
 
     if (isCandidate) {
@@ -695,7 +708,85 @@ export const App: React.FC<AppProps> = ({
 
         {/* Page Content with RBAC Access Protection */}
         <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
-          {!accessCheck.allowed ? (
+          {isPendingRecruiter ? (
+            /* Pending Recruiter Approval State (Phase 2 & Phase 5) */
+            <div className="max-w-xl mx-auto my-12 bg-white rounded-3xl p-8 border border-amber-200 shadow-xl text-center space-y-5 animate-in fade-in duration-200">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+                <Briefcase className="w-8 h-8" />
+              </div>
+
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  Approval Pending
+                </span>
+                <h2 className="text-xl font-extrabold text-slate-900 mt-3">
+                  Recruiter Registration Received
+                </h2>
+                <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                  Thank you for registering <strong className="text-slate-800">{currentUser?.name}</strong> with EarlyAI ATS.
+                  {currentUser?.company ? (
+                    <> Your account for <strong className="text-slate-800">{currentUser.company}</strong> has been registered and is pending administrator authorization.</>
+                  ) : (
+                    <> Your hiring team account has been registered and is pending administrator authorization.</>
+                  )}
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-left text-xs space-y-2 text-slate-600">
+                <div className="flex justify-between py-1 border-b border-slate-200/50">
+                  <span className="font-semibold text-slate-500">Account Role</span>
+                  <span className="font-bold text-slate-800">Hiring Team / Recruiter</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-200/50">
+                  <span className="font-semibold text-slate-500">Work Email</span>
+                  <span className="font-bold text-slate-800">{currentUser?.email}</span>
+                </div>
+                {currentUser?.company && (
+                  <div className="flex justify-between py-1">
+                    <span className="font-semibold text-slate-500">Organization</span>
+                    <span className="font-bold text-slate-800">{currentUser.company}</span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                For candidate privacy and organizational compliance, access to candidate profiles, requisitions, and AI ATS intelligence requires administrator review.
+              </p>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetchMe();
+                      if (res?.data?.user) {
+                        setCurrentUser(res.data.user);
+                        if (res.data.user.approvalStatus === "approved") {
+                          setAuthNotice("Congratulations! Your recruiter account has been approved.");
+                        } else {
+                          setAuthNotice("Account is still under review. Please check back shortly.");
+                        }
+                      }
+                    } catch {
+                      setAuthNotice("Unable to verify status. Please try again.");
+                    }
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 gradient-btn-primary text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Check Approval Status</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          ) : !accessCheck.allowed ? (
             /* 403 Forbidden State (Phase 6 & 7) */
             <div className="max-w-xl mx-auto my-12 bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
